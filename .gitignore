@@ -1,0 +1,15 @@
+# files created by VS
+.vs/
+.vscode/
+
+# builds
+bin/
+obj/
+
+# cache temp files
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+*.cache
+*.log
