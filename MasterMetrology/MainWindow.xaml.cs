@@ -19,6 +19,7 @@ namespace MasterMetrology
     {
 
         private PanAndZoomController _panZoom;
+        private ProcessController _processController;
 
         public MainWindow()
         {
@@ -29,12 +30,18 @@ namespace MasterMetrology
         private void MainWindow_Loaded(object sender, RoutedEventArgs e)
         {
             _panZoom = new PanAndZoomController(DiagramBorder, ZoomTransform, PanTransform, 50000);
+            _processController = new ProcessController(DiagramCanvas);
             _panZoom.CenterView();
         }
 
         private void ResetView_Click(object sender, RoutedEventArgs e)
         {
             _panZoom.CenterView();
+        }
+
+        private void OnClickSpawnObject(object sender, RoutedEventArgs e)
+        {
+            _processController.SpawnObject();
         }
     }
 }

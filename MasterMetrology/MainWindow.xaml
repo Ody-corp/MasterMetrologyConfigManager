@@ -73,6 +73,7 @@
                     </Grid>
                 </Border>
             </Grid>
+            <Button Content="Button" Width="50" Height="20" Click="OnClickSpawnObject"/>
         </DockPanel>
     </Grid>
 </Window>

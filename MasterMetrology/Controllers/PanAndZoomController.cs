@@ -10,7 +10,7 @@ using System.Windows.Controls;
 
 namespace MasterMetrology.Controllers
 {
-    public class PanAndZoomController
+    internal class PanAndZoomController
     {
         private readonly FrameworkElement _viewport;   
         private readonly ScaleTransform _zoomTransform;
