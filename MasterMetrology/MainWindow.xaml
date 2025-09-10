@@ -9,16 +9,70 @@
     <Grid>
         <DockPanel>
             <Menu DockPanel.Dock="Top">
-                <MenuItem Header="_File">
+                <MenuItem Header="_File" >
                     <MenuItem Header="Import"/>
                     <MenuItem Header="Save"/>
                     <MenuItem Header="Save as"/>
                     <MenuItem Header="Exit"/>
                 </MenuItem>
             </Menu>
-            <StackPanel>
-                
-            </StackPanel>
+            <Grid>
+                <Border x:Name="DiagramBorder" BorderBrush="Black" BorderThickness="1" ClipToBounds="True" Height="350" Width="400" HorizontalAlignment="Left" VerticalAlignment="Top">
+                    <Grid>
+                        <!-- bottom layer (background) of canvas view with grid -->
+                        <Canvas x:Name="GridCanvas" Width="50000" Height="50000">
+                            <Canvas.Background>
+                                <DrawingBrush TileMode="Tile" Viewport="0,0,50,50" ViewportUnits="Absolute">
+                                    <DrawingBrush.Drawing>
+                                        <!-- white background -->
+                                        <GeometryDrawing Brush="White">
+                                            <!-- grid -->
+                                            <GeometryDrawing.Pen>
+                                                <Pen Brush="LightGray" Thickness="0.5"/>
+                                            </GeometryDrawing.Pen>
+                                            <GeometryDrawing.Geometry>
+                                                <GeometryGroup>
+                                                    <LineGeometry StartPoint="0,0" EndPoint="50,0"/>
+                                                    <LineGeometry StartPoint="0,0" EndPoint="0,50"/>
+                                                </GeometryGroup>
+                                            </GeometryDrawing.Geometry>
+                                        </GeometryDrawing>
+                                    </DrawingBrush.Drawing>
+                                </DrawingBrush>
+                            </Canvas.Background>
+                            <!-- allows canvas to move and transport -->
+                                <Canvas.RenderTransform>
+                                <TransformGroup>
+                                    <ScaleTransform x:Name="ZoomTransform" ScaleX="1" ScaleY="1"/>
+                                    <TranslateTransform x:Name="PanTransform" X="0" Y="0"/>
+                                </TransformGroup>
+                            </Canvas.RenderTransform>
+                        </Canvas>
+
+                        <!-- top layer: objects -->
+                        <Canvas x:Name="DiagramCanvas" Width="50000" Height="50000" Background="Transparent">
+                            <!-- transform and zoom locked with bottom layer -->
+                                <Canvas.RenderTransform>
+                                <TransformGroup>
+                                    <ScaleTransform ScaleX="{Binding ElementName=ZoomTransform, Path=ScaleX}"
+                                                    ScaleY="{Binding ElementName=ZoomTransform, Path=ScaleY}"/>
+                                    <TranslateTransform X="{Binding ElementName=PanTransform, Path=X}"
+                                                        Y="{Binding ElementName=PanTransform, Path=Y}"/>
+                                </TransformGroup>
+                            </Canvas.RenderTransform>
+
+                            <!-- object for testing -->
+                            <Grid Width="120" Height="60" Canvas.Left="25000" Canvas.Top="25000">
+                                <Rectangle Fill="LightBlue" Stroke="Black" StrokeThickness="2"/>
+                                <TextBlock Text="Tabuľka 1"
+                                           HorizontalAlignment="Center"
+                                           VerticalAlignment="Center"
+                                           FontWeight="Bold"/>
+                            </Grid>
+                        </Canvas>
+                    </Grid>
+                </Border>
+            </Grid>
         </DockPanel>
     </Grid>
 </Window>
