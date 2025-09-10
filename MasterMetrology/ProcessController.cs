@@ -25,7 +25,7 @@ namespace MasterMetrology
 
         public void SpawnObject()
         {
-            Grid objectGrid = _DataModelVisual.CreateTableData(25000, 25000, "TEST");
+            Grid objectGrid = _DataModelVisual.CreateTableData(24950, 24950, "TEST");
             viewPort.Children.Add(objectGrid);
         }
     }
