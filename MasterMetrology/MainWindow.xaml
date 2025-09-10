@@ -15,6 +15,20 @@
                     <MenuItem Header="Save as"/>
                     <MenuItem Header="Exit"/>
                 </MenuItem>
+                <MenuItem Header="View">
+                    <MenuItem Header="_Center view" Click="ResetView_Click"/>
+                    <MenuItem Header="Zoom">
+                        <MenuItem Header="40%"/>
+                        <MenuItem Header="60%"/>
+                        <MenuItem Header="80%"/>
+                        <MenuItem Header="100%"/>
+                        <MenuItem Header="120%"/>
+                        <MenuItem Header="150%"/>
+                        <MenuItem Header="200%"/>
+                        <MenuItem Header="250%"/>
+                        <MenuItem Header="300%"/>
+                    </MenuItem>
+                </MenuItem>
             </Menu>
             <Grid>
                 <Border x:Name="DiagramBorder" BorderBrush="Black" BorderThickness="1" ClipToBounds="True" Height="350" Width="400" HorizontalAlignment="Left" VerticalAlignment="Top">

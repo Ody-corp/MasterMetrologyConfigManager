@@ -20,7 +20,7 @@ namespace MasterMetrology.Controllers
         private Point _lastMousePos;
         private bool _isPanning;
 
-        private const double MinZoom = 0.2;
+        private const double MinZoom = 0.4;
         private const double MaxZoom = 3.0;
 
         public PanAndZoomController(FrameworkElement viewport, ScaleTransform zoom, TranslateTransform pan, double canvasSize)
