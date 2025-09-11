@@ -9,14 +9,17 @@
     <Grid>
         <DockPanel>
             <Menu DockPanel.Dock="Top">
-                <MenuItem Header="_File" >
+                <MenuItem Header="File" >
                     <MenuItem Header="Import"/>
                     <MenuItem Header="Save"/>
                     <MenuItem Header="Save as"/>
-                    <MenuItem Header="Exit"/>
+                    <MenuItem Header="Exit" Click="ExitSoftware"/>
+                </MenuItem>
+                <MenuItem Header="Edit">
+                    
                 </MenuItem>
                 <MenuItem Header="View">
-                    <MenuItem Header="_Center view" Click="ResetView_Click"/>
+                    <MenuItem Header="_Center" Click="ResetView_Click"/>
                     <MenuItem Header="Zoom">
                         <MenuItem Header="40%"/>
                         <MenuItem Header="60%"/>

@@ -10,7 +10,7 @@ using System.Windows.Shapes;
 
 namespace MasterMetrology.Models.Visual
 {
-    internal class DataModelVisual
+    internal class NodeModelVisual
     {
         public Grid CreateTableData(double x, double y, string name)
         {

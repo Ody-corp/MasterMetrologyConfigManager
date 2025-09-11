@@ -43,5 +43,10 @@ namespace MasterMetrology
         {
             _processController.SpawnObject();
         }
+
+        private void ExitSoftware(object sender, RoutedEventArgs e)
+        {
+            Application.Current.Shutdown();
+        }
     }
 }

@@ -14,12 +14,12 @@ namespace MasterMetrology
     internal class ProcessController
     {
 
-        private DataModelVisual _DataModelVisual;
+        private readonly NodeModelVisual _DataModelVisual;
         private Panel viewPort;
 
         public ProcessController(Panel viewPort) 
         {
-            _DataModelVisual = new DataModelVisual();
+            _DataModelVisual = new NodeModelVisual();
             this.viewPort = viewPort;
         }
 
