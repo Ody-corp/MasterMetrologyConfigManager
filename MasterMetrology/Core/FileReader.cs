@@ -7,14 +7,41 @@ using System.Xml;
 
 namespace MasterMetrology
 {
-    class FileReader
+    internal class FileReader
     {
-        public XmlDocument LoadDataFromFile(string filePath)
+        public void LoadDataFromFile(string filePath)
         {
-            XmlDocument xmlFile = new XmlDocument();
-            xmlFile.Load(filePath);
+            using (XmlReader reader = XmlReader.Create(filePath))
+            {
+                while (reader.Read())
+                {
+                    if (reader.NodeType == XmlNodeType.Element)
+                    {
+                        if (reader.Name == "xml" ||  reader.Name == "MeasurementModule")
+                        {
 
-            return xmlFile;
+                        }
+                        else
+                        {
+                            //incorrect content of file 
+                        }
+                    }
+                    else
+                    {
+                        //incorrect content of file
+                    }
+                }
+            }
+
+            
+        }
+
+        public void readData(XmlDocument xmlFile)
+        {
+            using (XmlReader reader = new XmlNodeReader(xmlFile)) 
+            {
+                
+            }
         }
     }
 }

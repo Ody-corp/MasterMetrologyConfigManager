@@ -19,7 +19,7 @@ namespace MasterMetrology
         private Panel viewPort;
         private FileReader _fileReader;
 
-        private XmlDocument xmlFile;
+        private string filePath;
 
         public ProcessController(Panel viewPort) 
         {
@@ -36,7 +36,13 @@ namespace MasterMetrology
 
         public void LoadDataXML(string filePath)
         {
-            xmlFile = _fileReader.LoadDataFromFile(filePath);
+            SaveOldXMLPath(filePath);
+            _fileReader.LoadDataFromFile(filePath);
+        }
+
+        private void SaveOldXMLPath(string filePath)
+        {
+            this.filePath = filePath;
         }
     }
 }
