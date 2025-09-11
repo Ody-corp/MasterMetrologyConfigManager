@@ -1,4 +1,5 @@
 ﻿using MasterMetrology.Controllers;
+using Microsoft.Win32;
 using System.Text;
 using System.Windows;
 using System.Windows.Controls;
@@ -47,6 +48,20 @@ namespace MasterMetrology
         private void ExitSoftware(object sender, RoutedEventArgs e)
         {
             Application.Current.Shutdown();
+        }
+
+        private void ImportFile_Click(object sender, RoutedEventArgs e)
+        {
+            OpenFileDialog ofd = new OpenFileDialog { Filter = "XML files (*.xml)|*.xml"};
+            
+            bool? response = ofd.ShowDialog();
+
+            if (response == true)
+            {
+                string filepath = ofd.FileName;
+
+                MessageBox.Show(filepath);
+            }
         }
     }
 }
