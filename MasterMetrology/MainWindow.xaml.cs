@@ -60,7 +60,7 @@ namespace MasterMetrology
             {
                 string filepath = ofd.FileName;
 
-                MessageBox.Show(filepath);
+                _processController.LoadDataXML(filepath);
             }
         }
     }

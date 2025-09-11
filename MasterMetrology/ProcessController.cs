@@ -8,6 +8,7 @@ using System.Windows.Shapes;
 using System.Windows.Controls;
 using System.Windows.Media;
 using System.Windows;
+using System.Xml;
 
 namespace MasterMetrology
 {
@@ -16,10 +17,14 @@ namespace MasterMetrology
 
         private readonly NodeModelVisual _DataModelVisual;
         private Panel viewPort;
+        private FileReader _fileReader;
+
+        private XmlDocument xmlFile;
 
         public ProcessController(Panel viewPort) 
         {
             _DataModelVisual = new NodeModelVisual();
+            _fileReader = new FileReader();
             this.viewPort = viewPort;
         }
 
@@ -27,6 +32,11 @@ namespace MasterMetrology
         {
             Grid objectGrid = _DataModelVisual.CreateTableData(24950, 24950, "TEST");
             viewPort.Children.Add(objectGrid);
+        }
+
+        public void LoadDataXML(string filePath)
+        {
+            xmlFile = _fileReader.LoadDataFromFile(filePath);
         }
     }
 }
