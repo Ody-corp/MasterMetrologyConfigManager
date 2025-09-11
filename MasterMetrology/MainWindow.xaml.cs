@@ -52,7 +52,11 @@ namespace MasterMetrology
 
         private void ImportFile_Click(object sender, RoutedEventArgs e)
         {
-            OpenFileDialog ofd = new OpenFileDialog { Filter = "XML files (*.xml)|*.xml"};
+            OpenFileDialog ofd = new OpenFileDialog 
+            { 
+                Title = "Chose file",
+                Filter = "XML files (*.xml)|*.xml" 
+            };
             
             bool? response = ofd.ShowDialog();
 
