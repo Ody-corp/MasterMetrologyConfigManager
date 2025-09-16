@@ -10,9 +10,9 @@ using System.Windows.Shapes;
 
 namespace MasterMetrology.Models.Visual
 {
-    internal class NodeModelVisual
+    internal class StateModelVisual
     {
-        public Grid CreateTableData(double x, double y, string name)
+        public Grid CreateTableData(double x, double y, string name, string index)
         {
             var rect = new Rectangle
             {
@@ -25,7 +25,7 @@ namespace MasterMetrology.Models.Visual
 
             var text = new TextBlock
             {
-                Text = name,
+                Text = name + "\n" + index,
                 HorizontalAlignment = HorizontalAlignment.Center,
                 VerticalAlignment = VerticalAlignment.Center
             };

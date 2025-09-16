@@ -16,7 +16,9 @@ namespace MasterMetrology
         List<StateModelData> FullListStateModelData = new List<StateModelData>();
         Stack<StateModelData> stack = new Stack<StateModelData>();
 
-        public void LoadDataFromFile(string filePath)
+        
+
+        public (List<InputsDefModelData> InputsDefinition, List<OutputModelData> OutputDefinition, List<StateModelData> FullListStateModelData) LoadDataFromFile(string filePath)
         {
             using (XmlReader reader = XmlReader.Create(filePath))
             {
@@ -88,6 +90,8 @@ namespace MasterMetrology
                 }
                 
             }
+
+            return (InputsDefinition, OutputDefinition, FullListStateModelData);
         }
     }
 }

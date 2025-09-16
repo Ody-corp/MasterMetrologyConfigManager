@@ -9,6 +9,7 @@ using System.Windows.Controls;
 using System.Windows.Media;
 using System.Windows;
 using System.Xml;
+using MasterMetrology.Models.Data;
 
 namespace MasterMetrology
 {
@@ -18,6 +19,11 @@ namespace MasterMetrology
         private readonly NodeModelVisual _DataModelVisual;
         private Panel viewPort;
         private FileReader _fileReader;
+
+        private List<InputsDefModelData> inputsDefModelDatas;
+        private List<OutputModelData> outputsDefModelDatas;
+        private List<StateModelData> statesModelDatas;
+
 
         private string filePath;
 
@@ -37,7 +43,11 @@ namespace MasterMetrology
         public void LoadDataXML(string filePath)
         {
             SaveOldXMLPath(filePath);
-            _fileReader.LoadDataFromFile(filePath);
+            var list = _fileReader.LoadDataFromFile(filePath);
+
+            inputsDefModelDatas = list.InputsDefinition;
+            outputsDefModelDatas = list.OutputDefinition;
+            statesModelDatas = list.FullListStateModelData;
         }
 
         private void SaveOldXMLPath(string filePath)
