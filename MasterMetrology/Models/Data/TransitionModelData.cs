@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace MasterMetrology.Models.Data
 {
-    class TransitionModelData
+    internal class TransitionModelData
     {
         public string Input {  get; set; }
         public string NextState { get; set; }

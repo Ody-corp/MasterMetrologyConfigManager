@@ -1,5 +1,7 @@
-﻿using System;
+﻿using MasterMetrology.Models.Data;
+using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -9,6 +11,11 @@ namespace MasterMetrology
 {
     internal class FileReader
     {
+        List<InputsDefModelData> InputsDefinition = new List<InputsDefModelData>();
+        List<OutputModelData> OutputDefinition = new List<OutputModelData>();
+        List<StateModelData> FullListStateModelData = new List<StateModelData>();
+        Stack<StateModelData> stack = new Stack<StateModelData>();
+
         public void LoadDataFromFile(string filePath)
         {
             using (XmlReader reader = XmlReader.Create(filePath))
@@ -17,29 +24,68 @@ namespace MasterMetrology
                 {
                     if (reader.NodeType == XmlNodeType.Element)
                     {
-                        if (reader.Name == "xml" ||  reader.Name == "MeasurementModule")
+                        if (reader.Name == "Input")
                         {
-
+                            var input = new InputsDefModelData()
+                            {
+                                Name = reader.GetAttribute("Name"),
+                                ID = reader.GetAttribute("ID")
+                            };
+                            InputsDefinition.Add(input);
                         }
-                        else
+                        else if (reader.Name == "Output")
                         {
-                            //incorrect content of file 
+                            var output = new OutputModelData()
+                            {
+                                Name = reader.GetAttribute("Name"),
+                                ID = reader.GetAttribute("ID"),
+                                UpdateDefinition = Boolean.Parse(reader.GetAttribute("UpdateDefinition")),
+                                UpdateParameters = Boolean.Parse(reader.GetAttribute("UpdateParameters")),
+                                UpdateCalibration = Boolean.Parse(reader.GetAttribute("UpdateCalibration")),
+                                UpdateMeasuredData = Boolean.Parse(reader.GetAttribute("UpdateMeasuredData")),
+
+                            };
+                            OutputDefinition.Add(output);
+                        }
+                        else if (reader.Name == "Transition")
+                        {
+                            if (stack.Count > 0)
+                            {
+                                stack.Peek().TransitionsData.Add(new TransitionModelData
+                                {
+                                    Input = reader.GetAttribute("Input"),
+                                    NextState = reader.GetAttribute("NextState")
+                                });
+                            }
+                        }
+                        else if (reader.Name == "State")
+                        {
+                            var state = new StateModelData()
+                            {
+                                Name = reader.GetAttribute("Name"),
+                                Index = reader.GetAttribute("Index"),
+                                Output = reader.GetAttribute("Output"),
+                                TransitionsData = new List<TransitionModelData>(),
+                                SubStatesData = new List<StateModelData>()
+                            };
+
+                            if (stack.Count > 0)
+                            {
+                                stack.Peek().SubStatesData.Add(state);
+                            }
+                            else
+                            {
+                                FullListStateModelData.Add(state);
+                            }
+
+                            stack.Push(state);
                         }
                     }
-                    else
+                    else if (reader.NodeType == XmlNodeType.EndElement && reader.Name == "State")
                     {
-                        //incorrect content of file
+                        stack.Pop();
                     }
                 }
-            }
-
-            
-        }
-
-        public void readData(XmlDocument xmlFile)
-        {
-            using (XmlReader reader = new XmlNodeReader(xmlFile)) 
-            {
                 
             }
         }

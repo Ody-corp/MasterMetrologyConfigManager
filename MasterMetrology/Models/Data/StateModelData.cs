@@ -7,11 +7,14 @@ using System.Threading.Tasks;
 
 namespace MasterMetrology.Models.Data
 {
-    public class NodeModel
+    internal class StateModelData
     {
+
         public string Name { get; set; }
         public string Index { get; set; }
         public string Output { get; set; }
+        public List<StateModelData> SubStatesData { get; set; }
+        public List<TransitionModelData> TransitionsData { get; set; }
 
     }
 }

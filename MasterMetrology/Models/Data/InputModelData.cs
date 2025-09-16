@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace MasterMetrology.Models.Data
 {
-    class InputsDefModelData
+    internal class InputsDefModelData
     {
         public string ID { get; set; }
         public string Name { get; set; }
