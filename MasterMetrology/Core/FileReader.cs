@@ -67,8 +67,6 @@ namespace MasterMetrology
                                 Name = reader.GetAttribute("Name"),
                                 Index = reader.GetAttribute("Index"),
                                 Output = reader.GetAttribute("Output"),
-                                TransitionsData = new List<TransitionModelData>(),
-                                SubStatesData = new List<StateModelData>()
                             };
 
                             if (stack.Count > 0)

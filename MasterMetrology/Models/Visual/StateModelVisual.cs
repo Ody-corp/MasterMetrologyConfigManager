@@ -14,29 +14,77 @@ namespace MasterMetrology.Models.Visual
     {
         public Grid CreateTableData(double x, double y, string name, string index)
         {
-            var rect = new Rectangle
+            var border = new Border
             {
-                Width = 120,
-                Height = 60,
-                Fill = Brushes.LightBlue,
-                Stroke = Brushes.Black,
-                StrokeThickness = 2
+                Background = Brushes.LightBlue,
+                BorderBrush = Brushes.Black,
+                BorderThickness = new Thickness(2)
             };
 
             var text = new TextBlock
             {
-                Text = name + "\n" + index,
+                Text = name.Substring(6).Replace("_", " ") + "\n" + index,
+                Margin = new Thickness(10),
                 HorizontalAlignment = HorizontalAlignment.Center,
-                VerticalAlignment = VerticalAlignment.Center
+                VerticalAlignment = VerticalAlignment.Center,
+                TextAlignment = TextAlignment.Center
             };
 
-            var grid = new Grid { Width = 120, Height = 60 };
-            grid.Children.Add(rect);
+            var grid = new Grid 
+            {
+                MinWidth = 100,
+                Margin = new Thickness(40)
+                
+            };
+            
+            grid.Children.Add(border);
             grid.Children.Add(text);
 
             Canvas.SetLeft(grid, x);
             Canvas.SetTop(grid, y);
             
+            return grid;
+        }
+
+        public Grid CreateSectionData(double x, double y, string name, string index, double width = 0, double height = 0)
+        {
+            var border = new Border
+            {
+                BorderBrush = Brushes.Black,
+                BorderThickness = new Thickness(2),
+                Padding = new Thickness(25)
+            };
+
+            var text = new TextBox
+            {
+                Text = name.Substring(6).Replace("_", " ") + "\n" + index,
+                Margin = new Thickness(10),
+                HorizontalAlignment = HorizontalAlignment.Left,
+                VerticalAlignment = VerticalAlignment.Top,
+                TextAlignment = TextAlignment.Center,
+                Background = Brushes.Transparent
+                
+            };
+
+            var grid = new Grid
+            {
+                Background = Brushes.Yellow,
+                Margin = new Thickness(40)
+            };
+
+            var innerPanel = new StackPanel
+            {
+                Orientation = Orientation.Vertical,
+                Margin = new Thickness(0, 40, 0, 0)
+            };
+
+            grid.Children.Add(innerPanel);
+            grid.Children.Add(border);
+            grid.Children.Add(text);
+
+            Canvas.SetLeft(grid, x);
+            Canvas.SetTop(grid, y);
+
             return grid;
         }
     }

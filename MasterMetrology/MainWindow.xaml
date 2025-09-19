@@ -5,7 +5,7 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:MasterMetrology"
         mc:Ignorable="d"
-        Title="MainWindow" Height="450" Width="800">
+        Title="MainWindow" Height="1080" Width="1920" WindowState="Maximized">
     <Grid>
         <DockPanel>
             <Menu DockPanel.Dock="Top">
@@ -16,7 +16,7 @@
                     <MenuItem Header="Exit" Click="ExitSoftware"/>
                 </MenuItem>
                 <MenuItem Header="Edit">
-                    
+
                 </MenuItem>
                 <MenuItem Header="View">
                     <MenuItem Header="_Center" Click="ResetView_Click"/>
@@ -34,63 +34,70 @@
                 </MenuItem>
             </Menu>
             <Grid>
-                <Border x:Name="DiagramBorder" BorderBrush="Black" BorderThickness="1" ClipToBounds="True" Height="350" Width="400" HorizontalAlignment="Left" VerticalAlignment="Top">
-                    <Grid>
-                        <!-- bottom layer (background) of canvas view with grid -->
-                        <Canvas x:Name="GridCanvas" Width="50000" Height="50000">
-                            <Canvas.Background>
-                                <DrawingBrush TileMode="Tile" Viewport="0,0,50,50" ViewportUnits="Absolute">
-                                    <DrawingBrush.Drawing>
-                                        <!-- white background -->
-                                        <GeometryDrawing Brush="White">
-                                            <!-- grid -->
-                                            <GeometryDrawing.Pen>
-                                                <Pen Brush="LightGray" Thickness="0.5"/>
-                                            </GeometryDrawing.Pen>
-                                            <GeometryDrawing.Geometry>
-                                                <GeometryGroup>
-                                                    <LineGeometry StartPoint="0,0" EndPoint="50,0"/>
-                                                    <LineGeometry StartPoint="0,0" EndPoint="0,50"/>
-                                                </GeometryGroup>
-                                            </GeometryDrawing.Geometry>
-                                        </GeometryDrawing>
-                                    </DrawingBrush.Drawing>
-                                </DrawingBrush>
-                            </Canvas.Background>
-                            <!-- allows canvas to move and transport -->
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="2*"/>
+                    <ColumnDefinition Width="1*"/>
+                </Grid.ColumnDefinitions>
+                <Grid Height="auto" Grid.Column="0" x:Name="ViewPort">
+                    <Border x:Name="DiagramBorder" BorderBrush="Black" BorderThickness="1" ClipToBounds="True" Height="auto" Width="auto" HorizontalAlignment="Left" VerticalAlignment="Top">
+                        <Grid>
+                            <!-- bottom layer (background) of canvas view with grid -->
+                            <Canvas x:Name="GridCanvas" Width="50000" Height="50000">
+                                <Canvas.Background>
+                                    <DrawingBrush TileMode="Tile" Viewport="0,0,50,50" ViewportUnits="Absolute">
+                                        <DrawingBrush.Drawing>
+                                            <!-- white background -->
+                                            <GeometryDrawing Brush="White">
+                                                <!-- grid -->
+                                                <GeometryDrawing.Pen>
+                                                    <Pen Brush="LightGray" Thickness="0.5"/>
+                                                </GeometryDrawing.Pen>
+                                                <GeometryDrawing.Geometry>
+                                                    <GeometryGroup>
+                                                        <LineGeometry StartPoint="0,0" EndPoint="50,0"/>
+                                                        <LineGeometry StartPoint="0,0" EndPoint="0,50"/>
+                                                    </GeometryGroup>
+                                                </GeometryDrawing.Geometry>
+                                            </GeometryDrawing>
+                                        </DrawingBrush.Drawing>
+                                    </DrawingBrush>
+                                </Canvas.Background>
+                                <!-- allows canvas to move and transport -->
                                 <Canvas.RenderTransform>
-                                <TransformGroup>
-                                    <ScaleTransform x:Name="ZoomTransform" ScaleX="1" ScaleY="1"/>
-                                    <TranslateTransform x:Name="PanTransform" X="0" Y="0"/>
-                                </TransformGroup>
-                            </Canvas.RenderTransform>
-                        </Canvas>
+                                    <TransformGroup>
+                                        <ScaleTransform x:Name="ZoomTransform" ScaleX="1" ScaleY="1"/>
+                                        <TranslateTransform x:Name="PanTransform" X="0" Y="0"/>
+                                    </TransformGroup>
+                                </Canvas.RenderTransform>
+                            </Canvas>
 
-                        <!-- top layer: objects -->
-                        <Canvas x:Name="DiagramCanvas" Width="50000" Height="50000" Background="Transparent">
-                            <!-- transform and zoom locked with bottom layer -->
+                            <!-- top layer: objects -->
+                            <Canvas x:Name="DiagramCanvas" Width="50000" Height="50000" Background="Transparent">
+                                <!-- transform and zoom locked with bottom layer -->
                                 <Canvas.RenderTransform>
-                                <TransformGroup>
-                                    <ScaleTransform ScaleX="{Binding ElementName=ZoomTransform, Path=ScaleX}"
-                                                    ScaleY="{Binding ElementName=ZoomTransform, Path=ScaleY}"/>
-                                    <TranslateTransform X="{Binding ElementName=PanTransform, Path=X}"
-                                                        Y="{Binding ElementName=PanTransform, Path=Y}"/>
-                                </TransformGroup>
-                            </Canvas.RenderTransform>
-
-                            <!-- object for testing -->
-                            <Grid Width="120" Height="60" Canvas.Left="25000" Canvas.Top="25000">
-                                <Rectangle Fill="LightBlue" Stroke="Black" StrokeThickness="2"/>
-                                <TextBlock Text="Tabuľka 1"
-                                           HorizontalAlignment="Center"
-                                           VerticalAlignment="Center"
-                                           FontWeight="Bold"/>
-                            </Grid>
-                        </Canvas>
-                    </Grid>
-                </Border>
+                                    <TransformGroup>
+                                        <ScaleTransform ScaleX="{Binding ElementName=ZoomTransform, Path=ScaleX}"
+                                        ScaleY="{Binding ElementName=ZoomTransform, Path=ScaleY}"/>
+                                        <TranslateTransform X="{Binding ElementName=PanTransform, Path=X}"
+                                            Y="{Binding ElementName=PanTransform, Path=Y}"/>
+                                    </TransformGroup>
+                                </Canvas.RenderTransform>
+                            </Canvas>
+                        </Grid>
+                    </Border>
+                </Grid>
+                <Grid Height="auto" Grid.Column="1" >
+                    
+                    <StackPanel Orientation="Vertical" Margin="20" Background="Blue">
+                        <StackPanel Orientation="Horizontal" Background="Yellow">
+                            <Label Background="Green">Name</Label>
+                            <TextBox Background="White" Margin="5" MinWidth="200">Ahoj</TextBox>
+                        </StackPanel>
+                        
+                    </StackPanel>
+                    <Button Content="Button" Width="50" Height="20" Click="OnClickSpawnObject"/>
+                </Grid>
             </Grid>
-            <Button Content="Button" Width="50" Height="20" Click="OnClickSpawnObject"/>
         </DockPanel>
     </Grid>
 </Window>

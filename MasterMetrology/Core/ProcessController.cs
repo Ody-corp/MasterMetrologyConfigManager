@@ -10,15 +10,17 @@ using System.Windows.Media;
 using System.Windows;
 using System.Xml;
 using MasterMetrology.Models.Data;
+using MasterMetrology.Core;
 
 namespace MasterMetrology
 {
-    internal class ProcessController
+    internal class ProcessController(Panel viewPort)
     {
 
-        private readonly NodeModelVisual _DataModelVisual;
-        private Panel viewPort;
-        private FileReader _fileReader;
+        private readonly StateModelVisual _DataModelVisual = new StateModelVisual();
+        private Panel viewPort = viewPort;
+        private FileReader _fileReader = new FileReader();
+        private VisualRendering visualRender = new VisualRendering(viewPort);
 
         private List<InputsDefModelData> inputsDefModelDatas;
         private List<OutputModelData> outputsDefModelDatas;
@@ -27,16 +29,9 @@ namespace MasterMetrology
 
         private string filePath;
 
-        public ProcessController(Panel viewPort) 
-        {
-            _DataModelVisual = new NodeModelVisual();
-            _fileReader = new FileReader();
-            this.viewPort = viewPort;
-        }
-
         public void SpawnObject()
         {
-            Grid objectGrid = _DataModelVisual.CreateTableData(24950, 24950, "TEST");
+            Grid objectGrid = _DataModelVisual.CreateTableData(24950, 24950, "TEST", "1");
             viewPort.Children.Add(objectGrid);
         }
 
@@ -48,6 +43,8 @@ namespace MasterMetrology
             inputsDefModelDatas = list.InputsDefinition;
             outputsDefModelDatas = list.OutputDefinition;
             statesModelDatas = list.FullListStateModelData;
+
+            visualRender.RenderStates(statesModelDatas);
         }
 
         private void SaveOldXMLPath(string filePath)
