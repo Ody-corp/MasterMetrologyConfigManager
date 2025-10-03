@@ -10,7 +10,7 @@ using System.Windows.Media;
 using System.Windows;
 using System.Xml;
 using MasterMetrology.Models.Data;
-using MasterMetrology.Core;
+using MasterMetrology.Core.Rendering;
 
 namespace MasterMetrology
 {
@@ -44,7 +44,12 @@ namespace MasterMetrology
             outputsDefModelDatas = list.OutputDefinition;
             statesModelDatas = list.FullListStateModelData;
 
-            visualRender.RenderStates(statesModelDatas);
+            visualRender.RenderStates(statesModelDatas, 
+                Config.DEFAULT_VALUE_CANVAS_CENTER, 
+                Config.DEFAULT_VALUE_CANVAS_CENTER, 
+                Config.DEFAULT_VALUE_SPACING_X, 
+                Config.DEFAULT_VALUE_SPACING_Y
+                );
         }
 
         private void SaveOldXMLPath(string filePath)

@@ -16,7 +16,7 @@ namespace MasterMetrology
         List<StateModelData> FullListStateModelData = new List<StateModelData>();
         Stack<StateModelData> stack = new Stack<StateModelData>();
 
-        
+        Stack<string> stackIndex = new Stack<string>();
 
         public (List<InputsDefModelData> InputsDefinition, List<OutputModelData> OutputDefinition, List<StateModelData> FullListStateModelData) LoadDataFromFile(string filePath)
         {
@@ -56,17 +56,31 @@ namespace MasterMetrology
                                 stack.Peek().TransitionsData.Add(new TransitionModelData
                                 {
                                     Input = reader.GetAttribute("Input"),
-                                    NextState = reader.GetAttribute("NextState")
+                                    NextStage = reader.GetAttribute("NextState")
                                 });
                             }
                         }
                         else if (reader.Name == "State")
                         {
+                            stackIndex.Push(reader.GetAttribute("Index"));
+                            string tempFullIndex;
+
+                            if (stackIndex.Count > 0)
+                            {
+                                tempFullIndex = string.Join(".", stackIndex);
+                            }
+                            else
+                            {
+                                tempFullIndex = stackIndex.First();
+                            }
+
+
                             var state = new StateModelData()
                             {
                                 Name = reader.GetAttribute("Name"),
                                 Index = reader.GetAttribute("Index"),
                                 Output = reader.GetAttribute("Output"),
+                                FullIndex = tempFullIndex,
                             };
 
                             if (stack.Count > 0)
@@ -84,6 +98,7 @@ namespace MasterMetrology
                     else if (reader.NodeType == XmlNodeType.EndElement && reader.Name == "State")
                     {
                         stack.Pop();
+                        stackIndex.Pop();
                     }
                 }
                 

@@ -1,9 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using System.Windows;
 
 namespace MasterMetrology.Models.Data
 {
@@ -11,6 +13,7 @@ namespace MasterMetrology.Models.Data
     {
         private string input;
         private string nextStage;
+        private ObservableCollection<Point> pathPoints = new();
 
         public string Input
         {
@@ -36,7 +39,16 @@ namespace MasterMetrology.Models.Data
                 }
             }
         }
-
+        
+        public ObservableCollection<Point> PathPoints
+        {
+            get => pathPoints;
+            set 
+            { 
+                pathPoints = value; 
+                OnPropertyChanged(nameof(PathPoints)); 
+            }
+        }
         public event PropertyChangedEventHandler? PropertyChanged;
         protected void OnPropertyChanged(string propertyName)
             => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));

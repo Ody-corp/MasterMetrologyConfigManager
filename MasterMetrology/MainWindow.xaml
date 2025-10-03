@@ -88,10 +88,10 @@
                 </Grid>
                 <Grid Height="auto" Grid.Column="1" >
                     
-                    <StackPanel Orientation="Vertical" Margin="20" Background="Blue">
-                        <StackPanel Orientation="Horizontal" Background="Yellow">
-                            <Label Background="Green">Name</Label>
-                            <TextBox Background="White" Margin="5" MinWidth="200">Ahoj</TextBox>
+                    <StackPanel Orientation="Vertical" Margin="20" Background="White">
+                        <StackPanel Orientation="Horizontal" Background="White">
+                            <Label Background="White">Name</Label>
+                            <TextBox Background="White" Margin="5" MinWidth="200">#####</TextBox>
                         </StackPanel>
                         
                     </StackPanel>
