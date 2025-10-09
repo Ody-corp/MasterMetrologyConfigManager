@@ -12,7 +12,7 @@ namespace MasterMetrology.Models.Visual
 {
     internal class StateModelVisual
     {
-        public Grid CreateTableData(double x, double y, string name, string index)
+        /*public Grid CreateTableData(double x, double y, string name, string index)
         {
             var border = new Border
             {
@@ -72,9 +72,8 @@ namespace MasterMetrology.Models.Visual
                 Margin = new Thickness(Config.DEFAULT_VALUE_GRID_MARGIN)
             };
 
-            var innerPanel = new StackPanel
+            var innerGrid = new Grid
             {
-                Orientation = Orientation.Vertical,
                 Margin = new Thickness(
                     0, 
                     Config.DEFAULT_VALUE_INNER_PANEL_MARGIN, 
@@ -82,7 +81,7 @@ namespace MasterMetrology.Models.Visual
                     0)
             };
 
-            grid.Children.Add(innerPanel);
+            grid.Children.Add(innerGrid);
             grid.Children.Add(border);
             grid.Children.Add(text);
 
@@ -90,6 +89,73 @@ namespace MasterMetrology.Models.Visual
             Canvas.SetTop(grid, y);
 
             return grid;
+        }*/
+        public Grid CreateTableData(double x, double y, string name, string index)
+        {
+            var border = new Border
+            {
+                Background = Brushes.LightBlue,
+                BorderBrush = Brushes.Black,
+                BorderThickness = new Thickness(Config.DEFAULT_VALUE_BORDER_THICKNESS)
+            };
+
+            var text = new TextBlock
+            {
+                Text = name.Substring(6).Replace("_", " ") + "\n" + index,
+                Margin = new Thickness(Config.DEFAULT_VALUE_TEXT_MARGIN),
+                HorizontalAlignment = HorizontalAlignment.Center,
+                VerticalAlignment = VerticalAlignment.Center,
+                TextAlignment = TextAlignment.Center
+            };
+
+            var grid = new Grid
+            {
+                MinWidth = 100,
+                MinHeight = 60,
+                Margin = new Thickness(Config.DEFAULT_VALUE_GRID_MARGIN)
+            };
+
+            grid.Children.Add(border);
+            grid.Children.Add(text);
+
+            Canvas.SetLeft(grid, x);
+            Canvas.SetTop(grid, y);
+
+            return grid;
+        }
+
+        // Sekcia je len vizuálny obrys – neobsahuje žiadne deti
+        public Grid CreateSectionBorder(string name, string index, Rect bounds)
+        {
+            var border = new Border
+            {
+                BorderBrush = Brushes.Black,
+                BorderThickness = new Thickness(Config.DEFAULT_VALUE_BORDER_THICKNESS),
+                Background = Brushes.Transparent,
+                CornerRadius = new CornerRadius(4),
+                Width = bounds.Width,
+                Height = bounds.Height,
+            };
+
+            var label = new TextBlock
+            {
+                Text = $"{name.Substring(6).Replace("_", " ")}\n{index}",
+                FontWeight = FontWeights.Bold,
+                Background = Brushes.Transparent,
+                Margin = new Thickness(8),
+                VerticalAlignment = VerticalAlignment.Top,
+                HorizontalAlignment = HorizontalAlignment.Left
+            };
+
+            // Pridáme text ako overlay
+            var container = new Grid();
+            container.Children.Add(border);
+            container.Children.Add(label);
+
+            Canvas.SetLeft(container, bounds.X);
+            Canvas.SetTop(container, bounds.Y);
+
+            return container;
         }
     }
 }
