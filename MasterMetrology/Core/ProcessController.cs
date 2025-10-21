@@ -14,13 +14,13 @@ using MasterMetrology.Core.Rendering;
 
 namespace MasterMetrology
 {
-    internal class ProcessController(Panel viewPort)
+    internal class ProcessController(Canvas viewPort)
     {
 
         private readonly StateModelVisual _DataModelVisual = new StateModelVisual();
-        private Panel viewPort = viewPort;
+        private Canvas viewPort = viewPort;
         private FileReader _fileReader = new FileReader();
-        private VisualRendering visualRender = new VisualRendering(viewPort);
+        private VisualRendering visualRender = new VisualRendering();
 
         private List<InputsDefModelData> inputsDefModelDatas;
         private List<OutputModelData> outputsDefModelDatas;
@@ -44,12 +44,7 @@ namespace MasterMetrology
             outputsDefModelDatas = list.OutputDefinition;
             statesModelDatas = list.FullListStateModelData;
 
-            visualRender.RenderStates(statesModelDatas, 
-                Config.DEFAULT_VALUE_CANVAS_CENTER, 
-                Config.DEFAULT_VALUE_CANVAS_CENTER, 
-                Config.DEFAULT_VALUE_SPACING_X, 
-                Config.DEFAULT_VALUE_SPACING_Y
-                );
+            visualRender.RenderGraph(statesModelDatas, viewPort);
         }
 
         private void SaveOldXMLPath(string filePath)

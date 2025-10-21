@@ -1,0 +1,33 @@
+<UserControl x:Class="MasterMetrology.Controls.StateSection"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:local="clr-namespace:MasterMetrology.Controls"
+             Background="Transparent">
+
+    <Border x:Name="SectionBorder"
+
+            CornerRadius="15"
+            Background="#221F2E"
+            SnapsToDevicePixels="True">
+        <Grid Margin="10">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="*"/>
+            </Grid.RowDefinitions>
+
+            
+            <TextBlock x:Name="SectionTitle"
+                       Grid.Row="0"
+                       Text="Section"
+                       FontWeight="Bold"
+                       FontSize="16"
+                       Foreground="Black"
+                       Margin="5,0,0,5"/>
+
+            
+            <Canvas x:Name="InnerCanvas" Grid.Row="1"
+                    Background="Transparent"
+                    IsHitTestVisible="False"/>
+        </Grid>
+    </Border>
+</UserControl>

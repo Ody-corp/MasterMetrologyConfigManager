@@ -73,6 +73,8 @@
 
                             <!-- top layer: objects -->
                             <Canvas x:Name="DiagramCanvas" Width="50000" Height="50000" Background="Transparent">
+                                <Canvas x:Name="GraphLayer" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" Background="Transparent"/>
+
                                 <!-- transform and zoom locked with bottom layer -->
                                 <Canvas.RenderTransform>
                                     <TransformGroup>

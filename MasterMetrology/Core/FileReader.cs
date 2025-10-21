@@ -67,7 +67,7 @@ namespace MasterMetrology
 
                             if (stackIndex.Count > 0)
                             {
-                                tempFullIndex = string.Join(".", stackIndex);
+                                tempFullIndex = string.Join(".", stackIndex.Reverse());
                             }
                             else
                             {

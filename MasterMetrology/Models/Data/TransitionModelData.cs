@@ -9,7 +9,7 @@ using System.Windows;
 
 namespace MasterMetrology.Models.Data
 {
-    internal class TransitionModelData : INotifyPropertyChanged
+    public class TransitionModelData : INotifyPropertyChanged
     {
         private string input;
         private string nextStage;

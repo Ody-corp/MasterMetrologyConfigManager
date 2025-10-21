@@ -9,7 +9,7 @@ using System.Threading.Tasks;
 
 namespace MasterMetrology.Models.Data
 {
-    internal class StateModelData : INotifyPropertyChanged
+    public class StateModelData : INotifyPropertyChanged
     {
         private string name;
         private string index;
