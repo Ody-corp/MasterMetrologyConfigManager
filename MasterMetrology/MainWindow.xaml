@@ -88,16 +88,55 @@
                         </Grid>
                     </Border>
                 </Grid>
-                <Grid Height="auto" Grid.Column="1" >
-                    
-                    <StackPanel Orientation="Vertical" Margin="20" Background="White">
-                        <StackPanel Orientation="Horizontal" Background="White">
-                            <Label Background="White">Name</Label>
-                            <TextBox Background="White" Margin="5" MinWidth="200">#####</TextBox>
-                        </StackPanel>
-                        
-                    </StackPanel>
-                    <Button Content="Button" Width="50" Height="20" Click="OnClickSpawnObject"/>
+                <Grid Height="auto" Grid.Column="1" MinWidth="300">
+
+                    <Grid Margin="12">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="*"/>
+                            <!-- rezervované pre transitions list -->
+                        </Grid.RowDefinitions>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="100"/>
+                            <!-- labels -->
+                            <ColumnDefinition Width="*"/>
+                            <!-- inputs -->
+                        </Grid.ColumnDefinitions>
+
+                        <Label Grid.Row="0" Grid.Column="0" Content="Name"/>
+                        <TextBox Grid.Row="0" Grid.Column="1" x:Name="TxtName" Margin="2.5"/>
+
+                        <Label Grid.Row="1" Grid.Column="0" Content="ID"/>
+                        <TextBox Grid.Row="1" Grid.Column="1" x:Name="TxtId" Margin="2.5"/>
+
+                        <Label Grid.Row="2" Grid.Column="0" Content="Full Index"/>
+                        <TextBox Grid.Row="2" Grid.Column="1" x:Name="TxtFullIndex" Margin="2.5" IsReadOnly="True" Background="LightGray"/>
+
+                        <Label Grid.Row="3" Grid.Column="0" Content="Output"/>
+                        <TextBox Grid.Row="3" Grid.Column="1" x:Name="TxtOutput" Margin="2.5"/>
+
+                        <!-- Transitions area -->
+                        <GroupBox Grid.Row="4" Grid.Column="0" Grid.ColumnSpan="2" Header="Transitions" Margin="0,8,0,0">
+                            <DockPanel>
+                                <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="0,4,0,8">
+                                    <Label>Input</Label>
+                                    <TextBox x:Name="TxtNewTransitionInput" MinWidth="40" MaxWidth="50" Margin="0,3,8,3" />
+                                    <Label>Target</Label>
+
+                                    <ComboBox x:Name="CmbTransitionTarget" Width="180" Margin="0,3,8,3" />
+                                    <Button x:Name="BtnAddTransition" Content="Add" Click="BtnAddTransition_Click" Width="40" Margin="0,3,8,3"/>
+                                    <Button x:Name="BtnRemoveTransition" Content="Remove selected" Click="BtnRemoveTransition_Click" Margin="0,3,0,3"/>
+
+                                </StackPanel>
+
+                                <ListBox x:Name="LstTransitions" DisplayMemberPath="DisplayText" Height="auto" Width="auto" Margin="20,10,20,10" SelectionChanged="LstTransitions_SelectionChanged"/>
+
+                            </DockPanel>
+                        </GroupBox>
+                    </Grid>
                 </Grid>
             </Grid>
         </DockPanel>

@@ -1,8 +1,8 @@
 ﻿using GraphX;
 using GraphX.Controls;
 using GraphX.PCL.Common.Enums;
-using MasterMetrology.Controls;
 using MasterMetrology.Core.GraphX;
+using MasterMetrology.Core.GraphX.Controls;
 using MasterMetrology.Models.Data;
 using MasterMetrology.Models.Visual;
 using System;
@@ -19,12 +19,16 @@ namespace MasterMetrology.Core.Rendering
 {
     internal class VisualRendering
     {
-        public void RenderGraph(List<StateModelData> states, Canvas graphLayer)
+        public StateGraphArea LastGraphArea { get; private set; }
+        public StateGraph LastGraph { get; private set; }
+
+        public void RenderGraph(List<StateModelData> states, Canvas graphLayer, Action<GraphVertex> onVertexSelected = null)
         {
             graphLayer.Children.Clear();
 
             // 1️⃣ Vytvoríme GraphX graf
             var graph = new StateGraph();
+            LastGraph = graph;
 
             // Mapovanie state -> vertex
             var vertexMap = new Dictionary<string, GraphVertex>();
@@ -32,10 +36,7 @@ namespace MasterMetrology.Core.Rendering
             // 2️⃣ Najprv pridaj všetky stavy ako uzly
             foreach (var state in states)
                 AddStateRecursive(state, graph, vertexMap);
-            foreach (var element in vertexMap)
-            {
-            //    Debug.WriteLine($"{element.Key} - {element.Value}");
-            }
+
             // 3️⃣ Potom pridaj všetky prechody ako hrany
             foreach (var state in states)
                 AddTransitionsRecursive(state, graph, vertexMap);
@@ -48,8 +49,11 @@ namespace MasterMetrology.Core.Rendering
                 DefaultLayoutAlgorithm = LayoutAlgorithmTypeEnum.FR,
                 DefaultOverlapRemovalAlgorithm = OverlapRemovalAlgorithmTypeEnum.OneWayFSA,
                 DefaultEdgeRoutingAlgorithm = EdgeRoutingAlgorithmTypeEnum.None,
-                EnableParallelEdges = false
+                EnableParallelEdges = true 
             };
+
+            var factory = new CustomControlFactory();
+            
 
             // 5️⃣ Vytvor GraphArea a vygeneruj vizuál
             var graphArea = new StateGraphArea
@@ -58,54 +62,42 @@ namespace MasterMetrology.Core.Rendering
                 Width = Config.DEFAULT_VALUE_CANVAS_X,
                 Height = Config.DEFAULT_VALUE_CANVAS_Y,
                 Background = Brushes.Transparent,
-                
+                ControlFactory = factory
             };
 
-             
-            
+            factory.FactoryRootArea = graphArea;
+
+            LastGraphArea = graphArea;
+
+            graphLayer.Children.Add(graphArea);
+
+            graphArea.GenerateGraph(true);
+            graphArea.SetVerticesDrag(true, true);
+            graphArea.ShowAllEdgesLabels(true);
 
             foreach (var vc in graphArea.VertexList.Values)
             {
-                var vertex = vc.Vertex as GraphVertex;
-                if (vertex == null) continue;
+                // capture local
+                var vertexObj = vc.Vertex as GraphVertex;
+                if (vertexObj == null) continue;
 
-                
-                    if (vertex is GraphVertexSection)
+                vc.MouseLeftButtonUp += (s, e) =>
+                {
+                    try
                     {
-                        // 👉 Sekcia – použije SectionVertexTemplate z App.xaml
-                        vc.SetResourceReference(ContentControl.ContentTemplateProperty, "SectionVertexTemplate");
+                        onVertexSelected?.Invoke(vertexObj);
+                        e.Handled = true;
                     }
-                    else
-                    {
-                        // 👉 Bežný stav – použije StateVertexTemplate
-                        vc.SetResourceReference(ContentControl.ContentTemplateProperty, "StateVertexTemplate");
-                    }
-                
-                
+                    catch { }
+                };
             }
-            graphArea.GenerateGraph(true);
 
-            graphArea.SetVerticesDrag(true, true);
-            graphArea.ShowAllEdgesLabels(true);
-            //graphArea.ShowAllVerticesLabels(true);
+            UpdateSubPositions(graphArea, graph);
 
-            // 6️⃣ Pridaj GraphArea do hlavného Canvasu
-            graphLayer.Children.Add(graphArea);
+            graphArea.LayoutUpdated += (s, e) => UpdateSubPositions(graphArea, graph);
 
-            //graphArea.Dispatcher.BeginInvoke(() =>
-            //{
-            //    DrawSections(graphLayer, states);
-            //});
+
             graphArea.RelayoutGraph();
-
-            //try
-            //{
-            //    graphArea.RelayoutGraph();
-            //}
-            //catch (ArgumentOutOfRangeException ex)
-            //{
-            //    Debug.WriteLine("⚠️ GraphX edge layout failed: " + ex.Message);
-            //}
 
             // Zarovnaj do stredu
             double centerX = (Config.DEFAULT_VALUE_CANVAS_X - graphArea.DesiredSize.Width) / 2;
@@ -114,29 +106,118 @@ namespace MasterMetrology.Core.Rendering
             Canvas.SetTop(graphArea, centerY);
         }
 
-
-        private void AddStateRecursive(StateModelData state, StateGraph graph, Dictionary<string, GraphVertex> map)
+        // Metóda na refresh vizuálu jedného vertexu (napr. po Apply)
+        public void RefreshVertexVisual(GraphVertex vertex)
         {
+            if (LastGraphArea == null || vertex == null) return;
+            if (!LastGraphArea.VertexList.TryGetValue(vertex, out var vc)) return;
+
+            // ak máš SimpleVertexControl / SectionVertexControl, updateni ich natívnym API
+            if (vc is SimpleVertexControl simple)
+            {
+                simple.UpdateLabel(vertex.State?.Name ?? "");
+            }
+            else if (vc is SectionVertexControl section)
+            {
+                section.SetTitle(vertex.State?.Name ?? "");
+                // prípadne update size ak potrebuješ:
+                // section.SetSize(newWidth, newHeight);
+            }
+        }
+
+        // Helper: nastav pozície sub-vertexov podľa pozície sekcie
+        private void UpdateSubPositions(StateGraphArea graphArea, StateGraph graph)
+        {
+            if (graphArea?.VertexList == null) return;
+
+            foreach (var section in graph.Vertices.OfType<GraphVertexSection>())
+            {
+                if (!graphArea.VertexList.TryGetValue(section, out var vcSection)) continue;
+
+                var sectionPos = vcSection.GetPosition();
+                var secControl = vcSection as SectionVertexControl;
+                if (secControl == null) continue;
+
+                // definuj vnútorné paddingy a offsets
+                double offsetX = 12;
+                double offsetYStart = 44;
+                double spacing = 60;
+
+                double maxRight = 0;
+                double maxBottom = offsetYStart;
+
+                for (int i = 0; i < section.SubVertices.Count; i++)
+                {
+                    var sub = section.SubVertices[i];
+                    if (!graphArea.VertexList.TryGetValue(sub, out var vcSub)) continue;
+
+                    double relX = offsetX;
+                    double relY = offsetYStart + i * spacing;
+                    double finalX = sectionPos.X + relX;
+                    double finalY = sectionPos.Y + relY;
+
+                    // Z-index: sub nad sekciou
+                    if (vcSub is UIElement subUi) Panel.SetZIndex(subUi, 1);
+                    if (vcSection is UIElement secUi) Panel.SetZIndex(secUi, 0);
+
+                    // nastav poziciu sub-vertexu
+                    try
+                    {
+                        vcSub.SetPosition(finalX, finalY);
+                    }
+                    catch
+                    {
+                        Canvas.SetLeft(vcSub, finalX);
+                        Canvas.SetTop(vcSub, finalY);
+                    }
+
+                    // track boundary for auto-size
+                    double right = relX + (vcSub?.ActualWidth ?? vcSub?.Width ?? 120);
+                    double bottom = relY + (vcSub?.ActualHeight ?? vcSub?.Height ?? 48);
+                    if (right > maxRight) maxRight = right;
+                    if (bottom > maxBottom) maxBottom = bottom;
+                }
+
+                // compute new size with padding
+                double newWidth = Math.Max(secControl.SectionWidth, maxRight + 20);
+                double newHeight = Math.Max(secControl.SectionHeight, maxBottom + 20);
+
+                // apply size if changed
+                if (Math.Abs(newWidth - secControl.SectionWidth) > 1 || Math.Abs(newHeight - secControl.SectionHeight) > 1)
+                {
+                    secControl.SetSize(newWidth, newHeight);
+                }
+            }
+        }
+
+        private GraphVertex AddStateRecursive(StateModelData state, StateGraph graph, Dictionary<string, GraphVertex> map)
+        {
+            if (state == null) return null;
+
             GraphVertex vertex;
 
             if (state.SubStatesData != null && state.SubStatesData.Count > 0)
             {
-                vertex = new GraphVertexSection(state); // sekcia
-                Debug.WriteLine($"[AddStateRecursive] - section - {state.Name}");
+                var sectionVertex = new GraphVertexSection(state);
+                vertex = sectionVertex;
+
+                foreach (var sub in state.SubStatesData)
+                {
+                    var child = AddStateRecursive(sub, graph, map);
+                    if (child != null)
+                        sectionVertex.SubVertices.Add(child);
+                }
             }
             else
             {
-                vertex = new GraphVertex(state); // bežný stav
-                Debug.WriteLine($"[AddStateRecursive] - state - {state.Name}");
+                vertex = new GraphVertex(state);
             }
 
             graph.AddVertex(vertex);
             map[state.FullIndex] = vertex;
-
-            // Rekurzívne pridaj podstavy
-            foreach (var sub in state.SubStatesData)
-                AddStateRecursive(sub, graph, map);
+            return vertex;
         }
+
 
 
         private void AddTransitionsRecursive(StateModelData state, StateGraph graph, Dictionary<string, GraphVertex> map)
@@ -152,10 +233,8 @@ namespace MasterMetrology.Core.Rendering
             {
                 // Zoskup podľa cieľa
                 var grouped = state.TransitionsData.GroupBy(t => t.NextStage);
-                Debug.WriteLine($"State: {state.Name} transitions: {grouped.ToList()}");
                 foreach (var g in grouped)
                 {
-                    Debug.WriteLine($"{g}");
                     if (!map.TryGetValue(state.FullIndex, out var from))
                     {
                         Debug.WriteLine($"⚠️ Missing FROM: {state.FullIndex}");
@@ -179,99 +258,62 @@ namespace MasterMetrology.Core.Rendering
             }
         }
 
-        private void DrawSections(Canvas canvas, List<StateModelData> states)
+        public void RemoveTransition(TransitionModelData transition)
         {
-            foreach (var state in states)
-            {
-                if (state.SubStatesData == null || state.SubStatesData.Count == 0)
-                    continue;
+            if (LastGraphArea == null || LastGraph == null || transition == null) return;
 
-                var section = new StateSection(state)
+            // nájdi GraphEdge (model) a EdgeControl (vizuál)
+            var ec = LastGraphArea.EdgesList.Values.FirstOrDefault(e => (e.Edge as GraphEdge)?.Transition == transition);
+            var modelEdge = ec?.Edge as GraphEdge;
+
+            if (modelEdge != null)
+            {
+                // odstráň model hrany
+                LastGraph.RemoveEdge(modelEdge);
+
+                // odstráň vizuál (EdgeControl)
+                try
                 {
-                    Width = 400,
-                    Height = 300
-                };
+                    LastGraphArea.RemoveEdge(modelEdge);
+                }
+                catch { }
 
-                // Tu sa rozhodneš, kam ju umiestniť
-                Canvas.SetLeft(section, Config.DEFAULT_VALUE_CANVAS_CENTER);
-                Canvas.SetTop(section, Config.DEFAULT_VALUE_CANVAS_CENTER);
-
-                canvas.Children.Add(section);
-
-                // Rekurzívne pridaj aj podsekcie
-                DrawSections(canvas, state.SubStatesData.ToList());
+                // refresh / relayout
+                try { LastGraphArea.RelayoutGraph(); } catch { LastGraphArea.UpdateLayout(); }
             }
         }
 
-        private List<StateModelData> GetAllSubStates(StateModelData parent)
+        public void AddTransition(TransitionModelData transition)
         {
-            var result = new List<StateModelData>();
+            if (LastGraphArea == null || LastGraph == null || transition == null) return;
 
-            foreach (var sub in parent.SubStatesData)
+            // nájdi zodpovedajúce GraphVertex (podľa FullIndex)
+            var from = LastGraph.Vertices.FirstOrDefault(v => v.State?.FullIndex == transition.FromStage);
+            var to = LastGraph.Vertices.FirstOrDefault(v => v.State?.FullIndex == transition.NextStage);
+
+            if (from == null || to == null)
             {
-                result.Add(sub);
-                if (sub.SubStatesData != null && sub.SubStatesData.Count > 0)
-                    result.AddRange(GetAllSubStates(sub));
+                // ak nie je vertex v grafe, nemôžeme pridať (môžeš rozšíriť, aby sme pridali aj nové vertexy)
+                return;
             }
 
-            return result;
-        }
-
-        private void DrawSection(Canvas canvas, StateModelData section, List<VertexControl> subVertices)
-        {
-            if (subVertices == null || subVertices.Count == 0)
-                return;
-
-            // Vyfiltruj len vertexy, ktoré majú platné pozície
-            var validVertices = subVertices
-        .Where(v =>
-            !double.IsNaN(Canvas.GetLeft(v)) &&
-            !double.IsNaN(Canvas.GetTop(v)) &&
-            v.ActualWidth > 0 &&
-            v.ActualHeight > 0)
-        .ToList();
-            if (validVertices.Count == 0)
-                return;
-
-            double minX = validVertices.Min(v => Canvas.GetLeft(v));
-            double minY = validVertices.Min(v => Canvas.GetTop(v));
-            double maxX = validVertices.Max(v => Canvas.GetLeft(v) + v.ActualWidth);
-            double maxY = validVertices.Max(v => Canvas.GetTop(v) + v.ActualHeight);
-
-            var border = new Border
+            var newEdge = new GraphEdge(from, to, transition)
             {
-                Width = (maxX - minX) + 80,
-                Height = (maxY - minY) + 80,
-                Background = new SolidColorBrush(Color.FromArgb(25, 100, 180, 255)),
-                BorderBrush = Brushes.SteelBlue,
-                BorderThickness = new Thickness(4),
-                CornerRadius = new CornerRadius(12),
-                SnapsToDevicePixels = true
+                Label = transition.Input ?? ""
             };
 
-            var label = new TextBlock
+            LastGraph.AddEdge(newEdge);
+
+            // re-generate / relayout graf tak, aby sa zobrazil nová hrana
+            try
             {
-                Text = section.Name.Substring(6).Replace("_", " "),
-                Foreground = Brushes.DarkBlue,
-                FontSize = 18,
-                FontWeight = FontWeights.SemiBold,
-                Margin = new Thickness(10, -25, 0, 0)
-            };
-
-            var container = new Canvas();
-            container.Children.Add(border);
-            container.Children.Add(label);
-
-            Canvas.SetLeft(container, minX - 40);
-            Canvas.SetTop(container, minY - 40);
-
-            Canvas.SetLeft(label, 10);
-            Canvas.SetTop(label, 5);
-
-            if (!canvas.Children.Contains(container))
-                canvas.Children.Insert(0, container);
+                LastGraphArea.GenerateGraph(true);
+                LastGraphArea.RelayoutGraph();
+            }
+            catch
+            {
+                try { LastGraphArea.RelayoutGraph(); } catch { LastGraphArea.UpdateLayout(); }
+            }
         }
-
-
     }
 }

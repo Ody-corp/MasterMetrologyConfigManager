@@ -13,6 +13,7 @@ namespace MasterMetrology.Models.Data
     {
         private string input;
         private string nextStage;
+        private string fromStage;
         private ObservableCollection<Point> pathPoints = new();
 
         public string Input
@@ -36,6 +37,18 @@ namespace MasterMetrology.Models.Data
                 {
                     nextStage = value;
                     OnPropertyChanged(nameof(NextStage));
+                }
+            }
+        }
+        public string FromStage
+        {
+            get => fromStage;
+            set
+            {
+                if (fromStage != value)
+                {
+                    fromStage = value;
+                    OnPropertyChanged(nameof(FromStage));
                 }
             }
         }
