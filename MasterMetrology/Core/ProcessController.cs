@@ -79,13 +79,9 @@ namespace MasterMetrology
                 }
 
                 foreach (var r in roots)
-                    collect(r);
-
-                if (roots != null)
                 {
-                    foreach (var r in roots)
-                        collect(r);
-                }
+                    collect(r);
+                }         
             }
 
             if (Application.Current?.Dispatcher != null && !Application.Current.Dispatcher.CheckAccess())
@@ -160,7 +156,9 @@ namespace MasterMetrology
             };
 
             if (owner.TransitionsData == null)         
-                owner.TransitionsData = new System.Collections.ObjectModel.ObservableCollection<TransitionModelData>();
+                owner.TransitionsData = new ObservableCollection<TransitionModelData>();
+
+            owner.TransitionsData.Add(newT);
 
             var vm = new TransitionViewModel(newT, owner.FullIndex);
 

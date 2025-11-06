@@ -5,6 +5,7 @@ using MasterMetrology.Core.GraphX;
 using MasterMetrology.Core.GraphX.Controls;
 using MasterMetrology.Models.Data;
 using MasterMetrology.Models.Visual;
+using QuickGraph;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -247,11 +248,8 @@ namespace MasterMetrology.Core.Rendering
                         continue;
                     }
 
-                    var rep = g.First();
-                    var edge = new GraphEdge(from, to, rep)
-                    {
-                        Label = string.Join(", ", g.Select(t => t.Input).Where(s => !string.IsNullOrWhiteSpace(s)))
-                    };
+                    var transitionsForThisPair = g.ToList();
+                    var edge = new GraphEdge(from, to, transitionsForThisPair);
 
                     graph.AddEdge(edge);
                 }
@@ -263,57 +261,211 @@ namespace MasterMetrology.Core.Rendering
             if (LastGraphArea == null || LastGraph == null || transition == null) return;
 
             // nájdi GraphEdge (model) a EdgeControl (vizuál)
-            var ec = LastGraphArea.EdgesList.Values.FirstOrDefault(e => (e.Edge as GraphEdge)?.Transition == transition);
-            var modelEdge = ec?.Edge as GraphEdge;
-
-            if (modelEdge != null)
+            var modelEdge = LastGraph.Edges.OfType<GraphEdge>().FirstOrDefault(e => e.Transitions.Contains(transition));
+            
+            bool removed = modelEdge.RemoveTransition(transition);
+            if (!removed) return;
+            Debug.WriteLine("1. CHECKPOINT");
+            LastGraphArea.Dispatcher.Invoke(() =>
             {
-                // odstráň model hrany
-                LastGraph.RemoveEdge(modelEdge);
-
-                // odstráň vizuál (EdgeControl)
-                try
+                Debug.WriteLine("2. CHECKPOINT");
+                if (modelEdge.Transitions.Count > 0)
                 {
+                    Debug.WriteLine("3.1. CHECKPOINT");
+                    // update edge control label
+                    if (LastGraphArea.EdgesList.TryGetValue(modelEdge, out var ec))
+                    {
+                        /*Debug.WriteLine("4. CHECKPOINT");
+                        try { 
+                            ec.UpdateEdge(true);
+                            Debug.WriteLine("5. CHECKPOINT");
+                        } catch { }*/
+                        /*try
+                        {
+                            ec.InvalidateMeasure();
+                            ec.InvalidateVisual();
+                            LastGraphArea.UpdateLayout();
+                            Debug.WriteLine("5. CHECKPOINT - invalidated & UpdateLayout");
+                        }
+                        catch { }*/
+                        modelEdge.UpdateLabelFromTransitions();
+                        //UpdateEdgeLabelVisual(ec, modelEdge.Label);
+                    }
+                }
+                else
+                {
+                    Debug.WriteLine("3.2. CHECKPOINT");
+                    // no more transitions -> remove edge from model and view
+                    LastGraph.RemoveEdge(modelEdge);
                     LastGraphArea.RemoveEdge(modelEdge);
                 }
-                catch { }
-
-                // refresh / relayout
-                try { LastGraphArea.RelayoutGraph(); } catch { LastGraphArea.UpdateLayout(); }
-            }
+            }, DispatcherPriority.Normal);
         }
 
         public void AddTransition(TransitionModelData transition)
         {
             if (LastGraphArea == null || LastGraph == null || transition == null) return;
-
-            // nájdi zodpovedajúce GraphVertex (podľa FullIndex)
+            
             var from = LastGraph.Vertices.FirstOrDefault(v => v.State?.FullIndex == transition.FromStage);
             var to = LastGraph.Vertices.FirstOrDefault(v => v.State?.FullIndex == transition.NextStage);
 
-            if (from == null || to == null)
+            var existingEdge = LastGraph.Edges.FirstOrDefault(e => e.Source == from && e.Target == to) as GraphEdge;
+            if (existingEdge != null)
             {
-                // ak nie je vertex v grafe, nemôžeme pridať (môžeš rozšíriť, aby sme pridali aj nové vertexy)
-                return;
+                // aktualizovať EdgeControl label ak existuje:
+                existingEdge.AddTransition(transition);
+                LastGraphArea.Dispatcher.Invoke(() =>
+                {
+                    if (LastGraphArea.EdgesList.TryGetValue(existingEdge, out var ec))
+                    {
+                        try { ec.UpdateEdge(true); } catch { }
+                    }
+                }, DispatcherPriority.Normal);
+                // alebo ec.UpdateEdgeRendering(...) podľa API
             }
-
-            var newEdge = new GraphEdge(from, to, transition)
+            else
             {
-                Label = transition.Input ?? ""
-            };
+                // ak hrana neexistuje -> pridaj model edge a vytvor vizuál bez posunu vertexov
+                // 1) uloz pozicie vertexov
+                var positions = LastGraphArea.VertexList.ToDictionary(kvp => kvp.Key, kvp => kvp.Value.GetPosition());
 
-            LastGraph.AddEdge(newEdge);
+                // 2) pridaj modelovu hranu
+                /*var newEdge = new GraphEdge(from, to, new[] { transition });
+                LastGraph.AddEdge(newEdge);
 
-            // re-generate / relayout graf tak, aby sa zobrazil nová hrana
-            try
-            {
-                LastGraphArea.GenerateGraph(true);
-                LastGraphArea.RelayoutGraph();
-            }
-            catch
-            {
-                try { LastGraphArea.RelayoutGraph(); } catch { LastGraphArea.UpdateLayout(); }
+                // 3) regenerate/refresh edges, ale zachovame pozicie vertexy
+                LastGraphArea.Dispatcher.Invoke(() =>
+                {
+                    try
+                    {
+                        // zjednodušené: vygenerujeme edge-controls (bez presunu vertexov, preto ich zarovno obnovíme)
+                        LastGraphArea.GenerateGraph(true);
+                    }
+                    catch
+                    {
+                        try { LastGraphArea.RelayoutGraph(); } catch { }
+                    }
+
+                    // obnov pozicie vertexov aby nebol viditelny presun
+                    foreach (var kv in positions)
+                    {
+                        if (LastGraphArea.VertexList.TryGetValue(kv.Key, out var vc))
+                        {
+                            try { vc.SetPosition(kv.Value); } catch { Canvas.SetLeft(vc, kv.Value.X); Canvas.SetTop(vc, kv.Value.Y); }
+                        }
+                    }
+
+                    // update edge label (najmä novovytvorena)
+                    if (LastGraphArea.EdgesList.TryGetValue(newEdge, out var ecNew))
+                    {
+                        try { ecNew.UpdateEdge(true); } catch { }
+                    }
+                }, DispatcherPriority.Background);*/
+
+                var newEdge = new GraphEdge(from, to, new[] { transition });
+                LastGraph.AddEdge(newEdge);
+
+                // 3) generate only edges for 'from' vertex (or both) - avoid full relayout
+                LastGraphArea.Dispatcher.Invoke(() =>
+                {
+                    try
+                    {
+                        // Preferred: generate edges only for the 'from' vertex (less invasive)
+                        // NOTE: GenerateEdgesForVertex may exist in your GraphX build.
+                        var method = LastGraphArea.GetType().GetMethod("GenerateEdgesForVertex", new Type[] { from.GetType() });
+                        if (method != null)
+                        {
+                            // call GenerateEdgesForVertex(from)
+                            method.Invoke(LastGraphArea, new object[] { from });
+                        }
+                        else
+                        {
+                            // Fallback: generate all edges (less ideal)
+                            var genAll = LastGraphArea.GetType().GetMethod("GenerateAllEdges", new Type[] { });
+                            if (genAll != null) genAll.Invoke(LastGraphArea, null);
+                            else
+                            {
+                                // Ultimate fallback: try to create edge-control via ControlFactory (best-effort)
+                                try
+                                {
+                                    var factory = LastGraphArea.ControlFactory;
+                                    var createEdge = factory?.GetType().GetMethod("CreateEdgeControl");
+                                    if (createEdge != null)
+                                    {
+                                        var ec = createEdge.Invoke(factory, new object[] { newEdge }) as EdgeControl;
+                                        if (ec != null)
+                                        {
+                                            // register it in area
+                                            var addEdgeMethod = LastGraphArea.GetType().GetMethod("AddEdge", new Type[] { newEdge.GetType(), ec.GetType() });
+                                            if (addEdgeMethod != null) addEdgeMethod.Invoke(LastGraphArea, new object[] { newEdge, ec });
+                                        }
+                                    }
+                                }
+                                catch { /* best-effort fallback */ }
+                            }
+                        }
+                    }
+                    catch
+                    {
+                        // Last resort: call GenerateGraph (will relayout) – but we try to avoid this.
+                        try { LastGraphArea.GenerateGraph(true); } catch { }
+                    }
+
+                    // 4) restore saved vertex positions to avoid perceived movement
+                    foreach (var kv in positions)
+                    {
+                        if (LastGraphArea.VertexList.TryGetValue(kv.Key, out var vc))
+                        {
+                            try { vc.SetPosition(kv.Value); } catch { Canvas.SetLeft(vc, kv.Value.X); Canvas.SetTop(vc, kv.Value.Y); }
+                        }
+                    }
+
+                    // 5) ensure newly created edge label is updated
+                    if (LastGraphArea.EdgesList.TryGetValue(newEdge, out var newEc))
+                    {
+                        try { newEc.UpdateEdge(true); } catch { }
+                    }
+                }, System.Windows.Threading.DispatcherPriority.Background);
             }
         }
+        
+
+    private T? FindVisualChild<T>(DependencyObject parent) where T : DependencyObject
+        {
+            if (parent == null) return null;
+            int count = VisualTreeHelper.GetChildrenCount(parent);
+            for (int i = 0; i < count; i++)
+            {
+                var child = VisualTreeHelper.GetChild(parent, i);
+                if (child is T t) return t;
+                var result = FindVisualChild<T>(child);
+                if (result != null) return result;
+            }
+            return null;
+        }
+
+        private void UpdateEdgeLabelVisual(EdgeControl ec, string newLabel)
+        {
+            if (ec == null) return;
+            try
+            {
+                // Najprv skús nájsť TextBlock vnútri EdgeControl
+                var tb = FindVisualChild<TextBlock>(ec);
+                if (tb != null)
+                {
+                    tb.Text = newLabel ?? string.Empty;
+                    tb.InvalidateVisual();
+                }
+                // Force refresh
+                ec.InvalidateMeasure();
+                ec.InvalidateVisual();
+                if (ec.Parent is UIElement p) p.UpdateLayout();
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine("UpdateEdgeLabelVisual failed: " + ex.Message);
+            }
+        }
+
     }
 }
