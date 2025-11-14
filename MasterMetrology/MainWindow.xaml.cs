@@ -3,6 +3,7 @@ using MasterMetrology.Models.Data;
 using MasterMetrology.Models.Visual;
 using Microsoft.Win32;
 using System.ComponentModel;
+using System.Diagnostics;
 using System.Text;
 using System.Windows;
 using System.Windows.Controls;
@@ -153,10 +154,10 @@ namespace MasterMetrology
 
         private void LstTransitions_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
-            if (LstTransitions.SelectedItem is TransitionModelData selectedTransition)
+            if (LstTransitions.SelectedItem is TransitionViewModel selectedTransition)
             {
                 // napríklad zvýrazníš vybraný transition alebo uložíš pre delete
-                System.Diagnostics.Debug.WriteLine($"Selected Transition: {selectedTransition.Input} → {selectedTransition.NextStage}");
+                Debug.WriteLine($"Selected Transition: {selectedTransition.DisplayText}");
             }
         }
     }

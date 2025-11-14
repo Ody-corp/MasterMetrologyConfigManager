@@ -163,9 +163,9 @@ namespace MasterMetrology
             var vm = new TransitionViewModel(newT, owner.FullIndex);
 
             // add to UI collection
-            if (Application.Current?.Dispatcher != null && !Application.Current.Dispatcher.CheckAccess())
-                Application.Current.Dispatcher.Invoke(() => AllTransitions.Add(vm));
-            else
+            //if (Application.Current?.Dispatcher != null && !Application.Current.Dispatcher.CheckAccess())
+            //    Application.Current.Dispatcher.Invoke(() => AllTransitions.Add(vm));
+            //else
                 AllTransitions.Add(vm);
 
             // pridaj do vizuálu (grafu) – VisualRendering sa postará o tom, aby nevykonal celý relayout
