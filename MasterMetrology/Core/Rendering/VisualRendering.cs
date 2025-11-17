@@ -123,65 +123,6 @@ namespace MasterMetrology.Core.Rendering
             Canvas.SetTop(graphArea, centerY);
         }
 
-        private void RefreshEdgeVisual(GraphEdge modelEdge)
-        {
-            if (modelEdge == null || LastGraphArea == null) return;
-
-            LastGraphArea.Dispatcher.Invoke(() =>
-            {
-                try
-                {
-                    var ec = GetEdgeControlForModel(modelEdge);
-                    if (ec == null)
-                    {
-                        var created = TryRegenerateEdgeControlsForEdge(modelEdge);
-                        if (!created)
-                        {
-                            try { LastGraphArea.GenerateGraph(true); } catch (Exception exg) { Debug.WriteLine("RefreshEdgeVisual: full generate fallback failed: " + exg.Message); }
-                        }
-                        ec = GetEdgeControlForModel(modelEdge);
-                    }
-
-                    if (_edgeLabelMap.TryGetValue(modelEdge, out var storedLabel) && storedLabel != null)
-                    {
-                        try { storedLabel.Attach(ec); } catch (Exception ex) { Debug.WriteLine("RefreshEdgeVisual: reattach label failed: " + ex.Message); }
-                    }
-
-                    if (ec != null)
-                    {
-                        try { ec.UpdateEdge(true); } catch (Exception ex) { Debug.WriteLine("RefreshEdgeVisual: ec.UpdateEdge failed: " + ex.Message); }
-                        try { ec.UpdateLabel(); ec.InvalidateVisual(); ec.InvalidateMeasure(); } catch (Exception ex) { Debug.WriteLine("RefreshEdgeVisual: label/update failed: " + ex.Message); }
-                    }
-
-                    try
-                    {
-                        LastGraphArea.UpdateLayout();
-                        LastGraphArea.Dispatcher.Invoke(() => { }, DispatcherPriority.Render);
-                    }
-                    catch (Exception ex) { Debug.WriteLine("RefreshEdgeVisual: UpdateLayout/Render failed: " + ex.Message); }
-                }
-                catch (Exception ex)
-                {
-                    Debug.WriteLine("RefreshEdgeVisual failed: " + ex.Message);
-                }
-            }, DispatcherPriority.Normal);
-        }
-
-        public void RefreshVertexVisual(GraphVertex vertex)
-        {
-            if (LastGraphArea == null || vertex == null) return;
-            if (!LastGraphArea.VertexList.TryGetValue(vertex, out var vc)) return;
-
-            if (vc is SimpleVertexControl simple)
-            {
-                simple.UpdateLabel(vertex.State?.Name ?? "");
-            }
-            else if (vc is SectionVertexControl section)
-            {
-                section.SetTitle(vertex.State?.Name ?? "");
-            }
-        }
-
         private void UpdateSubPositions(StateGraphArea graphArea, StateGraph graph)
         {
             if (graphArea?.VertexList == null) return;
@@ -350,14 +291,6 @@ namespace MasterMetrology.Core.Rendering
             }
         }
 
-        private EdgeControl? GetEdgeControlForModel(GraphEdge modelEdge)
-        {
-            if (LastGraphArea == null || modelEdge == null) return null;
-            if (LastGraphArea.EdgesList.TryGetValue(modelEdge, out var ec)) return ec;
-            var kv = LastGraphArea.EdgesList.FirstOrDefault(k => k.Key == modelEdge);
-            return kv.Value;
-        }
-
         public void RemoveTransition(TransitionModelData transition)
         {
             if (LastGraphArea == null || LastGraph == null || transition == null) return;
@@ -371,23 +304,18 @@ namespace MasterMetrology.Core.Rendering
 
             var removed = modelEdge.RemoveTransition(transition);
             Debug.WriteLine($"RemoveTransition: removed from model, new label='{modelEdge.Text}', removedFlag={removed}");
-            if (!removed) return;
-
-            LastGraphArea.Dispatcher.Invoke(() =>
+            if (!removed) 
             {
-                if (modelEdge.Transitions.Count > 0)
-                {
-                    RefreshEdgeVisual(modelEdge);
-                }
-                else
-                {
-                    try { DetachLabelForEdge(modelEdge); } catch (Exception ex) { Debug.WriteLine("Detach label before remove failed: " + ex.Message); }
-                    try { LastGraphArea.RemoveEdge(modelEdge); } catch (Exception ex) { Debug.WriteLine("RemoveEdge area failed: " + ex.Message); }
-                    try { LastGraph.RemoveEdge(modelEdge); } catch (Exception ex) { Debug.WriteLine("RemoveEdge model failed: " + ex.Message); }
-                    try { LastGraphArea.UpdateLayout(); } catch { }
-                }
-            }, DispatcherPriority.Normal);
-            TryRegenerateEdgeControlsForEdge(modelEdge);
+                return;
+            }
+
+            if (modelEdge.Transitions.Count == 0)
+            {
+                LastGraph.RemoveEdge(modelEdge);
+                Debug.WriteLine("RemoveTransition: removed edge from visual");
+            }
+
+            LastGraphArea.GenerateAllEdges();
         }
 
         public void AddTransition(TransitionModelData transition)
@@ -408,221 +336,16 @@ namespace MasterMetrology.Core.Rendering
             {
                 existingEdge.AddTransition(transition);
                 Debug.WriteLine($"AddTransition: added into existing edge, new label='{existingEdge.Text}'");
+            }
+            else
+            {
+                var savedPositions = LastGraphArea.VertexList.ToDictionary(kvp => kvp.Key, kvp => kvp.Value.GetPosition());
 
-                LastGraphArea.Dispatcher.Invoke(() =>
-                {
-                    RefreshEdgeVisual(existingEdge);
-                    
-                }, DispatcherPriority.Normal);
-                TryRegenerateEdgeControlsForEdge(existingEdge);
-                return;
+                var newEdge = new GraphEdge(from, to, new[] { transition });
+                LastGraph.AddEdge(newEdge);
             }
 
-            var savedPositions = LastGraphArea.VertexList.ToDictionary(kvp => kvp.Key, kvp => kvp.Value.GetPosition());
-
-            var newEdge = new GraphEdge(from, to, new[] { transition });
-            LastGraph.AddEdge(newEdge);
-            LastGraphArea.Dispatcher.Invoke(() =>
-            {
-                
-
-                foreach (var kv in savedPositions)
-                {
-                    if (LastGraphArea.VertexList.TryGetValue(kv.Key, out var vc))
-                    {
-                        try { vc.SetPosition(kv.Value); } catch { Canvas.SetLeft(vc, kv.Value.X); Canvas.SetTop(vc, kv.Value.Y); }
-                    }
-                }
-                RefreshEdgeVisual(newEdge);
-            }, DispatcherPriority.Normal);
-            TryRegenerateEdgeControlsForEdge(newEdge);
             LastGraphArea.GenerateAllEdges();
-        }
-
-        private T? FindVisualChild<T>(DependencyObject parent) where T : DependencyObject
-        {
-            if (parent == null) return null;
-            int count = VisualTreeHelper.GetChildrenCount(parent);
-            for (int i = 0; i < count; i++)
-            {
-                var child = VisualTreeHelper.GetChild(parent, i);
-                if (child is T t) return t;
-                var result = FindVisualChild<T>(child);
-                if (result != null) return result;
-            }
-            return null;
-        }
-
-        private void UpdateEdgeLabelVisual(EdgeControl ec, string newLabel)
-        {
-            if (ec == null) return;
-            try
-            {
-                var tb = FindVisualChild<TextBlock>(ec);
-                if (tb != null)
-                {
-                    tb.Text = newLabel ?? string.Empty;
-                    tb.InvalidateVisual();
-                    Debug.WriteLine("UpdateEdgeLabelVisual: updated TextBlock.");
-                }
-                else
-                {
-                    var lbl = FindVisualChild<Label>(ec);
-                    if (lbl != null)
-                    {
-                        lbl.Content = newLabel ?? string.Empty;
-                        lbl.InvalidateVisual();
-                        Debug.WriteLine("UpdateEdgeLabelVisual: updated Label.");
-                    }
-                    else
-                    {
-                        var cp = FindVisualChild<ContentPresenter>(ec);
-                        if (cp != null)
-                        {
-                            var tb2 = FindVisualChild<TextBlock>(cp);
-                            if (tb2 != null)
-                            {
-                                tb2.Text = newLabel ?? string.Empty;
-                                tb2.InvalidateVisual();
-                                Debug.WriteLine("UpdateEdgeLabelVisual: updated TextBlock inside ContentPresenter.");
-                            }
-                        }
-                        else
-                        {
-                            Debug.WriteLine("UpdateEdgeLabelVisual: no text holder found inside EdgeControl.");
-                        }
-                    }
-                }
-
-                ec.InvalidateMeasure();
-                ec.InvalidateVisual();
-                if (ec.Parent is UIElement p) p.UpdateLayout();
-            }
-            catch (Exception ex)
-            {
-                Debug.WriteLine("UpdateEdgeLabelVisual failed: " + ex.Message);
-            }
-        }
-
-        private bool TryRegenerateEdgeControlsForEdge(GraphEdge modelEdge)
-        {
-            if (LastGraphArea == null || modelEdge == null) return false;
-
-            try
-            {
-                var generateMethods = LastGraphArea.GetType()
-                    .GetMethods(System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic)
-                    .Where(m => m.Name.Contains("Generate") && m.Name.Contains("Edge")).ToList();
-
-                foreach (var m in generateMethods)
-                {
-                    var pars = m.GetParameters();
-                    if (pars.Length == 1)
-                    {
-                        var pType = pars[0].ParameterType;
-                        if (LastGraphArea.VertexList.TryGetValue(modelEdge.Source, out var srcVc) && pType.IsAssignableFrom(srcVc.GetType()))
-                        {
-                            m.Invoke(LastGraphArea, new object[] { srcVc });
-                            Debug.WriteLine($"TryRegenerateEdgeControlsForEdge: invoked {m.Name} with VertexControl");
-                            var newEc = GetEdgeControlForModel(modelEdge);
-                            if (newEc != null && _edgeLabelMap.TryGetValue(modelEdge, out var lbl) && lbl != null)
-                            {
-                                try { lbl.Attach(newEc); } catch (Exception ex) { Debug.WriteLine("Re-attach label failed: " + ex.Message); }
-                            }
-                            LastGraphArea.UpdateLayout();
-                            return true;
-                        }
-                        if (pType.IsAssignableFrom(modelEdge.Source.GetType()))
-                        {
-                            m.Invoke(LastGraphArea, new object[] { modelEdge.Source });
-                            Debug.WriteLine($"TryRegenerateEdgeControlsForEdge: invoked {m.Name} with model vertex");
-                            var newEc = GetEdgeControlForModel(modelEdge);
-                            if (newEc != null && _edgeLabelMap.TryGetValue(modelEdge, out var lbl2) && lbl2 != null)
-                            {
-                                try { lbl2.Attach(newEc); } catch (Exception ex) { Debug.WriteLine("Re-attach label failed: " + ex.Message); }
-                            }
-                            LastGraphArea.UpdateLayout();
-                            return true;
-                        }
-                    }
-                    else if (pars.Length == 0)
-                    {
-                        m.Invoke(LastGraphArea, null);
-                        Debug.WriteLine($"TryRegenerateEdgeControlsForEdge: invoked {m.Name}()");
-                        var newEc = GetEdgeControlForModel(modelEdge);
-                        if (newEc != null && _edgeLabelMap.TryGetValue(modelEdge, out var lbl3) && lbl3 != null)
-                        {
-                            try { lbl3.Attach(newEc); } catch (Exception ex) { Debug.WriteLine("Re-attach label failed: " + ex.Message); }
-                        }
-                        LastGraphArea.UpdateLayout();
-                        return true;
-                    }
-                }
-
-                var factory = LastGraphArea.ControlFactory;
-                if (factory != null && LastGraphArea.VertexList.TryGetValue(modelEdge.Source, out var src) && LastGraphArea.VertexList.TryGetValue(modelEdge.Target, out var tgt))
-                {
-                    var create = factory.GetType().GetMethods().FirstOrDefault(mi => mi.Name.Contains("CreateEdgeControl"));
-                    if (create != null)
-                    {
-                        object ecObj = null;
-                        var pars = create.GetParameters();
-                        if (pars.Length == 3)
-                            ecObj = create.Invoke(factory, new object[] { src, tgt, modelEdge });
-                        else if (pars.Length == 5)
-                            ecObj = create.Invoke(factory, new object[] { src, tgt, modelEdge, true, Visibility.Visible });
-                        else
-                        {
-                            var args = new List<object>();
-                            foreach (var p in pars)
-                            {
-                                if (p.ParameterType.IsAssignableFrom(src.GetType())) args.Add(src);
-                                else if (p.ParameterType.IsAssignableFrom(tgt.GetType())) args.Add(tgt);
-                                else args.Add(null);
-                            }
-                            ecObj = create.Invoke(factory, args.ToArray());
-                        }
-
-                        if (ecObj is EdgeControl ec)
-                        {
-                            try
-                            {
-                                LastGraphArea.EdgesList[modelEdge] = ec;
-                                Debug.WriteLine("TryRegenerateEdgeControlsForEdge: created EdgeControl via factory and registered.");
-
-                                if (_edgeLabelMap.TryGetValue(modelEdge, out var lbl) && lbl != null)
-                                {
-                                    try { lbl.Attach(ec); } catch (Exception ex) { Debug.WriteLine("TryRegenerateEdgeControlsForEdge: reattach label failed - " + ex.Message); }
-                                }
-
-                                LastGraphArea.UpdateLayout();
-                                return true;
-                            }
-                            catch (Exception ex)
-                            {
-                                Debug.WriteLine("TryRegenerateEdgeControlsForEdge: register failed - " + ex.Message);
-                            }
-                        }
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                Debug.WriteLine("TryRegenerateEdgeControlsForEdge failed: " + ex.Message);
-            }
-
-            return false;
-        }
-
-        private void DumpVisualTree(DependencyObject node, int depth)
-        {
-            if (node == null) return;
-            string indent = new string(' ', depth * 2);
-            Debug.WriteLine($"{indent}{node.GetType().Name} {(node is FrameworkElement fe && !string.IsNullOrEmpty(fe.Name) ? " Name=" + fe.Name : "")}");
-
-            int cnt = VisualTreeHelper.GetChildrenCount(node);
-            for (int i = 0; i < cnt; i++)
-                DumpVisualTree(VisualTreeHelper.GetChild(node, i), depth + 1);
         }
     }
 }

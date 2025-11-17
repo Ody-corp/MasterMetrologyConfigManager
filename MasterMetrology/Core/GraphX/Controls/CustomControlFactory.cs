@@ -24,15 +24,7 @@ namespace MasterMetrology.Core.GraphX.Controls
 
         public EdgeControl CreateEdgeControl(VertexControl source, VertexControl target, object edge, bool showArrows = true, Visibility visibility = Visibility.Visible)
         {
-            //if (edge is GraphEdge ge)
-            //{
-            //    var ec = new LabeledEdgeControl(source, target, ge) { Visibility = visibility };
-            //    ec.ShowArrows = showArrows;
-            // /   return ec;
-            //}
-
             var fallback = new EdgeControl(source, target, edge) { Visibility = visibility };
-            fallback.ShowArrows = showArrows;
             return fallback;
         }
     }

@@ -72,6 +72,7 @@ namespace MasterMetrology
                     TxtOutput.Text = "";
                     TxtId.Text = "";
                     _transitionsView.Filter = null;
+                    
                 }
                 _transitionsView.Refresh();
             });
@@ -116,7 +117,7 @@ namespace MasterMetrology
                 if (CmbTransitionTarget.Items.Count > 0) CmbTransitionTarget.SelectedIndex = 0;
 
 
-                System.Diagnostics.Debug.WriteLine(filepath);
+                Debug.WriteLine(filepath);
             }
         }
 
