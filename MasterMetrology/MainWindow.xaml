@@ -96,6 +96,9 @@
                             <RowDefinition Height="Auto"/>
                             <RowDefinition Height="Auto"/>
                             <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
                             <RowDefinition Height="*"/>
                             <!-- rezervované pre transitions list -->
                         </Grid.RowDefinitions>
@@ -105,7 +108,7 @@
                             <ColumnDefinition Width="*"/>
                             <!-- inputs -->
                         </Grid.ColumnDefinitions>
-
+                          
                         <Label Grid.Row="0" Grid.Column="0" Content="Name"/>
                         <TextBox Grid.Row="0" Grid.Column="1" x:Name="TxtName" Margin="2.5"/>
 
@@ -118,17 +121,34 @@
                         <Label Grid.Row="3" Grid.Column="0" Content="Output"/>
                         <TextBox Grid.Row="3" Grid.Column="1" x:Name="TxtOutput" Margin="2.5"/>
 
+                        <!-- PARENT: combobox instead of simple textbox -->
+                        <Label Grid.Row="4" Grid.Column="0" Content="Parent"/>
+                        <ComboBox Grid.Row="4" Grid.Column="1" x:Name="CmbParent" Margin="2.5" DisplayMemberPath="State.Name" SelectionChanged="CmbParent_SelectionChanged"/>
+
+                        <!-- Children area: list + add/remove -->
+                        <Label Grid.Row="5" Grid.Column="0" Content="Children"/>
+                        <StackPanel Grid.Row="5" Grid.Column="1" Orientation="Vertical" Margin="2.5">
+                            <ListBox x:Name="LstChildren" Height="120" DisplayMemberPath="State.Name" SelectionMode="Single" />
+                            <StackPanel Orientation="Horizontal" Margin="0,6,0,0">
+                                <ComboBox x:Name="CmbChild" MinWidth="200" Margin="0,0,8,0" SelectionChanged="CmbChild_SelectionChanged"/>
+                                <Button x:Name="BtnAddChild" Content="Add child" Click="BtnAddChild_Click" Width="80" />
+                                <Button x:Name="BtnRemoveChild" Content="Remove selected" Click="BtnRemoveChild_Click" Width="100" Margin="8,0,0,0"/>
+                            </StackPanel>
+                        </StackPanel>
+
+                        <Button Grid.Row="6" x:Name="BtnApplyEdit" Content="Apply" Click="BtnApplyEdit_Click" Width="100" Margin="8,10,2.5,2.5"/>
+
                         <!-- Transitions area -->
-                        <GroupBox Grid.Row="4" Grid.Column="0" Grid.ColumnSpan="2" Header="Transitions" Margin="0,8,0,0">
+                        <GroupBox Grid.Row="7" Grid.Column="0" Grid.ColumnSpan="2" Header="Transitions" Margin="0,8,0,0">
                             <DockPanel>
                                 <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="0,4,0,8">
                                     <Label>Input</Label>
                                     <TextBox x:Name="TxtNewTransitionInput" MinWidth="40" MaxWidth="50" Margin="0,3,8,3" />
                                     <Label>Target</Label>
 
-                                    <ComboBox x:Name="CmbTransitionTarget" Width="180" Margin="0,3,8,3" />
+                                    <ComboBox x:Name="CmbTransitionTarget" MinWidth="200" Margin="0,3,8,3" />
                                     <Button x:Name="BtnAddTransition" Content="Add" Click="BtnAddTransition_Click" Width="40" Margin="0,3,8,3"/>
-                                    <Button x:Name="BtnRemoveTransition" Content="Remove selected" Click="BtnRemoveTransition_Click" Margin="0,3,0,3"/>
+                                    <Button x:Name="BtnRemoveTransition" Content="Remove selected" Click="BtnRemoveTransition_Click" Margin="0,3,0,3" Width="100"/>
 
                                 </StackPanel>
 

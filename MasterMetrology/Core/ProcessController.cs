@@ -13,6 +13,7 @@ using MasterMetrology.Models.Data;
 using MasterMetrology.Core.Rendering;
 using System.Collections.ObjectModel;
 using System.Windows.Data;
+using System.Diagnostics;
 
 namespace MasterMetrology
 {
@@ -26,10 +27,13 @@ namespace MasterMetrology
 
         private List<InputsDefModelData> inputsDefModelDatas;
         private List<OutputModelData> outputsDefModelDatas;
-        private List<StateModelData> statesModelDatas;
+        private List<StateModelData> statesModelDatas = new List<StateModelData>();
 
         public ObservableCollection<TransitionViewModel> AllTransitions = new ObservableCollection<TransitionViewModel>();
 
+        private readonly List<string> _pendingAdds = new List<string>();
+        private readonly List<string> _pendingRemoves = new List<string>();
+        private string? _pendingParentFullIndex = null;
 
         private string filePath;
 
@@ -174,7 +178,7 @@ namespace MasterMetrology
             return true;
         }
 
-        private StateModelData FindStateByFullIndex(List<StateModelData> list, string fullIndex)
+        private StateModelData? FindStateByFullIndex(List<StateModelData> list, string fullIndex)
         {
             if (list == null || string.IsNullOrEmpty(fullIndex)) return null;
 
@@ -188,6 +192,348 @@ namespace MasterMetrology
                 }
             }
             return null;
+        }
+        public StateModelData? FindStateByFullIndex(string fullIndex)
+        {
+            return FindStateByFullIndex(statesModelDatas, fullIndex);
+        }
+        public StateModelData? FindParentByFullIndex(string childFullIndex)
+        {
+            if (statesModelDatas == null || string.IsNullOrEmpty(childFullIndex)) return null;
+            return FindParentRecursive(statesModelDatas, childFullIndex);
+        }
+
+        private StateModelData? FindParentRecursive(List<StateModelData> list, string childFullIndex)
+        {
+            if (list == null) return null;
+            foreach (var s in list)
+            {
+                if (s.SubStatesData != null)
+                {
+                    // priamy potomok?
+                    if (s.SubStatesData.Any(sub => sub.FullIndex == childFullIndex))
+                        return s;
+
+                    // hľadaj hlbšie
+                    var parent = FindParentRecursive(s.SubStatesData.ToList(), childFullIndex);
+                    if (parent != null) return parent;
+                }
+            }
+            return null;
+        }
+
+        // --- PUBLIC HOOK: UI môže subscribe a zavolať render / refresh ---
+        public Action<List<StateModelData>>? OnPendingChildrenApplied { get; set; }
+
+        // ---------------- UI metódy (volaj z code-behind) ----------------
+
+        public void Add_AddPendingChild(string childFullIndex)
+        {
+            if (string.IsNullOrWhiteSpace(childFullIndex)) return;
+            //if (_pendingRemoves.Contains(childFullIndex)) _pendingRemoves.Remove(childFullIndex);
+            if (!_pendingAdds.Contains(childFullIndex)) _pendingAdds.Add(childFullIndex);
+        }
+
+        public void Remove_AddPendingChild(string childFullIndex)
+        {
+            if (string.IsNullOrWhiteSpace(childFullIndex)) return;
+            _pendingAdds.Remove(childFullIndex);
+        }
+
+        public void Add_RemovePendingChild(string childFullIndex)
+        {
+            if (string.IsNullOrWhiteSpace(childFullIndex)) return;
+            //if (_pendingAdds.Contains(childFullIndex)) _pendingAdds.Remove(childFullIndex);
+            if (!_pendingRemoves.Contains(childFullIndex)) _pendingRemoves.Add(childFullIndex);
+        }
+
+        public void Remove_RemovePendingChild(string childFullIndex)
+        {
+            if (string.IsNullOrWhiteSpace(childFullIndex)) return;
+            _pendingRemoves.Remove(childFullIndex);
+        }
+
+        /// <summary>Set pending parent (null or empty means top-level).</summary>
+        public void SetPendingParent(string? parentFullIndex)
+        {
+            _pendingParentFullIndex = string.IsNullOrWhiteSpace(parentFullIndex) ? null : parentFullIndex;
+        }
+
+        public void ClearPendingChildChanges()
+        {
+            _pendingAdds.Clear();
+            _pendingRemoves.Clear();
+            _pendingParentFullIndex = null;
+        }
+
+        public IReadOnlyList<string> GetPendingAdds() => _pendingAdds.AsReadOnly();
+        public IReadOnlyList<string> GetPendingRemoves() => _pendingRemoves.AsReadOnly();
+        public string? GetPendingParent() => _pendingParentFullIndex;
+
+        // ---------------- Apply (hlavná logika) ----------------
+
+        /// <summary>
+        /// Aplikuje pending adds/removes.
+        /// Pri adds: presunie zo starého parenta pod _pendingParentFullIndex (null => top-level)
+        /// Pri removes: presunie dané položky na top-level (unparent)
+        /// Pri každom presune nastaví novú Index + FullIndex pre ten uzol (nasledujúci AFTER existing max).
+        /// Po aplikácii zavolá OnPendingChildrenApplied ak je prihlásené.
+        /// </summary>
+        public void ApplyPendingChildChanges()
+        {
+            if ((_pendingAdds.Count == 0) && (_pendingRemoves.Count == 0))
+            {
+                ClearPendingChildChanges();
+                return;
+            }
+
+            var movedPairs = new List<(string oldFull, string newFull)>();
+
+            // 1) Removals: unparent -> top-level
+            foreach (var fullIndex in _pendingRemoves.ToList())
+            {
+                var node = FindStateByFullIndex(fullIndex);
+                if (node == null) continue;
+
+                var removed = RemoveStateFromItsParent(node.FullIndex);
+                if (!removed) continue;
+
+                if (statesModelDatas == null) statesModelDatas = new List<StateModelData>();
+                statesModelDatas.Add(node);
+
+                var nextIdx = GetNextIndexForParent(null);
+                var newFull = nextIdx.ToString();
+                UpdateFullIndexRecursive(node, newFull);
+                movedPairs.Add((fullIndex, node.FullIndex));
+            }
+
+            // 2) Adds: presunieme do _pendingParentFullIndex (null => top-level)
+            if (_pendingAdds.Count > 0)
+            {
+                var targetParent = _pendingParentFullIndex; // null => top-level
+
+                foreach (var fullIndex in _pendingAdds.ToList())
+                {
+                    var node = FindStateByFullIndex(fullIndex);
+                    if (node == null) continue;
+
+                    var currentParent = FindParentByFullIndex(node.FullIndex);
+                    if (string.Equals(currentParent.FullIndex, targetParent, StringComparison.Ordinal)) continue;
+
+                    // cycle check: nechceme parent = self alebo potomok
+                    if (targetParent != null)
+                    {
+                        // správne poradie parametrov: descendant, ancestor
+                        if (node.FullIndex == targetParent || IsDescendantByFullIndex(node.FullIndex, targetParent))
+                        {
+                            Debug.WriteLine($"Skip: would create cycle {node.FullIndex} -> {targetParent}");
+                            continue;
+                        }
+                    }
+
+                    RemoveStateFromItsParent(node.FullIndex);
+
+                    if (targetParent == null)
+                    {
+                        if (statesModelDatas == null) statesModelDatas = new List<StateModelData>();
+                        statesModelDatas.Add(node);
+                    }
+                    else
+                    {
+                        var parentNode = FindStateByFullIndex(targetParent);
+                        if (parentNode == null)
+                        {
+                            Debug.WriteLine($"Apply add: target parent {targetParent} not found");
+                            continue;
+                        }
+                        if (parentNode.SubStatesData == null) parentNode.SubStatesData = new ObservableCollection<StateModelData>();
+                        parentNode.SubStatesData.Add(node);
+                    }
+
+                    var nextIdx = GetNextIndexForParent(targetParent);
+                    var newFull = targetParent == null ? nextIdx.ToString() : $"{targetParent}.{nextIdx}";
+                    UpdateFullIndexRecursive(node, newFull);
+                    movedPairs.Add((fullIndex, node.FullIndex));
+                }
+            }
+
+            // 3) Aktualizovať transitions pre každý presun (oldFull -> newFull)
+            foreach (var (oldFull, newFull) in movedPairs)
+            {
+                if (oldFull != newFull)
+                    UpdateTransitionReferencesForMovedNode(oldFull, newFull);
+            }
+
+            ClearPendingChildChanges();
+
+            try
+            {
+                OnPendingChildrenApplied?.Invoke(statesModelDatas ?? new List<StateModelData>());
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine("OnPendingChildrenApplied handler failed: " + ex.Message);
+            }
+        }
+
+        // ---------------- pomocné metódy ----------------
+
+        /// <summary>Vrátí next index (int) pre daného parenta (null => top-level).</summary>
+        private int GetNextIndexForParent(string? parentFullIndex)
+        {
+            IEnumerable<StateModelData> siblings;
+            if (parentFullIndex == null)
+            {
+                siblings = statesModelDatas ?? Enumerable.Empty<StateModelData>();
+            }
+            else
+            {
+                var parent = FindStateByFullIndex(parentFullIndex);
+                siblings = parent?.SubStatesData ?? Enumerable.Empty<StateModelData>();
+            }
+
+            int max = 0;
+            foreach (var s in siblings)
+            {
+                if (!string.IsNullOrWhiteSpace(s.Index) && int.TryParse(s.Index, out var v))
+                {
+                    if (v > max) max = v;
+                    continue;
+                }
+                var seg = s.FullIndex?.Split('.', StringSplitOptions.RemoveEmptyEntries).LastOrDefault();
+                if (int.TryParse(seg, out var v2))
+                {
+                    if (v2 > max) max = v2;
+                }
+            }
+            return max + 1;
+        }
+
+        /// <summary>Odstráni state z jeho aktuálneho parenta (ak existuje). Vracia true ak sa odstránil.</summary>
+        private bool RemoveStateFromItsParent(string fullIndex)
+        {
+            if (statesModelDatas == null || string.IsNullOrWhiteSpace(fullIndex)) return false;
+
+            var top = statesModelDatas.FirstOrDefault(s => s.FullIndex == fullIndex);
+            if (top != null)
+            {
+                statesModelDatas.Remove(top);
+                return true;
+            }
+
+            var parent = FindParentStateOf(fullIndex, statesModelDatas);
+            if (parent != null && parent.SubStatesData != null)
+            {
+                var child = parent.SubStatesData.FirstOrDefault(s => s.FullIndex == fullIndex);
+                if (child != null)
+                {
+                    parent.SubStatesData.Remove(child);
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        /// <summary>
+        /// Rekurzívne nastaví FullIndex a Index pre node + reindexuje jeho subtree (rekurzívne down to any depth).
+        /// Deti dostanú nové lokálne indexy 1..N podľa poradia v kolekcii.
+        /// </summary>
+        private void UpdateFullIndexRecursive(StateModelData node, string newFullIndex)
+        {
+            if (node == null) return;
+
+            node.FullIndex = newFullIndex;
+
+            var last = newFullIndex.Split('.', StringSplitOptions.RemoveEmptyEntries).LastOrDefault() ?? newFullIndex;
+            node.Index = last;
+
+            if (node.SubStatesData != null && node.SubStatesData.Count > 0)
+            {
+                for (int i = 0; i < node.SubStatesData.Count; i++)
+                {
+                    var child = node.SubStatesData[i];
+                    var childFull = $"{newFullIndex}.{i + 1}";
+                    UpdateFullIndexRecursive(child, childFull); // rekurzia—prehĺbenie do akýchkoľvek levelov
+                }
+            }
+        }
+
+        /// <summary>Aktualizuje všetky transitions (FromStage / NextStage) - exact match alebo prefix.</summary>
+        private void UpdateTransitionReferencesForMovedNode(string oldFull, string newFull)
+        {
+            if (statesModelDatas == null) return;
+
+            void walk(StateModelData s)
+            {
+                if (s.TransitionsData != null)
+                {
+                    foreach (var t in s.TransitionsData)
+                    {
+                        if (!string.IsNullOrEmpty(t.FromStage))
+                        {
+                            if (t.FromStage == oldFull) t.FromStage = newFull;
+                            else if (t.FromStage.StartsWith(oldFull + ".")) t.FromStage = newFull + t.FromStage.Substring(oldFull.Length);
+                        }
+                        if (!string.IsNullOrEmpty(t.NextStage))
+                        {
+                            if (t.NextStage == oldFull) t.NextStage = newFull;
+                            else if (t.NextStage.StartsWith(oldFull + ".")) t.NextStage = newFull + t.NextStage.Substring(oldFull.Length);
+                        }
+                    }
+                }
+                if (s.SubStatesData != null)
+                {
+                    foreach (var ss in s.SubStatesData) walk(ss);
+                }
+            }
+
+            foreach (var root in statesModelDatas) walk(root);
+        }
+
+        /// <summary>Vyhľadá parent StateModelData (ktorý má priamo child s daným fullIndex) rekurzívne.</summary>
+        private static StateModelData? FindParentStateOf(string childFullIndex, IEnumerable<StateModelData> nodes)
+        {
+            foreach (var s in nodes)
+            {
+                if (s.SubStatesData != null && s.SubStatesData.Any(x => x.FullIndex == childFullIndex))
+                    return s;
+                if (s.SubStatesData != null && s.SubStatesData.Count > 0)
+                {
+                    var res = FindParentStateOf(childFullIndex, s.SubStatesData);
+                    if (res != null) return res;
+                }
+            }
+            return null;
+        }
+
+        /// <summary>Bezpečné FindStateByFullIndex (rekurzívne).</summary>
+        /*
+        public StateModelData? FindStateByFullIndex(string fullIndex)
+        {
+            if (string.IsNullOrWhiteSpace(fullIndex) || statesModelDatas == null) return null;
+            StateModelData? result = null;
+            void traverse(IEnumerable<StateModelData> list)
+            {
+                if (result != null) return;
+                foreach (var s in list)
+                {
+                    if (s.FullIndex == fullIndex) { result = s; return; }
+                    if (s.SubStatesData != null && s.SubStatesData.Count > 0) traverse(s.SubStatesData);
+                    if (result != null) return;
+                }
+            }
+            traverse(statesModelDatas);
+            return result;
+        }*/
+
+        /// <summary>Check if descendantFullIndex is a child (descendant) of ancestorFullIndex</summary>
+        private static bool IsDescendantByFullIndex(string descendantFullIndex, string ancestorFullIndex)
+        {
+            if (string.IsNullOrWhiteSpace(descendantFullIndex) || string.IsNullOrWhiteSpace(ancestorFullIndex)) return false;
+            if (descendantFullIndex == ancestorFullIndex) return false;
+            if (!descendantFullIndex.StartsWith(ancestorFullIndex)) return false;
+            if (descendantFullIndex.Length == ancestorFullIndex.Length) return false;
+            return descendantFullIndex[ancestorFullIndex.Length] == '.';
         }
     }
 }
