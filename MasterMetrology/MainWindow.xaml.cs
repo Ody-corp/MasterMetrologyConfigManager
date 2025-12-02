@@ -28,10 +28,11 @@ namespace MasterMetrology
         private PanAndZoomController _panZoom;
         private ProcessController _processController;
         private GraphVertex _selectedVertex;
+        private MainWindowView _mainView;
 
         private ICollectionView _transitionsView;
 
-        private List<StateModelData> tempListAddingSubStates = new List<StateModelData>();
+        //private List<StateModelData> tempListAddingSubStates = new List<StateModelData>();
 
         public MainWindow()
         {
@@ -45,6 +46,8 @@ namespace MasterMetrology
             _processController = new ProcessController(GraphLayer);
             _processController.VertexSelected += OnVertexSelected;
             _panZoom.CenterView();
+
+            _mainView = new MainWindowView(_processController);
         }
 
         private void OnVertexSelected(GraphVertex v)
@@ -131,87 +134,15 @@ namespace MasterMetrology
 
         private void SetLstChild()
         {
-            LstChildren.ItemsSource = _selectedVertex.State.SubStatesData.Select(s => new { Display = $"{s.FullIndex} - {s.Name}", Value = s.FullIndex }).ToList();
-            LstChildren.DisplayMemberPath = "Display";
-            LstChildren.SelectedValuePath = "Value";
+            _mainView.SetLstChild(_selectedVertex, LstChildren);
         }
         private void SetCmbChild()
         {
-            var flat = _processController.GetFlatStates();
-            if (flat == null) { CmbChild.ItemsSource = null; return; }
-
-            var selectedFull = _selectedVertex?.State?.FullIndex; // uprav podľa tvojho selected objektu
-            if (string.IsNullOrEmpty(selectedFull))
-            {
-                // ak nič nie je vybraté — zobrazíme len top-level položky (bez rodiča)
-                var top = flat.Where(s => string.IsNullOrEmpty(GetParentFullIndex(s.FullIndex)))
-                              .Select(s => new { Display = $"{s.FullIndex} - {s.Name}", Value = s.FullIndex })
-                              .ToList();
-                CmbChild.ItemsSource = top;
-                CmbChild.DisplayMemberPath = "Display";
-                CmbChild.SelectedValuePath = "Value";
-                return;
-            }
-
-            var selParent = GetParentFullIndex(selectedFull);
-
-            var options = flat.Where(s =>
-            {
-                // exclude self
-                if (s.FullIndex == selectedFull) return false;
-
-                // same parent => allowed (siblings)
-                var p = GetParentFullIndex(s.FullIndex);
-                return string.Equals(p, selParent, StringComparison.Ordinal);
-            })
-                .Select(s => new { Display = $"{s.FullIndex} - {s.Name}", Value = s.FullIndex })
-                .ToList();
-
-            CmbChild.ItemsSource = options;
-            CmbChild.DisplayMemberPath = "Display";
-            CmbChild.SelectedValuePath = "Value";
-        }
-
-        private string GetParentFullIndex(string fullIndex)
-        {
-            if (string.IsNullOrEmpty(fullIndex)) return string.Empty;
-            var i = fullIndex.LastIndexOf('.');
-            return i <= 0 ? string.Empty : fullIndex.Substring(0, i);
-        }
-        private bool IsDescendant(StateModelData ancestor, StateModelData possibleDescendant)
-        {
-            if (ancestor?.SubStatesData == null || ancestor.SubStatesData.Count == 0) return false;
-            foreach (var child in ancestor.SubStatesData)
-            {
-                if (child.FullIndex == possibleDescendant.FullIndex) return true;
-                if (IsDescendant(child, possibleDescendant)) return true;
-            }
-            return false;
+            _mainView.SetCmbChild(_selectedVertex, CmbChild);
         }
         private void SetCmbParent()
         {
-            var flat = _processController.GetFlatStates(); // List<StateModelData>
-
-            // filter kandidátov: vylúč samého seba a svojich potomkov (aby nevznikol cyklus)
-            var candidates = flat
-                .Where(s => s.FullIndex != _selectedVertex.State.FullIndex)      // nie sám seba
-                .Where(s => !IsDescendant(_selectedVertex.State, s))            // nie svoj potomok
-                .OrderBy(s => s.FullIndex)
-                .ToList();
-
-            // zložíme ItemsSource: prvý item = (none)
-            var items = new List<object> { new { Display = "(none)", Value = "" } };
-            items.AddRange(candidates.Select(s => new { Display = $"{s.FullIndex} - {s.Name}", Value = s.FullIndex }));
-
-            CmbParent.ItemsSource = items;
-            CmbParent.SelectedValuePath = "Value";
-            CmbParent.DisplayMemberPath = "Display";
-
-            // prednastav SelectedValue podľa aktuálneho parenta (ak existuje)
-            // (použi správne meno property pre parent — tu som predpokladal `ParentFullIndex`)
-            var parent = _processController.FindParentByFullIndex(_selectedVertex.State.FullIndex);
-            CmbParent.SelectedValue = parent == null ? "" : parent.FullIndex;
-
+            _mainView.SetCmbParent(_selectedVertex, CmbParent);
         }
 
         private void BtnRemoveTransition_Click(object sender, RoutedEventArgs e)
@@ -272,7 +203,61 @@ namespace MasterMetrology
         }
         private void BtnApplyEdit_Click(object sender, RoutedEventArgs e)
         {
+            if (_selectedVertex == null || _selectedVertex.State == null)
+            {
+                MessageBox.Show("Select a state to apply changes.");
+                return;
+            }
 
+            var oldFull = _selectedVertex.State.FullIndex;
+            var newName = TxtName.Text?.Trim() ?? "";
+            var newIndex = TxtId.Text?.Trim() ?? "";
+            var newOutput = TxtOutput.Text?.Trim() ?? "";
+
+            // 1) pokus o update vlastností (validácia indexu na rovnakej úrovni sa robí tam)
+            if (!_processController.UpdateStateProperties(oldFull, newName, newIndex, newOutput, out var err))
+            {
+                MessageBox.Show("Apply failed: " + err, "Validation error", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+
+            // 2) nastaviť pending parent podľa vybraného comboboxu (ak tam je)
+            var selParent = CmbParent.SelectedValue as string;
+            _processController.SetPendingParent(string.IsNullOrWhiteSpace(selParent) ? null : selParent);
+
+            // 3) aplikovať pending child adds/removes (a re-render sa vykoná vnútri tej metódy)
+            _processController.ApplyPendingChildChanges(_selectedVertex);
+
+            // 4) refresh UI panel (znovu načíta current selected node state values)
+            // after Apply the selected node might have new FullIndex or moved -> refresh selection by finding node
+            var newFull = _processController.FindStateByFullIndex(newIndex == _selectedVertex.State.Index
+                                                                    ? _selectedVertex.State.FullIndex
+                                                                    : (_processController.FindParentByFullIndex(oldFull)?.FullIndex == null
+                                                                        ? newIndex
+                                                                        : $"{_processController.FindParentByFullIndex(oldFull)?.FullIndex}.{newIndex}"));
+
+            // safety: simply refresh textboxes from current _selectedVertex.State (if still valid)
+            if (_selectedVertex?.State != null)
+            {
+                TxtName.Text = _selectedVertex.State.Name ?? "";
+                TxtFullIndex.Text = _selectedVertex.State.FullIndex ?? "";
+                TxtOutput.Text = _selectedVertex.State.Output ?? "";
+                TxtId.Text = _selectedVertex.State.Index ?? "";
+            }
+
+            // also refresh transitions view
+            _transitionsView = CollectionViewSource.GetDefaultView(_processController.AllTransitions);
+            LstTransitions.ItemsSource = _transitionsView;
+            _transitionsView.Refresh();
+
+            // refresh child lists / comboboxes
+            SetCmbChild();
+            SetCmbParent();
+            SetLstChild();
+        }
+        private void ShowDebug_Click(object sender, RoutedEventArgs e)
+        {
+            Debug.WriteLine(StateModelDataDumper.DumpStates(_processController.GetFlatStates()));
         }
 
         // ---------------------------------------- //

@@ -15,7 +15,6 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Data;
 using System.Windows.Media;
-using System.Windows.Shapes;
 using System.Windows.Threading;
 
 namespace MasterMetrology.Core.Rendering
@@ -28,20 +27,15 @@ namespace MasterMetrology.Core.Rendering
         // mapovanie modelEdge -> attachable label control (aby sme ich vedeli odpojiť pri mazani)
         private readonly Dictionary<GraphEdge, AttachableEdgeLabelControl> _edgeLabelMap = new Dictionary<GraphEdge, AttachableEdgeLabelControl>();
 
+        // uchovávame referenciu na pridany layout handler aby sme ho vedeli odobrať
+        private EventHandler _layoutUpdatedHandler;
+
         public void RenderGraph(List<StateModelData> states, Canvas graphLayer, Action<GraphVertex> onVertexSelected = null)
         {
-            // detach any previously attached labels (safety)
-            try
-            {
-                foreach (var kv in _edgeLabelMap.ToList())
-                    DetachLabelForEdge(kv.Key);
-                _edgeLabelMap.Clear();
-            }
-            catch (Exception ex)
-            {
-                Debug.WriteLine("RenderGraph: failed to detach old labels: " + ex.Message);
-            }
+            // 0) cleanup starého GraphArea (bezpečne)
+            CleanupLastGraphArea(graphLayer);
 
+            // 1) Vytvor nový graph a graphArea
             graphLayer.Children.Clear();
 
             var graph = new StateGraph();
@@ -79,25 +73,35 @@ namespace MasterMetrology.Core.Rendering
             LastGraphArea = graphArea;
             graphLayer.Children.Add(graphArea);
 
-            // generate graph (do NOT call ShowAllEdgesLabels here - we manage labels ourselves)
+            // generate graph (do NOT call ShowAllEdgesLabels here - manage labels ourselves)
             graphArea.GenerateGraph(true);
             graphArea.SetVerticesDrag(true, true);
-            // graphArea.ShowAllEdgesLabels(true); // <-- removed to avoid attachable label timing issues
 
-            // Attach labels for all generated edges (after GenerateGraph)
-            try
+            // attach named handler (umožníme bezpečný odber neskôr)
+            _layoutUpdatedHandler = (s, e) => UpdateSubPositions(graphArea, graph);
+            graphArea.LayoutUpdated += _layoutUpdatedHandler;
+
+            // Attach labels for generated edges (after GenerateGraph)
+            var dispatcher = graphArea.Dispatcher ?? Dispatcher.CurrentDispatcher;
+            dispatcher.BeginInvoke(new Action(() =>
             {
-                foreach (var kv in graphArea.EdgesList)
+                try
                 {
-                    if (kv.Key is GraphEdge modelEdge && kv.Value is EdgeControl ec)
-                        AttachBindableLabelToEdge(ec, modelEdge);
+                    foreach (var kv in graphArea.EdgesList)
+                    {
+                        if (kv.Key is GraphEdge modelEdge && kv.Value is EdgeControl ec)
+                            AttachBindableLabelToEdge(ec, modelEdge);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Debug.WriteLine("RenderGraph: error attaching labels: " + ex.Message);
                 }
             }
-            catch (Exception ex)
-            {
-                Debug.WriteLine("RenderGraph: error attaching labels: " + ex.Message);
-            }
+            ), DispatcherPriority.Loaded);
+            
 
+            // vertex click hookup
             foreach (var vc in graphArea.VertexList.Values)
             {
                 var vertexObj = vc.Vertex as GraphVertex;
@@ -115,12 +119,75 @@ namespace MasterMetrology.Core.Rendering
             }
 
             UpdateSubPositions(graphArea, graph);
-            graphArea.LayoutUpdated += (s, e) => UpdateSubPositions(graphArea, graph);
 
+            // center
             double centerX = (Config.DEFAULT_VALUE_CANVAS_X - graphArea.DesiredSize.Width) / 2;
             double centerY = (Config.DEFAULT_VALUE_CANVAS_Y - graphArea.DesiredSize.Height) / 2;
             Canvas.SetLeft(graphArea, centerX);
             Canvas.SetTop(graphArea, centerY);
+        }
+
+        /// <summary>
+        /// Bezpečný cleanup pred vytváraním nového GraphArea: odoberie layout handler, detachne a odstráni attachable labely,
+        /// odstráni starý GraphArea z parentu a vyčistí interné mapy.
+        /// </summary>
+        private void CleanupLastGraphArea(Canvas graphLayer)
+        {
+            var old = LastGraphArea;
+            if (old == null) return;
+
+            try
+            {
+                // 1) odober layout handler
+                if (_layoutUpdatedHandler != null)
+                {
+                    try { old.LayoutUpdated -= _layoutUpdatedHandler; } catch { }
+                    _layoutUpdatedHandler = null;
+                }
+
+                // 2) detach všetkých attachable labelov z _edgeLabelMap (bez závislosti na LastGraphArea)
+                foreach (var kv in _edgeLabelMap.ToList())
+                {
+                    var label = kv.Value;
+                    try { if (label != null) label.ShowLabel = false; } catch { }
+                    try { if (label != null) label.Detach(); } catch (Exception ex) { Debug.WriteLine("Cleanup detach failed: " + ex.Message); }
+                    try { if (label != null && old.Children.Contains(label)) old.Children.Remove(label); } catch { }
+                }
+                _edgeLabelMap.Clear();
+
+                // 3) pokús sa odstrániť starý graphArea z jeho parenta (Canvas/Panel)
+                try
+                {
+                    if (old.Parent is Panel parentPanel)
+                    {
+                        parentPanel.Children.Remove(old);
+                    }
+                    else if (graphLayer != null && graphLayer.Children.Contains(old))
+                    {
+                        graphLayer.Children.Remove(old);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Debug.WriteLine("Cleanup remove old GraphArea failed: " + ex.Message);
+                }
+
+                // 4) nulovanie referencií
+                LastGraphArea = null;
+                LastGraph = null;
+
+                // 5) zbehnúť dispatcher pass, aby sa vyprázdnili eventy/layout (bez zablokovania UI - použijeme low-priority)
+                try
+                {
+                    var disp = old.Dispatcher ?? Dispatcher.CurrentDispatcher;
+                    disp.Invoke(() => { }, DispatcherPriority.ApplicationIdle);
+                }
+                catch { }
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine("CleanupLastGraphArea failed: " + ex.Message);
+            }
         }
 
         private void UpdateSubPositions(StateGraphArea graphArea, StateGraph graph)
@@ -247,7 +314,7 @@ namespace MasterMetrology.Core.Rendering
 
                 var attachLabel = new AttachableEdgeLabelControl
                 {
-                    // do NOT set ShowLabel = true yet
+                    // don't set ShowLabel here — we will set it after attach + dispatcher
                 };
 
                 var binding = new Binding(nameof(GraphEdge.Text))
@@ -255,13 +322,8 @@ namespace MasterMetrology.Core.Rendering
                     Source = modelEdge,
                     Mode = BindingMode.OneWay
                 };
-                attachLabel.SetBinding(ContentControl.ContentProperty, binding);
-
-                // IMPORTANT: Attach to edge control first (this registers label and places it into RootArea.Children)
                 attachLabel.Attach(ec);
-
-                // After it's attached to visual tree we can safely enable ShowLabel
-                attachLabel.ShowLabel = true;
+                attachLabel.SetBinding(ContentControl.ContentProperty, binding);
 
                 // store mapping for later detach
                 _edgeLabelMap[modelEdge] = attachLabel;
@@ -274,14 +336,14 @@ namespace MasterMetrology.Core.Rendering
 
         private void DetachLabelForEdge(GraphEdge modelEdge)
         {
-            if (modelEdge == null || LastGraphArea == null) return;
+            if (modelEdge == null) return;
             try
             {
                 if (_edgeLabelMap.TryGetValue(modelEdge, out var label) && label != null)
                 {
-                    try { label.ShowLabel = false; } catch { }
-                    try { label.Detach(); } catch (Exception ex) { Debug.WriteLine("DetachLabelForEdge: label.Detach() failed: " + ex.Message); }
-                    try { if (LastGraphArea.Children.Contains(label)) LastGraphArea.Children.Remove(label); } catch (Exception ex) { Debug.WriteLine("DetachLabelForEdge: remove from RootArea failed: " + ex.Message); }
+                    try { label.ShowLabel = false; } catch (Exception ex) { Debug.WriteLine("DetachLabelForEdge: ShowLabel=false failed: " + ex.Message); }
+                    try { label.Detach(); } catch (Exception ex) { Debug.WriteLine("DetachLabelForEdge: Detach() failed: " + ex.Message); }
+                    try { if (LastGraphArea != null && LastGraphArea.Children.Contains(label)) LastGraphArea.Children.Remove(label); } catch (Exception ex) { Debug.WriteLine("DetachLabelForEdge: remove from RootArea failed: " + ex.Message); }
                     _edgeLabelMap.Remove(modelEdge);
                 }
             }
@@ -304,18 +366,30 @@ namespace MasterMetrology.Core.Rendering
 
             var removed = modelEdge.RemoveTransition(transition);
             Debug.WriteLine($"RemoveTransition: removed from model, new label='{modelEdge.Text}', removedFlag={removed}");
-            if (!removed) 
-            {
-                return;
-            }
+            if (!removed) return;
 
+            // if no transitions left -> remove edge from graph and detach label first
             if (modelEdge.Transitions.Count == 0)
             {
-                LastGraph.RemoveEdge(modelEdge);
-                Debug.WriteLine("RemoveTransition: removed edge from visual");
+                try
+                {
+                    DetachLabelForEdge(modelEdge);
+                    LastGraph.RemoveEdge(modelEdge);
+                }
+                catch (Exception ex)
+                {
+                    Debug.WriteLine("RemoveTransition: remove edge failed: " + ex.Message);
+                }
             }
 
-            LastGraphArea.GenerateAllEdges();
+            try
+            {
+                LastGraphArea.GenerateAllEdges();
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine("RemoveTransition: GenerateAllEdges failed: " + ex.Message);
+            }
         }
 
         public void AddTransition(TransitionModelData transition)
@@ -339,13 +413,42 @@ namespace MasterMetrology.Core.Rendering
             }
             else
             {
-                var savedPositions = LastGraphArea.VertexList.ToDictionary(kvp => kvp.Key, kvp => kvp.Value.GetPosition());
-
                 var newEdge = new GraphEdge(from, to, new[] { transition });
                 LastGraph.AddEdge(newEdge);
             }
 
-            LastGraphArea.GenerateAllEdges();
+            try
+            {
+                LastGraphArea.GenerateAllEdges();
+
+                foreach (var kv in LastGraphArea.EdgesList)
+                {
+                    if (kv.Key is GraphEdge modelEdge && kv.Value is EdgeControl ec)
+                    {
+                        if (!_edgeLabelMap.ContainsKey(modelEdge))
+                            AttachBindableLabelToEdge(ec, modelEdge);
+                        else
+                        {
+                            try
+                            {
+                                var lbl = _edgeLabelMap[modelEdge];
+                                if (lbl != null)
+                                {
+                                    LastGraphArea.Dispatcher.BeginInvoke(new Action(() =>
+                                    {
+                                        try { lbl.ShowLabel = true; } catch { }
+                                    }), DispatcherPriority.Loaded);
+                                }
+                            }
+                            catch { }
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine("AddTransition: GenerateAllEdges or attach labels failed: " + ex.Message);
+            }
         }
     }
 }
