@@ -33,8 +33,8 @@ public static class StateModelDataDumper
         sb.AppendLine($"{indent}- FullIndex: {state.FullIndex ?? "<null>"}");
         sb.AppendLine($"{indent}  Index    : {state.Index ?? "<null>"}");
         sb.AppendLine($"{indent}  Name     : {state.Name ?? "<null>"}");
+        sb.AppendLine($"{indent}  Parent   : {(state.Parent != null ? state.Parent.Name : "<null>")}");
         sb.AppendLine($"{indent}  Output   : {state.Output ?? "<null>"}");
-        sb.AppendLine($"{indent}  Pos      : X={state.X}, Y={state.Y}");
         // transitions info (count + optional detail)
         int tcount = state.TransitionsData?.Count ?? 0;
         sb.AppendLine($"{indent}  Transitions: {tcount}");

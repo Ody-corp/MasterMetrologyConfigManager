@@ -64,6 +64,7 @@ namespace MasterMetrology
                         {
                             stackIndex.Push(reader.GetAttribute("Index"));
                             string tempFullIndex;
+                            StateModelData parentState;
 
                             if (stackIndex.Count > 0)
                             {
@@ -85,10 +86,12 @@ namespace MasterMetrology
 
                             if (stack.Count > 0)
                             {
+                                state.Parent = stack.Peek();
                                 stack.Peek().SubStatesData.Add(state);
                             }
                             else
                             {
+                                state.Parent = null;
                                 FullListStateModelData.Add(state);
                             }
 

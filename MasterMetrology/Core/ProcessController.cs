@@ -262,8 +262,6 @@ namespace MasterMetrology
         public IReadOnlyList<string> GetPendingRemoves() => _pendingRemoves.AsReadOnly();
         public string? GetPendingParent() => _pendingParentFullIndex;
 
-        // ---------------- Apply (hlavná logika) ----------------
-
         /// <summary>
         /// Aplikuje pending adds/removes.
         /// Pri adds: presunie zo starého parenta pod _pendingParentFullIndex (null => top-level)
@@ -280,13 +278,14 @@ namespace MasterMetrology
             }
 
             var movedPairs = new List<(string oldFull, string newFull)>();
-
+            Debug.WriteLine($"pendingAdds-{_pendingAdds.Count} pendingRemoves-{_pendingRemoves.Count}");
             // 1) Removals: unparent -> top-level
             foreach (var fullIndex in _pendingRemoves.ToList())
             {
+                Debug.WriteLine($"Working on pendingRemoves, actual {fullIndex}");
                 var movingState = FindStateByFullIndex(fullIndex);
                 if (movingState == null) continue;
-
+                Debug.WriteLine($"Found moving state! movingStateIndex {movingState.FullIndex} fullIndex {fullIndex}");
                 var removed = RemoveStateFromItsParent(movingState.FullIndex);
                 if (!removed) continue;
 
@@ -374,8 +373,6 @@ namespace MasterMetrology
             }
         }
 
-        // ---------------- pomocné metódy ----------------
-
         /// <summary>Vrátí next index (int) pre daného parenta (null => top-level).</summary>
         private int GetNextIndexForParent(string? parentFullIndex)
         {
@@ -410,8 +407,6 @@ namespace MasterMetrology
         /// <summary>Odstráni state z jeho aktuálneho parenta (ak existuje). Vracia true ak sa odstránil.</summary>
         private bool RemoveStateFromItsParent(string fullIndex)
         {
-            if (statesModelDatas == null || string.IsNullOrWhiteSpace(fullIndex)) return false;
-
             var top = statesModelDatas.FirstOrDefault(s => s.FullIndex == fullIndex);
             if (top != null)
             {
@@ -420,12 +415,15 @@ namespace MasterMetrology
             }
 
             var parent = FindParentStateOf(fullIndex, statesModelDatas);
+            Debug.WriteLine("MAYBE HERE IT WILL WORK");
             if (parent != null && parent.SubStatesData != null)
             {
+                Debug.WriteLine("DAS IT WORK");
                 var child = parent.SubStatesData.FirstOrDefault(s => s.FullIndex == fullIndex);
                 if (child != null)
                 {
                     parent.SubStatesData.Remove(child);
+                    Debug.WriteLine($"REMOVED {child.Name}-{child.FullIndex} from {parent.Name}-{parent.FullIndex}");
                     return true;
                 }
             }
@@ -493,9 +491,9 @@ namespace MasterMetrology
         {
             foreach (var s in nodes)
             {
-                if (s.SubStatesData != null && s.SubStatesData.Any(x => x.FullIndex == childFullIndex))
+                if (s.SubStatesData.Any(x => x.FullIndex == childFullIndex))
                     return s;
-                if (s.SubStatesData != null && s.SubStatesData.Count > 0)
+                if (s.SubStatesData.Count > 0)
                 {
                     var res = FindParentStateOf(childFullIndex, s.SubStatesData);
                     if (res != null) return res;

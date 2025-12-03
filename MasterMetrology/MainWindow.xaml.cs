@@ -189,10 +189,11 @@ namespace MasterMetrology
         }
         private void BtnRemoveChild_Click(object sender, RoutedEventArgs e)
         {
-            var fullIndex = CmbChild.SelectedValue as string;
-
+            var fullIndex = LstChildren.SelectedValue as string;
+            Debug.WriteLine($"BUTTON - Remove selected child - {fullIndex}");
             if (_selectedVertex.State.SubStatesData.Where(s => s.FullIndex == fullIndex).Count() == 1)
             {
+                Debug.WriteLine($"Add_RemovePendingChild");
                 _processController.Add_RemovePendingChild(fullIndex);
                 //_processController.Remove_AddPendingChild(fullIndex);
             }
@@ -215,18 +216,21 @@ namespace MasterMetrology
             var newOutput = TxtOutput.Text?.Trim() ?? "";
 
             // 1) pokus o update vlastností (validácia indexu na rovnakej úrovni sa robí tam)
-            if (!_processController.UpdateStateProperties(oldFull, newName, newIndex, newOutput, out var err))
+            /*if (!_processController.UpdateStateProperties(oldFull, newName, newIndex, newOutput, out var err))
             {
                 MessageBox.Show("Apply failed: " + err, "Validation error", MessageBoxButton.OK, MessageBoxImage.Warning);
                 return;
             }
-
+            */
             // 2) nastaviť pending parent podľa vybraného comboboxu (ak tam je)
             var selParent = CmbParent.SelectedValue as string;
-            _processController.SetPendingParent(string.IsNullOrWhiteSpace(selParent) ? null : selParent);
+            //_processController.SetPendingParent(string.IsNullOrWhiteSpace(selParent) ? null : selParent);
+
+            _selectedVertex.State.Name = newName;
+            
 
             // 3) aplikovať pending child adds/removes (a re-render sa vykoná vnútri tej metódy)
-            _processController.ApplyPendingChildChanges(_selectedVertex);
+            //_processController.ApplyPendingChildChanges(_selectedVertex);
 
             // 4) refresh UI panel (znovu načíta current selected node state values)
             // after Apply the selected node might have new FullIndex or moved -> refresh selection by finding node

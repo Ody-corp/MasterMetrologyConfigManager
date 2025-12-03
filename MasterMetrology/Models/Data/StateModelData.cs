@@ -15,8 +15,7 @@ namespace MasterMetrology.Models.Data
         private string index;
         private string fullIndex;
         private string output;
-        private double x;
-        private double y;
+        private StateModelData parent = null;
         public string Name
         {
             get => name;
@@ -68,31 +67,19 @@ namespace MasterMetrology.Models.Data
                 }
             }
         }
-        public double X
+        public StateModelData Parent
         {
-            get => x;
+            get => parent;
             set
             {
-                if (x != value)
+                if (parent != value)
                 {
-                    x = value;
-                    OnPropertyChanged(nameof(X));
+                    parent = value;
+                    OnPropertyChanged(nameof(Parent));
                 }
             }
         }
 
-        public double Y
-        {
-            get => y;
-            set
-            {
-                if (y != value)
-                {
-                    y = value;
-                    OnPropertyChanged(nameof(Y));
-                }
-            }
-        }
         public ObservableCollection<StateModelData> SubStatesData { get; set; } = new();
         public ObservableCollection<TransitionModelData> TransitionsData { get; set; } = new();
 
