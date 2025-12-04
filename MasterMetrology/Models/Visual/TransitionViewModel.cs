@@ -18,8 +18,8 @@ namespace MasterMetrology.Models.Visual
         {
             Transition = transition;
             FromFullIndex = fromFullIndex ?? "";
-            Id = $"{FromFullIndex}_{transition.NextStage}_{transition.Input}";
-            DisplayText = $"{Short(FromFullIndex)} → {Short(transition.NextStage)}  Input:({transition.Input})";
+            Id = $"{FromFullIndex}_{transition.NextState.FullIndex}_{transition.Input}";
+            DisplayText = $"{Short(transition.FromState.FullIndex)} → {Short(transition.NextState.FullIndex)}  Input:({transition.Input})";
         }
 
         string Short(string s) => string.IsNullOrEmpty(s) ? "(?)" : s;

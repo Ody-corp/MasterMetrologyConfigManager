@@ -26,7 +26,7 @@ namespace MasterMetrology
             {
                 // ak nič nie je vybraté — zobrazíme len top-level položky (bez rodiča)
                 var top = flat.Where(s => string.IsNullOrEmpty(GetParentFullIndex(s.FullIndex)))
-                              .Select(s => new { Display = $"{s.FullIndex} - {s.Name}", Value = s.FullIndex })
+                              .Select(s => new { Display = $"{s.FullIndex} - {s.Name}", Value = s })
                               .ToList();
                 cmbChild.ItemsSource = top;
                 cmbChild.DisplayMemberPath = "Display";
@@ -45,7 +45,7 @@ namespace MasterMetrology
                 var p = GetParentFullIndex(s.FullIndex);
                 return string.Equals(p, selParent, StringComparison.Ordinal);
             })
-                .Select(s => new { Display = $"{s.FullIndex} - {s.Name}", Value = s.FullIndex })
+                .Select(s => new { Display = $"{s.FullIndex} - {s.Name}", Value = s })
                 .ToList();
 
             cmbChild.ItemsSource = options;
@@ -55,7 +55,7 @@ namespace MasterMetrology
 
         internal void SetLstChild(GraphVertex selectedVertex, ListBox lstChildren)
         {
-            lstChildren.ItemsSource = selectedVertex.State.SubStatesData.Select(s => new { Display = $"{s.FullIndex} - {s.Name}", Value = s.FullIndex }).ToList();
+            lstChildren.ItemsSource = selectedVertex.State.SubStatesData.Select(s => new { Display = $"{s.FullIndex} - {s.Name}", Value = s }).ToList();
             lstChildren.DisplayMemberPath = "Display";
             lstChildren.SelectedValuePath = "Value";
         }
@@ -70,14 +70,14 @@ namespace MasterMetrology
                 .ToList();
 
             var items = new List<object> { new { Display = "(none)", Value = "" } };
-            items.AddRange(candidates.Select(s => new { Display = $"{s.FullIndex} - {s.Name}", Value = s.FullIndex }));
+            items.AddRange(candidates.Select(s => new { Display = $"{s.FullIndex} - {s.Name}", Value = s }));
 
             cmbParent.ItemsSource = items;
             cmbParent.SelectedValuePath = "Value";
             cmbParent.DisplayMemberPath = "Display";
 
             var parent = _processController.FindParentByFullIndex(selectedVertex.State.FullIndex);
-            cmbParent.SelectedValue = parent == null ? "" : parent.FullIndex;
+            cmbParent.SelectedValue = parent == null ? "" : parent;
         }
 
 

@@ -31,8 +31,8 @@ namespace MasterMetrology
 
         public ObservableCollection<TransitionViewModel> AllTransitions = new ObservableCollection<TransitionViewModel>();
 
-        private readonly List<string> _pendingAdds = new List<string>();
-        private readonly List<string> _pendingRemoves = new List<string>();
+        private readonly List<StateModelData> _pendingAdds = new List<StateModelData>();
+        private readonly List<StateModelData> _pendingRemoves = new List<StateModelData>();
         private string? _pendingParentFullIndex = null;
 
         private string filePath;
@@ -70,7 +70,8 @@ namespace MasterMetrology
 
                         foreach (var t in s.TransitionsData)
                         {
-                            t.FromStage = s.FullIndex;
+                            t.FromState = s;
+                            t.NextState = FindStateByFullIndex(t.NextStateId);
                             AllTransitions.Add(new TransitionViewModel(t, s.FullIndex));
                         }
                     }
@@ -119,7 +120,7 @@ namespace MasterMetrology
             var t = vm.Transition;
             if (t == null) return false;
 
-            var owner = FindStateByFullIndex(statesModelDatas, vm.FromFullIndex);
+            var owner = FindStateByFullIndex(statesModelDatas, vm.Transition.FromState.FullIndex);
             if (owner != null && owner.TransitionsData != null)
             {
                 var removed = owner.TransitionsData.Remove(t);
@@ -145,9 +146,9 @@ namespace MasterMetrology
         }
 
         // Add nový transition (cez UI): pridá do dát aj do grafu a do AllTransitions
-        public bool AddTransition(string fromFullIndex, string input, string toFullIndex)
+        public bool AddTransition(string fromFullIndex, string input, StateModelData state)
         {
-            if (string.IsNullOrEmpty(fromFullIndex) || string.IsNullOrEmpty(toFullIndex)) return false;
+            if (string.IsNullOrEmpty(fromFullIndex) || string.IsNullOrEmpty(state.FullIndex)) return false;
 
             var owner = FindStateByFullIndex(statesModelDatas, fromFullIndex);
             if (owner == null) return false;
@@ -155,8 +156,8 @@ namespace MasterMetrology
             var newT = new TransitionModelData
             {
                 Input = input,
-                NextStage = toFullIndex,
-                FromStage = owner.FullIndex
+                NextState = state,
+                FromState = owner
             };
 
             if (owner.TransitionsData == null)         
@@ -221,28 +222,28 @@ namespace MasterMetrology
 
         // ---------------- UI metódy (volaj z code-behind) ----------------
 
-        public void Add_AddPendingChild(string childFullIndex)
+        public void Add_AddPendingChild(StateModelData child)
         {
-            if (string.IsNullOrWhiteSpace(childFullIndex)) return;
-            if (!_pendingAdds.Contains(childFullIndex)) _pendingAdds.Add(childFullIndex);
+            //if (string.IsNullOrWhiteSpace(childFullIndex)) return;
+            if (!_pendingAdds.Contains(child)) _pendingAdds.Add(child);
         }
 
-        public void Remove_AddPendingChild(string childFullIndex)
+        public void Remove_AddPendingChild(StateModelData child)
         {
-            if (string.IsNullOrWhiteSpace(childFullIndex)) return;
-            _pendingAdds.Remove(childFullIndex);
+            //if (string.IsNullOrWhiteSpace(child)) return;
+            _pendingAdds.Remove(child);
         }
 
-        public void Add_RemovePendingChild(string childFullIndex)
+        public void Add_RemovePendingChild(StateModelData child)
         {
-            if (string.IsNullOrWhiteSpace(childFullIndex)) return;
-            if (!_pendingRemoves.Contains(childFullIndex)) _pendingRemoves.Add(childFullIndex);
+            //if (string.IsNullOrWhiteSpace(childFullIndex)) return;
+            if (!_pendingRemoves.Contains(child)) _pendingRemoves.Add(child);
         }
 
-        public void Remove_RemovePendingChild(string childFullIndex)
+        public void Remove_RemovePendingChild(StateModelData child)
         {
-            if (string.IsNullOrWhiteSpace(childFullIndex)) return;
-            _pendingRemoves.Remove(childFullIndex);
+            //if (string.IsNullOrWhiteSpace(child)) return;
+            _pendingRemoves.Remove(child);
         }
 
         /// <summary>Set pending parent (null or empty means top-level).</summary>
@@ -258,8 +259,8 @@ namespace MasterMetrology
             _pendingParentFullIndex = null;
         }
 
-        public IReadOnlyList<string> GetPendingAdds() => _pendingAdds.AsReadOnly();
-        public IReadOnlyList<string> GetPendingRemoves() => _pendingRemoves.AsReadOnly();
+        public IReadOnlyList<StateModelData> GetPendingAdds() => _pendingAdds.AsReadOnly();
+        public IReadOnlyList<StateModelData> GetPendingRemoves() => _pendingRemoves.AsReadOnly();
         public string? GetPendingParent() => _pendingParentFullIndex;
 
         /// <summary>
@@ -280,22 +281,23 @@ namespace MasterMetrology
             var movedPairs = new List<(string oldFull, string newFull)>();
             Debug.WriteLine($"pendingAdds-{_pendingAdds.Count} pendingRemoves-{_pendingRemoves.Count}");
             // 1) Removals: unparent -> top-level
-            foreach (var fullIndex in _pendingRemoves.ToList())
+            foreach (var state in _pendingRemoves.ToList())
             {
-                Debug.WriteLine($"Working on pendingRemoves, actual {fullIndex}");
-                var movingState = FindStateByFullIndex(fullIndex);
-                if (movingState == null) continue;
-                Debug.WriteLine($"Found moving state! movingStateIndex {movingState.FullIndex} fullIndex {fullIndex}");
-                var removed = RemoveStateFromItsParent(movingState.FullIndex);
-                if (!removed) continue;
+                Debug.WriteLine($"Working on pendingRemoves, actual {state.FullIndex}");
+                //var movingState = FindStateByFullIndex(state.FullIndex);
+                //if (movingState == null) continue;
+                //Debug.WriteLine($"Found moving state! movingStateIndex {state.FullIndex} fullIndex {state.FullIndex}");
+                //var removed = RemoveStateFromItsParent(state.FullIndex);
+                //if (!removed) continue;
 
-                if (statesModelDatas == null) statesModelDatas = new List<StateModelData>();
-                statesModelDatas.Add(movingState);
+                //if (statesModelDatas == null) statesModelDatas = new List<StateModelData>();
+                state.Parent.SubStatesData.Remove(state);
+                statesModelDatas.Add(state);
 
                 var nextIdx = GetNextIndexForParent(null);
                 var newFull = nextIdx.ToString();
-                UpdateFullIndexRecursive(movingState, newFull);
-                movedPairs.Add((fullIndex, movingState.FullIndex));
+                UpdateFullIndexRecursive(state, newFull);
+                //movedPairs.Add((fullIndex, movingState.FullIndex));
             }
 
             // 2) Adds: presunieme do _pendingParentFullIndex (null => top-level)
@@ -303,18 +305,26 @@ namespace MasterMetrology
             {
                 var targetParent = _pendingParentFullIndex;
 
-                foreach (var fullIndex in _pendingAdds.ToList())
+                foreach (var state in _pendingAdds.ToList())
                 {
-                    var movingState = FindStateByFullIndex(fullIndex);
-                    if (movingState == null) continue;
+                    //var movingState = FindStateByFullIndex(fullIndex);
+                    //if (movingState == null) continue;
 
-                    selectedVertex.State.SubStatesData.Add(movingState);
+                    selectedVertex.State.SubStatesData.Add(state);
+                    
+                    if (state.Parent != null)
+                    {
+                        state.Parent.SubStatesData.Remove(state);
+                    }
+                    else {
+                        statesModelDatas.Remove(state);
+                    }
 
                     //var currentParent = FindParentByFullIndex(movingState.FullIndex);
                     //if (string.Equals(currentParent.FullIndex, targetParent, StringComparison.Ordinal)) continue;
 
                     // cycle check: nechceme parent = self alebo potomok
-                    if (targetParent != null)
+                    /*if (targetParent != null)
                     {
                         // správne poradie parametrov: descendant, ancestor
                         if (movingState.FullIndex == targetParent || IsDescendantByFullIndex(movingState.FullIndex, targetParent))
@@ -322,11 +332,11 @@ namespace MasterMetrology
                             Debug.WriteLine($"Skip: would create cycle {movingState.FullIndex} -> {targetParent}");
                             continue;
                         }
-                    }
+                    }*/
 
-                    RemoveStateFromItsParent(movingState.FullIndex);
+                    //RemoveStateFromItsParent(movingState.FullIndex);
 
-                    if (targetParent == null)
+                    /*if (targetParent == null)
                     {
                         if (statesModelDatas == null) statesModelDatas = new List<StateModelData>();
                         statesModelDatas.Add(movingState);
@@ -341,12 +351,12 @@ namespace MasterMetrology
                         }
                         if (parentNode.SubStatesData == null) parentNode.SubStatesData = new ObservableCollection<StateModelData>();
                         parentNode.SubStatesData.Add(movingState);
-                    }
+                    }*/
 
                     var nextIdx = GetNextIndexForParent(targetParent);
                     var newFull = targetParent == null ? nextIdx.ToString() : $"{targetParent}.{nextIdx}";
-                    UpdateFullIndexRecursive(movingState, newFull);
-                    movedPairs.Add((fullIndex, movingState.FullIndex));
+                    UpdateFullIndexRecursive(state, newFull);
+                    //movedPairs.Add((fullIndex, movingState.FullIndex));
                 }
             }
 
@@ -458,22 +468,22 @@ namespace MasterMetrology
         private void UpdateTransitionReferencesForMovedNode(string oldFull, string newFull)
         {
             if (statesModelDatas == null) return;
-
+            /*
             void walk(StateModelData s)
             {
                 if (s.TransitionsData != null)
                 {
                     foreach (var t in s.TransitionsData)
                     {
-                        if (!string.IsNullOrEmpty(t.FromStage))
+                        if (!string.IsNullOrEmpty(t.FromState.FullIndex))
                         {
-                            if (t.FromStage == oldFull) t.FromStage = newFull;
-                            else if (t.FromStage.StartsWith(oldFull + ".")) t.FromStage = newFull + t.FromStage.Substring(oldFull.Length);
+                            if (t.FromState.FullIndex == oldFull) t.FromState.FullIndex = newFull;
+                            else if (t.FromState.FullIndex.StartsWith(oldFull + ".")) t.FromState.FullIndex = newFull + t.FromState.FullIndex.Substring(oldFull.Length);
                         }
-                        if (!string.IsNullOrEmpty(t.NextStage))
+                        if (!string.IsNullOrEmpty(t.NextState.FullIndex))
                         {
-                            if (t.NextStage == oldFull) t.NextStage = newFull;
-                            else if (t.NextStage.StartsWith(oldFull + ".")) t.NextStage = newFull + t.NextStage.Substring(oldFull.Length);
+                            if (t.NextState.FullIndex == oldFull) t.NextState.FullIndex = newFull;
+                            else if (t.NextState.FullIndex.StartsWith(oldFull + ".")) t.NextState.FullIndex = newFull + t.NextState.FullIndex.Substring(oldFull.Length);
                         }
                     }
                 }
@@ -483,7 +493,17 @@ namespace MasterMetrology
                 }
             }
 
-            foreach (var root in statesModelDatas) walk(root);
+            foreach (var root in statesModelDatas) walk(root);*/
+
+            void UpdateTransition()
+            {
+
+            }
+
+            foreach (StateModelData movedState in _pendingAdds)
+            {
+
+            }
         }
 
         /// <summary>Vyhľadá parent StateModelData (ktorý má priamo child s daným fullIndex) rekurzívne.</summary>

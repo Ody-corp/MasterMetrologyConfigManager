@@ -275,7 +275,7 @@ namespace MasterMetrology.Core.Rendering
             }
             else
             {
-                var grouped = state.TransitionsData.GroupBy(t => t.NextStage);
+                var grouped = state.TransitionsData.GroupBy(t => t.NextState.FullIndex);
                 foreach (var g in grouped)
                 {
                     if (!map.TryGetValue(state.FullIndex, out var from))
@@ -396,12 +396,12 @@ namespace MasterMetrology.Core.Rendering
         {
             if (LastGraphArea == null || LastGraph == null || transition == null) return;
 
-            var from = LastGraph.Vertices.FirstOrDefault(v => v.State?.FullIndex == transition.FromStage);
-            var to = LastGraph.Vertices.FirstOrDefault(v => v.State?.FullIndex == transition.NextStage);
+            var from = LastGraph.Vertices.FirstOrDefault(v => v.State?.FullIndex == transition.FromState.FullIndex);
+            var to = LastGraph.Vertices.FirstOrDefault(v => v.State?.FullIndex == transition.NextState.FullIndex);
 
             if (from == null || to == null)
             {
-                Debug.WriteLine($"AddTransition: source/target vertex not found (from={transition.FromStage}, to={transition.NextStage})");
+                Debug.WriteLine($"AddTransition: source/target vertex not found (from={transition.FromState.FullIndex}, to={transition.NextState.FullIndex})");
                 return;
             }
 

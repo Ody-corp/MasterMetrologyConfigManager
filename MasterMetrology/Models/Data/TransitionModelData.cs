@@ -12,8 +12,9 @@ namespace MasterMetrology.Models.Data
     public class TransitionModelData : INotifyPropertyChanged
     {
         private string input;
-        private string nextStage;
-        private string fromStage;
+        private string nextStateId;
+        private StateModelData nextState;
+        private StateModelData fromState;
         private ObservableCollection<Point> pathPoints = new();
 
         public string Input
@@ -28,27 +29,39 @@ namespace MasterMetrology.Models.Data
                 }
             }
         }
-        public string NextStage
+        public string NextStateId
         {
-            get => nextStage;
+            get => nextStateId;
             set
             {
-                if (nextStage != value)
+                if (nextStateId != value)
                 {
-                    nextStage = value;
-                    OnPropertyChanged(nameof(NextStage));
+                    nextStateId = value;
+                    OnPropertyChanged(nameof(NextState));
                 }
             }
         }
-        public string FromStage
+        public StateModelData NextState
         {
-            get => fromStage;
+            get => nextState;
             set
             {
-                if (fromStage != value)
+                if (nextState != value)
                 {
-                    fromStage = value;
-                    OnPropertyChanged(nameof(FromStage));
+                    nextState = value;
+                    OnPropertyChanged(nameof(NextState));
+                }
+            }
+        }
+        public StateModelData FromState
+        {
+            get => fromState;
+            set
+            {
+                if (fromState != value)
+                {
+                    fromState = value;
+                    OnPropertyChanged(nameof(FromState));
                 }
             }
         }

@@ -66,7 +66,7 @@ namespace MasterMetrology
                     {
                         _transitionsView.Filter = o =>
                         {
-                            if (o is TransitionViewModel vm) return vm.FromFullIndex == v.State.FullIndex;
+                            if (o is TransitionViewModel vm) return vm.Transition.FromState.FullIndex == v.State.FullIndex;
                             return false;
                         };
                     }
@@ -121,7 +121,7 @@ namespace MasterMetrology
                 // naplň combo box s možnými cieľmi (FullIndex)
                 var flat = _processController.GetFlatStates();
                 // zobrazíme user-friendly text a použijeme FullIndex ako Value
-                CmbTransitionTarget.ItemsSource = flat.Select(s => new { Display = $"{s.FullIndex} - {s.Name}", Value = s.FullIndex }).ToList();
+                CmbTransitionTarget.ItemsSource = flat.Select(s => new { Display = $"{s.FullIndex} - {s.Name}", Value = s }).ToList();
                 CmbTransitionTarget.DisplayMemberPath = "Display";
                 CmbTransitionTarget.SelectedValuePath = "Value";
                 if (CmbTransitionTarget.Items.Count > 0) CmbTransitionTarget.SelectedIndex = 0;
@@ -164,8 +164,8 @@ namespace MasterMetrology
             }
             var from = _selectedVertex.State?.FullIndex;
             var input = TxtNewTransitionInput.Text?.Trim();
-            var target = (string)CmbTransitionTarget.SelectedValue;
-            if (string.IsNullOrEmpty(target))
+            var target = CmbTransitionTarget.SelectedValue as StateModelData;
+            if (target == null)
             {
                 MessageBox.Show("Select a target state.");
                 return;
