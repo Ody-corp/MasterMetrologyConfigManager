@@ -49,6 +49,7 @@ namespace MasterMetrology.Models.Data
                 if (nextState != value)
                 {
                     nextState = value;
+                    //nextStateId = nextState?.FullIndex;
                     OnPropertyChanged(nameof(NextState));
                 }
             }

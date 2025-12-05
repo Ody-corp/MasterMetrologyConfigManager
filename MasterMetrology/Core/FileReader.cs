@@ -56,7 +56,8 @@ namespace MasterMetrology
                                 stack.Peek().TransitionsData.Add(new TransitionModelData
                                 {
                                     Input = reader.GetAttribute("Input"),
-                                    NextStateId = reader.GetAttribute("NextState")
+                                    NextStateId = reader.GetAttribute("NextState"),
+                                    FromState = stack.Peek()
                                 });
                             }
                         }

@@ -124,12 +124,12 @@
 
                         <!-- PARENT: combobox instead of simple textbox -->
                         <Label Grid.Row="4" Grid.Column="0" Content="Parent"/>
-                        <ComboBox Grid.Row="4" Grid.Column="1" x:Name="CmbParent" Margin="2.5" DisplayMemberPath="State.Name" SelectionChanged="CmbParent_SelectionChanged"/>
+                        <ComboBox Grid.Row="4" Grid.Column="1" x:Name="CmbParent" Margin="2.5" DisplayMemberPath="State.Name" SelectedValuePath="Value" SelectionChanged="CmbParent_SelectionChanged"/>
 
                         <!-- Children area: list + add/remove -->
                         <Label Grid.Row="5" Grid.Column="0" Content="Children"/>
                         <StackPanel Grid.Row="5" Grid.Column="1" Orientation="Vertical" Margin="2.5">
-                            <ListBox x:Name="LstChildren" Height="120" DisplayMemberPath="State.Name" SelectionMode="Single" />
+                            <ListBox x:Name="LstChildren" Height="120" DisplayMemberPath="State.Name" SelectedValuePath="Value" SelectionMode="Single" />
                             <StackPanel Orientation="Horizontal" Margin="0,6,0,0">
                                 <ComboBox x:Name="CmbChild" MinWidth="200" Margin="0,0,8,0" SelectionChanged="CmbChild_SelectionChanged"/>
                                 <Button x:Name="BtnAddChild" Content="Add child" Click="BtnAddChild_Click" Width="80" />

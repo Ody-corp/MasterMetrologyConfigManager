@@ -178,28 +178,28 @@ namespace MasterMetrology
         }
         private void BtnAddChild_Click(object sender, RoutedEventArgs e)
         {
-            var fullIndex = CmbChild.SelectedValue as string;
+            var state = CmbChild.SelectedValue as StateModelData;
 
-            if (_selectedVertex.State.SubStatesData.Where(s => s.FullIndex == fullIndex).Count() == 1)
+            if (_selectedVertex.State.SubStatesData.Any(s => s.SubStatesData.Count(ss => ss.FullIndex == state.FullIndex) == 1))
             {
-                _processController.Remove_RemovePendingChild(fullIndex);
+                _processController.Remove_RemovePendingChild(state);
             }
-            _processController.Add_AddPendingChild(fullIndex);
+            _processController.Add_AddPendingChild(state);
             Debug.WriteLine($"Successfully added. Here is a list -> {_processController.GetPendingAdds().ToString}");
         }
         private void BtnRemoveChild_Click(object sender, RoutedEventArgs e)
         {
-            var fullIndex = LstChildren.SelectedValue as string;
-            Debug.WriteLine($"BUTTON - Remove selected child - {fullIndex}");
-            if (_selectedVertex.State.SubStatesData.Where(s => s.FullIndex == fullIndex).Count() == 1)
+            var state = LstChildren.SelectedValue as StateModelData;
+            Debug.WriteLine($"BUTTON - Remove selected child - {state.Name}");
+            if (_selectedVertex.State.SubStatesData.Any(s => s.FullIndex == state.FullIndex))
             {
                 Debug.WriteLine($"Add_RemovePendingChild");
-                _processController.Add_RemovePendingChild(fullIndex);
+                _processController.Add_RemovePendingChild(state);
                 //_processController.Remove_AddPendingChild(fullIndex);
             }
             else
             {
-                _processController.Remove_AddPendingChild(fullIndex);
+                _processController.Remove_AddPendingChild(state);
             }
         }
         private void BtnApplyEdit_Click(object sender, RoutedEventArgs e)
@@ -225,21 +225,28 @@ namespace MasterMetrology
             // 2) nastaviť pending parent podľa vybraného comboboxu (ak tam je)
             var selParent = CmbParent.SelectedValue as string;
             //_processController.SetPendingParent(string.IsNullOrWhiteSpace(selParent) ? null : selParent);
-
-            _selectedVertex.State.Name = newName;
             
+            _selectedVertex.State.Name = newName;
+            var selectedParent = CmbParent.SelectedValue;
+            if (CmbParent.SelectedValue is StateModelData parentState)
+            {
+                _processController.ApplyPendingChildChanges(_selectedVertex, parentState);
+            }
+            else
+            {
+                _processController.ApplyPendingChildChanges(_selectedVertex, null);
+            }
 
             // 3) aplikovať pending child adds/removes (a re-render sa vykoná vnútri tej metódy)
-            //_processController.ApplyPendingChildChanges(_selectedVertex);
 
             // 4) refresh UI panel (znovu načíta current selected node state values)
             // after Apply the selected node might have new FullIndex or moved -> refresh selection by finding node
-            var newFull = _processController.FindStateByFullIndex(newIndex == _selectedVertex.State.Index
+            /*var newFull = _processController.FindStateByFullIndex(newIndex == _selectedVertex.State.Index
                                                                     ? _selectedVertex.State.FullIndex
                                                                     : (_processController.FindParentByFullIndex(oldFull)?.FullIndex == null
                                                                         ? newIndex
                                                                         : $"{_processController.FindParentByFullIndex(oldFull)?.FullIndex}.{newIndex}"));
-
+            */
             // safety: simply refresh textboxes from current _selectedVertex.State (if still valid)
             if (_selectedVertex?.State != null)
             {

@@ -14,6 +14,7 @@ using MasterMetrology.Core.Rendering;
 using System.Collections.ObjectModel;
 using System.Windows.Data;
 using System.Diagnostics;
+using MasterMetrology.Utils;
 
 namespace MasterMetrology
 {
@@ -35,6 +36,8 @@ namespace MasterMetrology
         private readonly List<StateModelData> _pendingRemoves = new List<StateModelData>();
         private string? _pendingParentFullIndex = null;
 
+        private List<(string, string)> movedPairs = new List<(string oldFull, string newFull)>();
+
         private string filePath;
 
         public void LoadDataXML(string filePath)
@@ -47,7 +50,7 @@ namespace MasterMetrology
             statesModelDatas = list.FullListStateModelData;
 
             PopulateTransitions(statesModelDatas);
-
+            
             visualRender.RenderGraph(statesModelDatas, viewPort, v => VertexSelected?.Invoke(v));
         }
 
@@ -58,7 +61,7 @@ namespace MasterMetrology
 
         private void PopulateTransitions(List<StateModelData> roots)
         {
-
+            Debug.WriteLine($"POLUTE TRANSITIONS");
             void doPopulate()
             {
                 AllTransitions.Clear();
@@ -72,7 +75,10 @@ namespace MasterMetrology
                         {
                             t.FromState = s;
                             t.NextState = FindStateByFullIndex(t.NextStateId);
+                            Debug.WriteLine($"Transition - {s.Name} {s.FullIndex} -> {t.NextState.Name} {t.NextState.Name}");
+
                             AllTransitions.Add(new TransitionViewModel(t, s.FullIndex));
+
                         }
                     }
 
@@ -86,7 +92,7 @@ namespace MasterMetrology
                 foreach (var r in roots)
                 {
                     collect(r);
-                }         
+                }
             }
 
             if (Application.Current?.Dispatcher != null && !Application.Current.Dispatcher.CheckAccess())
@@ -160,7 +166,7 @@ namespace MasterMetrology
                 FromState = owner
             };
 
-            if (owner.TransitionsData == null)         
+            if (owner.TransitionsData == null)
                 owner.TransitionsData = new ObservableCollection<TransitionModelData>();
 
             owner.TransitionsData.Add(newT);
@@ -270,100 +276,134 @@ namespace MasterMetrology
         /// Pri každom presune nastaví novú Index + FullIndex pre ten uzol (nasledujúci AFTER existing max).
         /// Po aplikácii zavolá OnPendingChildrenApplied ak je prihlásené.
         /// </summary>
-        public void ApplyPendingChildChanges(GraphVertex selectedVertex)
+        public void ApplyPendingChildChanges(GraphVertex selectedVertex, StateModelData parent)
         {
-            if ((_pendingAdds.Count == 0) && (_pendingRemoves.Count == 0))
+            /*if ((_pendingAdds.Count == 0) && (_pendingRemoves.Count == 0))
             {
                 ClearPendingChildChanges();
                 return;
+            }*/
+
+            movedPairs = new List<(string oldFull, string newFull)>();
+            Debug.WriteLine($"pendingAdds-{_pendingAdds.Count} pendingRemoves-{_pendingRemoves.Count}");
+
+            if (selectedVertex.State.Parent != parent)
+            {
+                //Debug.WriteLine($"Got different parent. Before {selectedVertex.State.Parent.Name} | New {parent.Name}");
+                var biggestIndex = 0;
+                bool isIndexAvailable = true;
+
+                if (parent == null)
+                {
+                    foreach (var state in statesModelDatas)
+                    {
+                        if (state.Index == selectedVertex.State.Index)
+                        {
+                            isIndexAvailable = false;
+                        }
+                        if (int.Parse(state.Index) > biggestIndex)
+                        {
+                            biggestIndex = int.Parse(state.Index);
+                        }
+                    }
+
+                    if (!isIndexAvailable)
+                    {
+                        selectedVertex.State.Index = $"{biggestIndex + 1}";
+                        
+                    }
+                    
+                    selectedVertex.State.Parent.SubStatesData.Remove(selectedVertex.State);
+                    selectedVertex.State.Parent = parent;
+                    statesModelDatas.Add(selectedVertex.State);
+                    
+                }
+                else
+                {
+                    foreach (var state in parent.SubStatesData)
+                    {
+                        if (state.Index == selectedVertex.State.Index)
+                        {
+                            isIndexAvailable = false;
+                        }
+                        if (int.Parse(state.Index) > biggestIndex)
+                        {
+                            biggestIndex = int.Parse(state.Index);
+                        }
+                    }
+
+                    if (!isIndexAvailable)
+                    {
+                        selectedVertex.State.Index = $"{biggestIndex + 1}";
+                    }
+
+                    selectedVertex.State.Parent = parent;
+                    parent.SubStatesData.Add(selectedVertex.State);
+                    statesModelDatas.Remove(selectedVertex.State);
+                }
+                UpdateIndexesRecursive(selectedVertex.State);
+
             }
 
-            var movedPairs = new List<(string oldFull, string newFull)>();
-            Debug.WriteLine($"pendingAdds-{_pendingAdds.Count} pendingRemoves-{_pendingRemoves.Count}");
-            // 1) Removals: unparent -> top-level
+
+            // 1) REMOVALS -> unparent to top-level, compute new index/full and collect moved pair
             foreach (var state in _pendingRemoves.ToList())
             {
-                Debug.WriteLine($"Working on pendingRemoves, actual {state.FullIndex}");
-                //var movingState = FindStateByFullIndex(state.FullIndex);
-                //if (movingState == null) continue;
-                //Debug.WriteLine($"Found moving state! movingStateIndex {state.FullIndex} fullIndex {state.FullIndex}");
-                //var removed = RemoveStateFromItsParent(state.FullIndex);
-                //if (!removed) continue;
+                var oldFull = state.FullIndex ?? "";
 
-                //if (statesModelDatas == null) statesModelDatas = new List<StateModelData>();
-                state.Parent.SubStatesData.Remove(state);
-                statesModelDatas.Add(state);
-
-                var nextIdx = GetNextIndexForParent(null);
-                var newFull = nextIdx.ToString();
-                UpdateFullIndexRecursive(state, newFull);
-                //movedPairs.Add((fullIndex, movingState.FullIndex));
-            }
-
-            // 2) Adds: presunieme do _pendingParentFullIndex (null => top-level)
-            if (_pendingAdds.Count > 0)
-            {
-                var targetParent = _pendingParentFullIndex;
-
-                foreach (var state in _pendingAdds.ToList())
+                // remove from old parent or from top-level list
+                if (state.Parent != null)
                 {
-                    //var movingState = FindStateByFullIndex(fullIndex);
-                    //if (movingState == null) continue;
-
-                    selectedVertex.State.SubStatesData.Add(state);
-                    
-                    if (state.Parent != null)
-                    {
-                        state.Parent.SubStatesData.Remove(state);
-                    }
-                    else {
-                        statesModelDatas.Remove(state);
-                    }
-
-                    //var currentParent = FindParentByFullIndex(movingState.FullIndex);
-                    //if (string.Equals(currentParent.FullIndex, targetParent, StringComparison.Ordinal)) continue;
-
-                    // cycle check: nechceme parent = self alebo potomok
-                    /*if (targetParent != null)
-                    {
-                        // správne poradie parametrov: descendant, ancestor
-                        if (movingState.FullIndex == targetParent || IsDescendantByFullIndex(movingState.FullIndex, targetParent))
-                        {
-                            Debug.WriteLine($"Skip: would create cycle {movingState.FullIndex} -> {targetParent}");
-                            continue;
-                        }
-                    }*/
-
-                    //RemoveStateFromItsParent(movingState.FullIndex);
-
-                    /*if (targetParent == null)
-                    {
-                        if (statesModelDatas == null) statesModelDatas = new List<StateModelData>();
-                        statesModelDatas.Add(movingState);
-                    }
-                    else
-                    {
-                        var parentNode = FindStateByFullIndex(targetParent);
-                        if (parentNode == null)
-                        {
-                            Debug.WriteLine($"Apply add: target parent {targetParent} not found");
-                            continue;
-                        }
-                        if (parentNode.SubStatesData == null) parentNode.SubStatesData = new ObservableCollection<StateModelData>();
-                        parentNode.SubStatesData.Add(movingState);
-                    }*/
-
-                    var nextIdx = GetNextIndexForParent(targetParent);
-                    var newFull = targetParent == null ? nextIdx.ToString() : $"{targetParent}.{nextIdx}";
-                    UpdateFullIndexRecursive(state, newFull);
-                    //movedPairs.Add((fullIndex, movingState.FullIndex));
+                    state.Parent.SubStatesData.Remove(state);
+                    state.Parent = null;
                 }
+                else
+                {
+                    // if it was top-level already, remove from statesModelDatas to re-add later
+                    statesModelDatas.Remove(state);
+                }
+
+                // add as top-level and compute new index/full
+                statesModelDatas.Add(state);
+                var nextIdx = GetNextIndexForParent(null);
+                state.Index = nextIdx.ToString();
+                //UpdateFullIndexRecursive(state, state.Index); // sets FullIndex and children
+                UpdateIndexesRecursive(state);
+                //movedPairs.Add((oldFull, state.FullIndex));
             }
 
-            // 3) Aktualizovať transitions pre každý presun (oldFull -> newFull)
+            // 2) ADDS -> move each pending add under selectedVertex.State, compute new index/full
+            foreach (var state in _pendingAdds.ToList())
+            {
+                var oldFull = state.FullIndex ?? "";
+
+                // remove from old location
+                if (state.Parent != null)
+                {
+                    state.Parent.SubStatesData.Remove(state);
+                }
+                else
+                {
+                    statesModelDatas.Remove(state);
+                }
+
+                // add under selected vertex
+                selectedVertex.State.SubStatesData.Add(state);
+                state.Parent = selectedVertex.State;
+
+                // assign next index within new parent and update fullindex recursively
+                var nextIdx = GetNextIndexForParent(selectedVertex.State);
+                state.Index = nextIdx.ToString();
+                var newFull = $"{selectedVertex.State.FullIndex}.{state.Index}";
+                //UpdateFullIndexRecursive(state, newFull);
+                UpdateIndexesRecursive(state);
+                //movedPairs.Add((oldFull, state.FullIndex));
+            }
+
+            // 3) Update all transitions which referenced oldFull -> newFull
             foreach (var (oldFull, newFull) in movedPairs)
             {
-                if (oldFull != newFull)
+                if (!string.IsNullOrEmpty(oldFull) && !string.IsNullOrEmpty(newFull) && oldFull != newFull)
                     UpdateTransitionReferencesForMovedNode(oldFull, newFull);
             }
 
@@ -371,8 +411,10 @@ namespace MasterMetrology
 
             try
             {
-                PopulateTransitions(statesModelDatas); //not sure yet
+                // re-populate transitions (this will resolve NextState from NextStateId)
+                PopulateTransitions(statesModelDatas);
 
+                // rerender
                 visualRender.RenderGraph(statesModelDatas, viewPort, v => VertexSelected?.Invoke(v));
 
                 OnPendingChildrenApplied?.Invoke(statesModelDatas ?? new List<StateModelData>());
@@ -383,33 +425,163 @@ namespace MasterMetrology
             }
         }
 
+        void UpdateIndexesRecursive(StateModelData state)
+        {
+            var oldFullIndex = state.FullIndex;
+            if (state.Parent != null)
+            {
+                state.FullIndex = $"{state.Parent.FullIndex}.{state.Index}";
+            }
+            else
+            {
+                state.FullIndex = state.Index;
+            }
+            
+            movedPairs.Add((oldFullIndex, state.FullIndex));
+
+            if (state.SubStatesData.Count() > 0)
+            {
+                foreach (var subState in state.SubStatesData)
+                {
+                    UpdateIndexesRecursive(subState);
+                }
+            } 
+        }
+
+        private void UpdateIndexes(GraphVertex selectedVertex, StateModelData cmbParent)
+        {
+            void SetIndexForPenddingStates(List<StateModelData> states)
+            {
+                var nextIndex = 0;
+                if (states.Count() > 0)
+                {
+                    nextIndex = states.Max(ss => int.Parse(ss.Index) + 1);
+                }
+                foreach (var state in states)
+                {
+                    state.Index = nextIndex.ToString();
+                    nextIndex++;
+                }
+            }
+            string GetFullIndexFromSelectedToTop(StateModelData state, string buildingFullIndex)
+            {
+                var tempIndex = buildingFullIndex;
+
+                var cur = state;
+                while (cur.Parent != null)
+                {
+                    var parentIdx = cur.Parent.Index;
+                    tempIndex = parentIdx + "." + tempIndex;
+                    cur = cur.Parent;
+                }
+
+                return tempIndex;
+            }
+
+            void SetFullIndexForSubStatesRecursive(string fullIndex, StateModelData state)
+            {
+                foreach (var subState in state.SubStatesData)
+                {
+                    subState.FullIndex = fullIndex + "." + subState.Index;
+
+                    if (subState.SubStatesData.Count > 0)
+                    {
+                        SetFullIndexForSubStatesRecursive(subState.FullIndex, subState);
+                    }
+                }
+            }
+
+            void SetFullIndex(bool topLevel)
+            {
+                var partialFullIndex = "";
+                if (topLevel)
+                {
+                    partialFullIndex = selectedVertex.State.Index;
+                }
+                else
+                {
+                    partialFullIndex = GetFullIndexFromSelectedToTop(selectedVertex.State, selectedVertex.State.Index);
+                }
+
+                SetFullIndexForSubStatesRecursive(partialFullIndex, selectedVertex.State);
+            }
+
+
+            if (_pendingAdds.Count() > 0)
+            {
+                SetIndexForPenddingStates(_pendingAdds);
+            }
+            if (_pendingRemoves.Count() > 0)
+            {
+                SetIndexForPenddingStates(_pendingRemoves);
+
+                foreach (var state in _pendingRemoves)
+                {
+                    state.Index = statesModelDatas.Max(ss => int.Parse(ss.Index) + 1).ToString();
+                    state.FullIndex = state.Index;
+                    SetFullIndexForSubStatesRecursive(state.FullIndex, state);
+                }
+            }
+
+            if (selectedVertex.State.Parent != cmbParent)
+            {
+
+                if (cmbParent == null)
+                {
+                    var nextIndex = statesModelDatas.Max(s => int.Parse(s.Index)) + 1;
+                    selectedVertex.State.Index = nextIndex.ToString();
+
+                    //set new indexes for subStates
+                    SetFullIndex(true);
+                }
+                else
+                {
+                    var nextIndex = selectedVertex.State.Parent.SubStatesData.Max(ss => int.Parse(ss.Index)) + 1;
+                    selectedVertex.State.Index = nextIndex.ToString();
+
+                    SetFullIndex(false);
+                }
+            }
+            else if (selectedVertex.State.Parent == cmbParent)
+            {
+                if (cmbParent == null)
+                {
+                    SetFullIndex(true);
+                }
+                else
+                {
+                    SetFullIndex(false);
+                }
+            }
+        }
+
         /// <summary>Vrátí next index (int) pre daného parenta (null => top-level).</summary>
-        private int GetNextIndexForParent(string? parentFullIndex)
+        private int GetNextIndexForParent(StateModelData? state)
         {
             IEnumerable<StateModelData> siblings;
-            if (parentFullIndex == null)
+            if (state == null)
             {
                 siblings = statesModelDatas ?? Enumerable.Empty<StateModelData>();
             }
             else
             {
-                var parent = FindStateByFullIndex(parentFullIndex);
-                siblings = parent?.SubStatesData ?? Enumerable.Empty<StateModelData>();
+                //var parent = state.Parent;
+                siblings = state.SubStatesData;
             }
 
             int max = 0;
             foreach (var s in siblings)
             {
-                if (!string.IsNullOrWhiteSpace(s.Index) && int.TryParse(s.Index, out var v))
+                if (int.TryParse(s.Index, out var v))
                 {
                     if (v > max) max = v;
                     continue;
                 }
-                var seg = s.FullIndex?.Split('.', StringSplitOptions.RemoveEmptyEntries).LastOrDefault();
-                if (int.TryParse(seg, out var v2))
-                {
-                    if (v2 > max) max = v2;
-                }
+                //var seg = s.FullIndex?.Split('.', StringSplitOptions.RemoveEmptyEntries).LastOrDefault();
+                //if (int.TryParse(seg, out var v2))
+                //{
+                //    if (v2 > max) max = v2;
+                //}
             }
             return max + 1;
         }
@@ -467,44 +639,40 @@ namespace MasterMetrology
         /// <summary>Aktualizuje všetky transitions (FromStage / NextStage) - exact match alebo prefix.</summary>
         private void UpdateTransitionReferencesForMovedNode(string oldFull, string newFull)
         {
-            if (statesModelDatas == null) return;
-            /*
+            if (string.IsNullOrEmpty(oldFull) || string.IsNullOrEmpty(newFull)) return;
+
             void walk(StateModelData s)
             {
                 if (s.TransitionsData != null)
                 {
                     foreach (var t in s.TransitionsData)
                     {
-                        if (!string.IsNullOrEmpty(t.FromState.FullIndex))
+                        if (string.IsNullOrWhiteSpace(t.NextStateId)) continue;
+
+                        if (t.NextStateId == oldFull)
                         {
-                            if (t.FromState.FullIndex == oldFull) t.FromState.FullIndex = newFull;
-                            else if (t.FromState.FullIndex.StartsWith(oldFull + ".")) t.FromState.FullIndex = newFull + t.FromState.FullIndex.Substring(oldFull.Length);
+                            t.NextStateId = newFull;
                         }
-                        if (!string.IsNullOrEmpty(t.NextState.FullIndex))
-                        {
-                            if (t.NextState.FullIndex == oldFull) t.NextState.FullIndex = newFull;
-                            else if (t.NextState.FullIndex.StartsWith(oldFull + ".")) t.NextState.FullIndex = newFull + t.NextState.FullIndex.Substring(oldFull.Length);
-                        }
+                        //else if (t.NextStateId.StartsWith(oldFull + "."))
+                        //{
+                        //    // preserve suffix
+                        //    var suffix = t.NextStateId.Substring(oldFull.Length);
+                        //    t.NextStateId = newFull + suffix;
+                        //}
+                        // NextState object reference will be re-resolved in PopulateTransitions, but keep it null for now
+                        //t.NextState = null;
                     }
                 }
-                if (s.SubStatesData != null)
+
+                if (s.SubStatesData != null && s.SubStatesData.Count > 0)
                 {
-                    foreach (var ss in s.SubStatesData) walk(ss);
+                    foreach (var sub in s.SubStatesData) walk(sub);
                 }
             }
 
-            foreach (var root in statesModelDatas) walk(root);*/
-
-            void UpdateTransition()
-            {
-
-            }
-
-            foreach (StateModelData movedState in _pendingAdds)
-            {
-
-            }
+            foreach (var root in statesModelDatas) walk(root);
         }
+
 
         /// <summary>Vyhľadá parent StateModelData (ktorý má priamo child s daným fullIndex) rekurzívne.</summary>
         private static StateModelData? FindParentStateOf(string childFullIndex, IEnumerable<StateModelData> nodes)
@@ -572,14 +740,14 @@ namespace MasterMetrology
             var oldFull = node.FullIndex;
             //if (!string.Equals(node.Index, newIndex, StringComparison.Ordinal))
             //{
-                string newFull = parent == null ? newIndex : $"{parent.FullIndex}.{newIndex}";
+            string newFull = parent == null ? newIndex : $"{parent.FullIndex}.{newIndex}";
 
-                UpdateFullIndexRecursive(node, newFull);
-                UpdateTransitionReferencesForMovedNode(oldFull, node.FullIndex);
+            UpdateFullIndexRecursive(node, newFull);
+            UpdateTransitionReferencesForMovedNode(oldFull, node.FullIndex);
 
-                // repopulate transitions and re-render graph to ensure visuals sync
-                PopulateTransitions(statesModelDatas);
-                visualRender.RenderGraph(statesModelDatas, viewPort, v => VertexSelected?.Invoke(v));
+            // repopulate transitions and re-render graph to ensure visuals sync
+            PopulateTransitions(statesModelDatas);
+            visualRender.RenderGraph(statesModelDatas, viewPort, v => VertexSelected?.Invoke(v));
             //}
             //else
             //{

@@ -60,7 +60,7 @@ public static class StateModelDataDumper
         }
     }
 
-    private static string GetTransitionDisplay(object t)
+    private static string GetTransitionDisplay(TransitionModelData t)
     {
         // Ak máš konkrétny typ, nahraď 'object' a rozbal presné polia.
         // Príklad (ak TransitionModelData má Input, FromStage, NextStage):
@@ -68,8 +68,8 @@ public static class StateModelDataDumper
         {
             dynamic dt = t;
             string input = dt.Input ?? "";
-            string from = dt.FromStage ?? "";
-            string next = dt.NextStage ?? "";
+            string from = dt.FromStage.FullIndex ?? "";
+            string next = dt.NextStage.FullIndex ?? "";
             return $"Input='{input}', From='{from}', Next='{next}'";
         }
         catch
