@@ -14,7 +14,6 @@ using MasterMetrology.Core.Rendering;
 using System.Collections.ObjectModel;
 using System.Windows.Data;
 using System.Diagnostics;
-using MasterMetrology.Utils;
 
 namespace MasterMetrology
 {
@@ -269,6 +268,29 @@ namespace MasterMetrology
         public IReadOnlyList<StateModelData> GetPendingRemoves() => _pendingRemoves.AsReadOnly();
         public string? GetPendingParent() => _pendingParentFullIndex;
 
+        private void SetCurrentStateIndex(GraphVertex selectedVertex, List<StateModelData> statesOnSameLevel)
+        {
+            bool isIndexAvailable = true;
+            var biggestIndex = 0;
+
+            foreach (var state in statesOnSameLevel)
+            {
+                if (state.Index == selectedVertex.State.Index)
+                {
+                    isIndexAvailable = false;
+                }
+                if (int.Parse(state.Index) > biggestIndex)
+                {
+                    biggestIndex = int.Parse(state.Index);
+                }
+            }
+
+            if (!isIndexAvailable)
+            {
+                selectedVertex.State.Index = $"{biggestIndex + 1}";
+            }
+        }
+
         /// <summary>
         /// Aplikuje pending adds/removes.
         /// Pri adds: presunie zo starého parenta pod _pendingParentFullIndex (null => top-level)
@@ -289,30 +311,10 @@ namespace MasterMetrology
 
             if (selectedVertex.State.Parent != parent)
             {
-                //Debug.WriteLine($"Got different parent. Before {selectedVertex.State.Parent.Name} | New {parent.Name}");
-                var biggestIndex = 0;
-                bool isIndexAvailable = true;
-
                 if (parent == null)
                 {
-                    foreach (var state in statesModelDatas)
-                    {
-                        if (state.Index == selectedVertex.State.Index)
-                        {
-                            isIndexAvailable = false;
-                        }
-                        if (int.Parse(state.Index) > biggestIndex)
-                        {
-                            biggestIndex = int.Parse(state.Index);
-                        }
-                    }
+                    SetCurrentStateIndex(selectedVertex, statesModelDatas);
 
-                    if (!isIndexAvailable)
-                    {
-                        selectedVertex.State.Index = $"{biggestIndex + 1}";
-                        
-                    }
-                    
                     selectedVertex.State.Parent.SubStatesData.Remove(selectedVertex.State);
                     selectedVertex.State.Parent = parent;
                     statesModelDatas.Add(selectedVertex.State);
@@ -320,22 +322,7 @@ namespace MasterMetrology
                 }
                 else
                 {
-                    foreach (var state in parent.SubStatesData)
-                    {
-                        if (state.Index == selectedVertex.State.Index)
-                        {
-                            isIndexAvailable = false;
-                        }
-                        if (int.Parse(state.Index) > biggestIndex)
-                        {
-                            biggestIndex = int.Parse(state.Index);
-                        }
-                    }
-
-                    if (!isIndexAvailable)
-                    {
-                        selectedVertex.State.Index = $"{biggestIndex + 1}";
-                    }
+                    SetCurrentStateIndex(selectedVertex, parent.SubStatesData.ToList());
 
                     selectedVertex.State.Parent = parent;
                     parent.SubStatesData.Add(selectedVertex.State);
@@ -446,113 +433,6 @@ namespace MasterMetrology
                     UpdateIndexesRecursive(subState);
                 }
             } 
-        }
-
-        private void UpdateIndexes(GraphVertex selectedVertex, StateModelData cmbParent)
-        {
-            void SetIndexForPenddingStates(List<StateModelData> states)
-            {
-                var nextIndex = 0;
-                if (states.Count() > 0)
-                {
-                    nextIndex = states.Max(ss => int.Parse(ss.Index) + 1);
-                }
-                foreach (var state in states)
-                {
-                    state.Index = nextIndex.ToString();
-                    nextIndex++;
-                }
-            }
-            string GetFullIndexFromSelectedToTop(StateModelData state, string buildingFullIndex)
-            {
-                var tempIndex = buildingFullIndex;
-
-                var cur = state;
-                while (cur.Parent != null)
-                {
-                    var parentIdx = cur.Parent.Index;
-                    tempIndex = parentIdx + "." + tempIndex;
-                    cur = cur.Parent;
-                }
-
-                return tempIndex;
-            }
-
-            void SetFullIndexForSubStatesRecursive(string fullIndex, StateModelData state)
-            {
-                foreach (var subState in state.SubStatesData)
-                {
-                    subState.FullIndex = fullIndex + "." + subState.Index;
-
-                    if (subState.SubStatesData.Count > 0)
-                    {
-                        SetFullIndexForSubStatesRecursive(subState.FullIndex, subState);
-                    }
-                }
-            }
-
-            void SetFullIndex(bool topLevel)
-            {
-                var partialFullIndex = "";
-                if (topLevel)
-                {
-                    partialFullIndex = selectedVertex.State.Index;
-                }
-                else
-                {
-                    partialFullIndex = GetFullIndexFromSelectedToTop(selectedVertex.State, selectedVertex.State.Index);
-                }
-
-                SetFullIndexForSubStatesRecursive(partialFullIndex, selectedVertex.State);
-            }
-
-
-            if (_pendingAdds.Count() > 0)
-            {
-                SetIndexForPenddingStates(_pendingAdds);
-            }
-            if (_pendingRemoves.Count() > 0)
-            {
-                SetIndexForPenddingStates(_pendingRemoves);
-
-                foreach (var state in _pendingRemoves)
-                {
-                    state.Index = statesModelDatas.Max(ss => int.Parse(ss.Index) + 1).ToString();
-                    state.FullIndex = state.Index;
-                    SetFullIndexForSubStatesRecursive(state.FullIndex, state);
-                }
-            }
-
-            if (selectedVertex.State.Parent != cmbParent)
-            {
-
-                if (cmbParent == null)
-                {
-                    var nextIndex = statesModelDatas.Max(s => int.Parse(s.Index)) + 1;
-                    selectedVertex.State.Index = nextIndex.ToString();
-
-                    //set new indexes for subStates
-                    SetFullIndex(true);
-                }
-                else
-                {
-                    var nextIndex = selectedVertex.State.Parent.SubStatesData.Max(ss => int.Parse(ss.Index)) + 1;
-                    selectedVertex.State.Index = nextIndex.ToString();
-
-                    SetFullIndex(false);
-                }
-            }
-            else if (selectedVertex.State.Parent == cmbParent)
-            {
-                if (cmbParent == null)
-                {
-                    SetFullIndex(true);
-                }
-                else
-                {
-                    SetFullIndex(false);
-                }
-            }
         }
 
         /// <summary>Vrátí next index (int) pre daného parenta (null => top-level).</summary>
@@ -688,16 +568,6 @@ namespace MasterMetrology
                 }
             }
             return null;
-        }
-
-        /// <summary>Check if descendantFullIndex is a child (descendant) of ancestorFullIndex</summary>
-        private static bool IsDescendantByFullIndex(string descendantFullIndex, string ancestorFullIndex)
-        {
-            if (string.IsNullOrWhiteSpace(descendantFullIndex) || string.IsNullOrWhiteSpace(ancestorFullIndex)) return false;
-            if (descendantFullIndex == ancestorFullIndex) return false;
-            if (!descendantFullIndex.StartsWith(ancestorFullIndex)) return false;
-            if (descendantFullIndex.Length == ancestorFullIndex.Length) return false;
-            return descendantFullIndex[ancestorFullIndex.Length] == '.';
         }
 
         public bool UpdateStateProperties(string fullIndex, string newName, string newIndex, string newOutput, out string errorMessage)
