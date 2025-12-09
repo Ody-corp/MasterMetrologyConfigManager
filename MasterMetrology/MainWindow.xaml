@@ -5,73 +5,160 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:MasterMetrology"
         mc:Ignorable="d"
-        Title="MainWindow" Height="450" Width="800">
+        Title="MainWindow" Height="1080" Width="1920" WindowState="Maximized">
     <Grid>
         <DockPanel>
             <Menu DockPanel.Dock="Top">
-                <MenuItem Header="_File" >
-                    <MenuItem Header="Import"/>
+                <MenuItem Header="File" >
+                    <MenuItem Header="Import" Click="ImportFile_Click"/>
+                    <MenuItem Header="Show States Debug" Click="ShowDebug_Click"/>
                     <MenuItem Header="Save"/>
                     <MenuItem Header="Save as"/>
-                    <MenuItem Header="Exit"/>
+                    <MenuItem Header="Exit" Click="ExitSoftware"/>
+                </MenuItem>
+                <MenuItem Header="Edit">
+
+                </MenuItem>
+                <MenuItem Header="View">
+                    <MenuItem Header="_Center" Click="ResetView_Click"/>
+                    <MenuItem Header="Zoom">
+                        <MenuItem Header="40%"/>
+                        <MenuItem Header="60%"/>
+                        <MenuItem Header="80%"/>
+                        <MenuItem Header="100%"/>
+                        <MenuItem Header="120%"/>
+                        <MenuItem Header="150%"/>
+                        <MenuItem Header="200%"/>
+                        <MenuItem Header="250%"/>
+                        <MenuItem Header="300%"/>
+                    </MenuItem>
                 </MenuItem>
             </Menu>
             <Grid>
-                <Border x:Name="DiagramBorder" BorderBrush="Black" BorderThickness="1" ClipToBounds="True" Height="350" Width="400" HorizontalAlignment="Left" VerticalAlignment="Top">
-                    <Grid>
-                        <!-- bottom layer (background) of canvas view with grid -->
-                        <Canvas x:Name="GridCanvas" Width="50000" Height="50000">
-                            <Canvas.Background>
-                                <DrawingBrush TileMode="Tile" Viewport="0,0,50,50" ViewportUnits="Absolute">
-                                    <DrawingBrush.Drawing>
-                                        <!-- white background -->
-                                        <GeometryDrawing Brush="White">
-                                            <!-- grid -->
-                                            <GeometryDrawing.Pen>
-                                                <Pen Brush="LightGray" Thickness="0.5"/>
-                                            </GeometryDrawing.Pen>
-                                            <GeometryDrawing.Geometry>
-                                                <GeometryGroup>
-                                                    <LineGeometry StartPoint="0,0" EndPoint="50,0"/>
-                                                    <LineGeometry StartPoint="0,0" EndPoint="0,50"/>
-                                                </GeometryGroup>
-                                            </GeometryDrawing.Geometry>
-                                        </GeometryDrawing>
-                                    </DrawingBrush.Drawing>
-                                </DrawingBrush>
-                            </Canvas.Background>
-                            <!-- allows canvas to move and transport -->
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="2*"/>
+                    <ColumnDefinition Width="1*"/>
+                </Grid.ColumnDefinitions>
+                <Grid Height="auto" Grid.Column="0" x:Name="ViewPort">
+                    <Border x:Name="DiagramBorder" BorderBrush="Black" BorderThickness="1" ClipToBounds="True" Height="auto" Width="auto" HorizontalAlignment="Left" VerticalAlignment="Top">
+                        <Grid>
+                            <!-- bottom layer (background) of canvas view with grid -->
+                            <Canvas x:Name="GridCanvas" Width="50000" Height="50000">
+                                <Canvas.Background>
+                                    <DrawingBrush TileMode="Tile" Viewport="0,0,50,50" ViewportUnits="Absolute">
+                                        <DrawingBrush.Drawing>
+                                            <!-- white background -->
+                                            <GeometryDrawing Brush="White">
+                                                <!-- grid -->
+                                                <GeometryDrawing.Pen>
+                                                    <Pen Brush="LightGray" Thickness="0.5"/>
+                                                </GeometryDrawing.Pen>
+                                                <GeometryDrawing.Geometry>
+                                                    <GeometryGroup>
+                                                        <LineGeometry StartPoint="0,0" EndPoint="50,0"/>
+                                                        <LineGeometry StartPoint="0,0" EndPoint="0,50"/>
+                                                    </GeometryGroup>
+                                                </GeometryDrawing.Geometry>
+                                            </GeometryDrawing>
+                                        </DrawingBrush.Drawing>
+                                    </DrawingBrush>
+                                </Canvas.Background>
+                                <!-- allows canvas to move and transport -->
                                 <Canvas.RenderTransform>
-                                <TransformGroup>
-                                    <ScaleTransform x:Name="ZoomTransform" ScaleX="1" ScaleY="1"/>
-                                    <TranslateTransform x:Name="PanTransform" X="0" Y="0"/>
-                                </TransformGroup>
-                            </Canvas.RenderTransform>
-                        </Canvas>
+                                    <TransformGroup>
+                                        <ScaleTransform x:Name="ZoomTransform" ScaleX="1" ScaleY="1"/>
+                                        <TranslateTransform x:Name="PanTransform" X="0" Y="0"/>
+                                    </TransformGroup>
+                                </Canvas.RenderTransform>
+                            </Canvas>
 
-                        <!-- top layer: objects -->
-                        <Canvas x:Name="DiagramCanvas" Width="50000" Height="50000" Background="Transparent">
-                            <!-- transform and zoom locked with bottom layer -->
+                            <!-- top layer: objects -->
+                            <Canvas x:Name="DiagramCanvas" Width="50000" Height="50000" Background="Transparent">
+                                <Canvas x:Name="GraphLayer" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" Background="Transparent"/>
+
+                                <!-- transform and zoom locked with bottom layer -->
                                 <Canvas.RenderTransform>
-                                <TransformGroup>
-                                    <ScaleTransform ScaleX="{Binding ElementName=ZoomTransform, Path=ScaleX}"
-                                                    ScaleY="{Binding ElementName=ZoomTransform, Path=ScaleY}"/>
-                                    <TranslateTransform X="{Binding ElementName=PanTransform, Path=X}"
-                                                        Y="{Binding ElementName=PanTransform, Path=Y}"/>
-                                </TransformGroup>
-                            </Canvas.RenderTransform>
+                                    <TransformGroup>
+                                        <ScaleTransform ScaleX="{Binding ElementName=ZoomTransform, Path=ScaleX}"
+                                        ScaleY="{Binding ElementName=ZoomTransform, Path=ScaleY}"/>
+                                        <TranslateTransform X="{Binding ElementName=PanTransform, Path=X}"
+                                            Y="{Binding ElementName=PanTransform, Path=Y}"/>
+                                    </TransformGroup>
+                                </Canvas.RenderTransform>
+                            </Canvas>
+                        </Grid>
+                    </Border>
+                </Grid>
+                <Grid Height="auto" Grid.Column="1" MinWidth="300">
 
-                            <!-- object for testing -->
-                            <Grid Width="120" Height="60" Canvas.Left="25000" Canvas.Top="25000">
-                                <Rectangle Fill="LightBlue" Stroke="Black" StrokeThickness="2"/>
-                                <TextBlock Text="Tabuľka 1"
-                                           HorizontalAlignment="Center"
-                                           VerticalAlignment="Center"
-                                           FontWeight="Bold"/>
-                            </Grid>
-                        </Canvas>
+                    <Grid Margin="12">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="*"/>
+                            <!-- rezervované pre transitions list -->
+                        </Grid.RowDefinitions>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="100"/>
+                            <!-- labels -->
+                            <ColumnDefinition Width="*"/>
+                            <!-- inputs -->
+                        </Grid.ColumnDefinitions>
+                          
+                        <Label Grid.Row="0" Grid.Column="0" Content="Name"/>
+                        <TextBox Grid.Row="0" Grid.Column="1" x:Name="TxtName" Margin="2.5"/>
+
+                        <Label Grid.Row="1" Grid.Column="0" Content="ID"/>
+                        <TextBox Grid.Row="1" Grid.Column="1" x:Name="TxtId" Margin="2.5"/>
+
+                        <Label Grid.Row="2" Grid.Column="0" Content="Full Index"/>
+                        <TextBox Grid.Row="2" Grid.Column="1" x:Name="TxtFullIndex" Margin="2.5" IsReadOnly="True" Background="LightGray"/>
+
+                        <Label Grid.Row="3" Grid.Column="0" Content="Output"/>
+                        <TextBox Grid.Row="3" Grid.Column="1" x:Name="TxtOutput" Margin="2.5"/>
+
+                        <!-- PARENT: combobox instead of simple textbox -->
+                        <Label Grid.Row="4" Grid.Column="0" Content="Parent"/>
+                        <ComboBox Grid.Row="4" Grid.Column="1" x:Name="CmbParent" Margin="2.5" DisplayMemberPath="State.Name" SelectedValuePath="Value" SelectionChanged="CmbParent_SelectionChanged"/>
+
+                        <!-- Children area: list + add/remove -->
+                        <Label Grid.Row="5" Grid.Column="0" Content="Children"/>
+                        <StackPanel Grid.Row="5" Grid.Column="1" Orientation="Vertical" Margin="2.5">
+                            <ListBox x:Name="LstChildren" Height="120" DisplayMemberPath="State.Name" SelectedValuePath="Value" SelectionMode="Single" />
+                            <StackPanel Orientation="Horizontal" Margin="0,6,0,0">
+                                <ComboBox x:Name="CmbChild" MinWidth="200" Margin="0,0,8,0" SelectionChanged="CmbChild_SelectionChanged"/>
+                                <Button x:Name="BtnAddChild" Content="Add child" Click="BtnAddChild_Click" Width="80" />
+                                <Button x:Name="BtnRemoveChild" Content="Remove selected" Click="BtnRemoveChild_Click" Width="100" Margin="8,0,0,0"/>
+                            </StackPanel>
+                        </StackPanel>
+
+                        <Button Grid.Row="6" x:Name="BtnApplyEdit" Content="Apply" Click="BtnApplyEdit_Click" Width="100" Margin="8,10,2.5,2.5"/>
+
+                        <!-- Transitions area -->
+                        <GroupBox Grid.Row="7" Grid.Column="0" Grid.ColumnSpan="2" Header="Transitions" Margin="0,8,0,0">
+                            <DockPanel>
+                                <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="0,4,0,8">
+                                    <Label>Input</Label>
+                                    <TextBox x:Name="TxtNewTransitionInput" MinWidth="40" MaxWidth="50" Margin="0,3,8,3" />
+                                    <Label>Target</Label>
+
+                                    <ComboBox x:Name="CmbTransitionTarget" MinWidth="200" Margin="0,3,8,3" />
+                                    <Button x:Name="BtnAddTransition" Content="Add" Click="BtnAddTransition_Click" Width="40" Margin="0,3,8,3"/>
+                                    <Button x:Name="BtnRemoveTransition" Content="Remove selected" Click="BtnRemoveTransition_Click" Margin="0,3,0,3" Width="100"/>
+
+                                </StackPanel>
+
+                                <ListBox x:Name="LstTransitions" DisplayMemberPath="DisplayText" Height="auto" Width="auto" Margin="20,10,20,10" SelectionChanged="LstTransitions_SelectionChanged"/>
+
+                            </DockPanel>
+                        </GroupBox>
                     </Grid>
-                </Border>
+                </Grid>
             </Grid>
         </DockPanel>
     </Grid>

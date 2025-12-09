@@ -8,4 +8,14 @@
     <UseWPF>true</UseWPF>
   </PropertyGroup>
 
+  <ItemGroup>
+    <PackageReference Include="Stride.GraphX.PCL.Common" Version="2.4.0" />
+    <PackageReference Include="Stride.GraphX.PCL.Logic" Version="2.4.0" />
+    <PackageReference Include="Stride.GraphX.WPF.Controls" Version="2.4.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Folder Include="Utils\" />
+  </ItemGroup>
+
 </Project>
