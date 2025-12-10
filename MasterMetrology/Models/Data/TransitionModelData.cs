@@ -1,83 +1,14 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Collections.ObjectModel;
-using System.ComponentModel;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using System.Collections.ObjectModel;
 using System.Windows;
 
 namespace MasterMetrology.Models.Data
 {
-    public class TransitionModelData : INotifyPropertyChanged
+    public class TransitionModelData
     {
-        private string input;
-        private string nextStateId;
-        private StateModelData nextState;
-        private StateModelData fromState;
-        private ObservableCollection<Point> pathPoints = new();
-
-        public string Input
-        {
-            get => input;
-            set
-            {
-                if (input != value)
-                {
-                    input = value;
-                    OnPropertyChanged(nameof(Input));
-                }
-            }
-        }
-        public string NextStateId
-        {
-            get => nextStateId;
-            set
-            {
-                if (nextStateId != value)
-                {
-                    nextStateId = value;
-                    OnPropertyChanged(nameof(NextState));
-                }
-            }
-        }
-        public StateModelData NextState
-        {
-            get => nextState;
-            set
-            {
-                if (nextState != value)
-                {
-                    nextState = value;
-                    //nextStateId = nextState?.FullIndex;
-                    OnPropertyChanged(nameof(NextState));
-                }
-            }
-        }
-        public StateModelData FromState
-        {
-            get => fromState;
-            set
-            {
-                if (fromState != value)
-                {
-                    fromState = value;
-                    OnPropertyChanged(nameof(FromState));
-                }
-            }
-        }
-        
-        public ObservableCollection<Point> PathPoints
-        {
-            get => pathPoints;
-            set 
-            { 
-                pathPoints = value; 
-                OnPropertyChanged(nameof(PathPoints)); 
-            }
-        }
-        public event PropertyChangedEventHandler? PropertyChanged;
-        protected void OnPropertyChanged(string propertyName)
-            => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+        public string Input {  get; set; }
+        public string NextStateId { get; set; }
+        public StateModelData NextState { get; set; }
+        public StateModelData FromState { get; set; } 
+        public ObservableCollection<Point> PathPoints { get; set; } = new(); 
     }
 }

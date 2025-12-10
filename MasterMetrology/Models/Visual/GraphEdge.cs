@@ -1,14 +1,6 @@
 ﻿using MasterMetrology.Models.Data;
-using QuickGraph;
 using GraphX.PCL.Common.Models;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using GraphX.PCL.Common.Interfaces;
 using System.ComponentModel;
-using GraphX.Controls;
 
 namespace MasterMetrology.Models.Visual
 {
@@ -57,7 +49,6 @@ namespace MasterMetrology.Models.Visual
 
         public void UpdateLabelFromTransitions()
         {
-            // zložíme text labelu z inputs (prípadne iné pravidlo)
             var inputs = Transitions.Select(x => x.Input).Where(s => !string.IsNullOrWhiteSpace(s)).ToArray();
             Text = inputs.Length == 0 ? string.Empty : string.Join(", ", inputs);
         }
@@ -67,10 +58,8 @@ namespace MasterMetrology.Models.Visual
             return Text;
         }
 
-        // INotifyPropertyChanged
         public event PropertyChangedEventHandler? PropertyChanged;
         protected void OnPropertyChanged(string propertyName)
             => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
     }
-
 }

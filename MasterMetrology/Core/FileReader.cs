@@ -1,10 +1,4 @@
 ﻿using MasterMetrology.Models.Data;
-using System;
-using System.Collections.Generic;
-using System.Diagnostics;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using System.Xml;
 
 namespace MasterMetrology
@@ -65,7 +59,6 @@ namespace MasterMetrology
                         {
                             stackIndex.Push(reader.GetAttribute("Index"));
                             string tempFullIndex;
-                            StateModelData parentState;
 
                             if (stackIndex.Count > 0)
                             {
