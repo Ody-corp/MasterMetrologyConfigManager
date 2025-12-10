@@ -1,16 +1,10 @@
-﻿using GraphX;
-using GraphX.Controls;
-using GraphX.PCL.Common;
+﻿using GraphX.Controls;
 using GraphX.PCL.Common.Enums;
 using MasterMetrology.Core.GraphX;
 using MasterMetrology.Core.GraphX.Controls;
 using MasterMetrology.Models.Data;
 using MasterMetrology.Models.Visual;
-using QuickGraph;
-using System;
-using System.Collections.Generic;
 using System.Diagnostics;
-using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Data;
@@ -24,18 +18,15 @@ namespace MasterMetrology.Core.Rendering
         public StateGraphArea LastGraphArea { get; private set; }
         public StateGraph LastGraph { get; private set; }
 
-        // mapovanie modelEdge -> attachable label control (aby sme ich vedeli odpojiť pri mazani)
+        // mapovanie modelEdge -> attachable label control
         private readonly Dictionary<GraphEdge, AttachableEdgeLabelControl> _edgeLabelMap = new Dictionary<GraphEdge, AttachableEdgeLabelControl>();
 
-        // uchovávame referenciu na pridany layout handler aby sme ho vedeli odobrať
         private EventHandler _layoutUpdatedHandler;
 
         public void RenderGraph(List<StateModelData> states, Canvas graphLayer, Action<GraphVertex> onVertexSelected = null)
         {
-            // 0) cleanup starého GraphArea (bezpečne)
             CleanupLastGraphArea(graphLayer);
 
-            // 1) Vytvor nový graph a graphArea
             graphLayer.Children.Clear();
 
             var graph = new StateGraph();
@@ -77,7 +68,7 @@ namespace MasterMetrology.Core.Rendering
             graphArea.GenerateGraph(true);
             graphArea.SetVerticesDrag(true, true);
 
-            // attach named handler (umožníme bezpečný odber neskôr)
+            // attach named handler
             _layoutUpdatedHandler = (s, e) => UpdateSubPositions(graphArea, graph);
             graphArea.LayoutUpdated += _layoutUpdatedHandler;
 
@@ -100,8 +91,6 @@ namespace MasterMetrology.Core.Rendering
             }
             ), DispatcherPriority.Loaded);
             
-
-            // vertex click hookup
             foreach (var vc in graphArea.VertexList.Values)
             {
                 var vertexObj = vc.Vertex as GraphVertex;
@@ -138,14 +127,12 @@ namespace MasterMetrology.Core.Rendering
 
             try
             {
-                // 1) odober layout handler
                 if (_layoutUpdatedHandler != null)
                 {
                     try { old.LayoutUpdated -= _layoutUpdatedHandler; } catch { }
                     _layoutUpdatedHandler = null;
                 }
 
-                // 2) detach všetkých attachable labelov z _edgeLabelMap (bez závislosti na LastGraphArea)
                 foreach (var kv in _edgeLabelMap.ToList())
                 {
                     var label = kv.Value;
@@ -155,7 +142,6 @@ namespace MasterMetrology.Core.Rendering
                 }
                 _edgeLabelMap.Clear();
 
-                // 3) pokús sa odstrániť starý graphArea z jeho parenta (Canvas/Panel)
                 try
                 {
                     if (old.Parent is Panel parentPanel)
@@ -172,11 +158,9 @@ namespace MasterMetrology.Core.Rendering
                     Debug.WriteLine("Cleanup remove old GraphArea failed: " + ex.Message);
                 }
 
-                // 4) nulovanie referencií
                 LastGraphArea = null;
                 LastGraph = null;
 
-                // 5) zbehnúť dispatcher pass, aby sa vyprázdnili eventy/layout (bez zablokovania UI - použijeme low-priority)
                 try
                 {
                     var disp = old.Dispatcher ?? Dispatcher.CurrentDispatcher;
@@ -314,7 +298,7 @@ namespace MasterMetrology.Core.Rendering
 
                 var attachLabel = new AttachableEdgeLabelControl
                 {
-                    // don't set ShowLabel here — we will set it after attach + dispatcher
+                    // don't set ShowLabel here — set it after attach + dispatcher
                 };
 
                 var binding = new Binding(nameof(GraphEdge.Text))
@@ -356,7 +340,7 @@ namespace MasterMetrology.Core.Rendering
         public void RemoveTransition(TransitionModelData transition)
         {
             if (LastGraphArea == null || LastGraph == null || transition == null) return;
-
+            
             var modelEdge = LastGraph.Edges.OfType<GraphEdge>().FirstOrDefault(e => e.Transitions.Contains(transition));
             if (modelEdge == null)
             {

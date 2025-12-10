@@ -1,9 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using MasterMetrology.Models.Data;
+﻿using MasterMetrology.Models.Data;
 
 namespace MasterMetrology.Models.Visual
 {

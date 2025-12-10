@@ -1,7 +1,5 @@
-﻿// File: Core/GraphX/Controls/SimpleVertexControl.cs
-using GraphX.Controls;
+﻿using GraphX.Controls;
 using MasterMetrology.Models.Visual;
-using System;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
@@ -19,7 +17,6 @@ namespace MasterMetrology.Core.GraphX.Controls
         {
             _visualChildren = new VisualCollection(this);
 
-            // uložíme root Canvas do poľa, aby sme naň mohli volať Measure/Arrange
             _rootCanvas = new Canvas
             {
                 //Width = 140,
@@ -52,30 +49,17 @@ namespace MasterMetrology.Core.GraphX.Controls
             Canvas.SetLeft(_label, 8);
             Canvas.SetTop(_label, 8);
 
-            // pridáme rootCanvas do VisualCollection (visual child controlu)
-            _visualChildren.Add(_rootCanvas);
-
-            //this.Width = _label.Width;
-            //this.Height = _label.Height;
-
-            //_rootCanvas.Width = this.Width;
-            //_rootCanvas.Height = this.Height;
-
-            //_border.Width = this.Width;
-            //_border.Height = this.Height;
-            
+            _visualChildren.Add(_rootCanvas);            
         }
 
-        // public API to change label when data changes
         public void UpdateLabel(string text)
         {
             _label.Text = text;
             InvalidateVisual();
             InvalidateMeasure();
-            UpdateLayout(); //#
+            UpdateLayout();
         }
 
-        // Override pre VisualCollection
         protected override int VisualChildrenCount => _visualChildren.Count;
 
         protected override Visual GetVisualChild(int index)
@@ -123,7 +107,6 @@ namespace MasterMetrology.Core.GraphX.Controls
             _rootCanvas.Measure(new Size(finalWidth, finalHeight));
 
             return new Size(finalWidth, finalHeight);
-
         }
 
         protected override Size ArrangeOverride(Size arrangeBounds)
@@ -131,7 +114,5 @@ namespace MasterMetrology.Core.GraphX.Controls
             _rootCanvas.Arrange(new Rect(0, 0, _rootCanvas.Width, _rootCanvas.Height));
             return new Size(_rootCanvas.Width, _rootCanvas.Height);
         }
-
-
     }
 }

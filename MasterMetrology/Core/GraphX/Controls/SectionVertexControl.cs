@@ -1,7 +1,5 @@
-﻿// File: Core/GraphX/Controls/SectionVertexControl.cs
-using GraphX.Controls;
+﻿using GraphX.Controls;
 using MasterMetrology.Models.Visual;
-using System;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
@@ -17,7 +15,6 @@ namespace MasterMetrology.Core.GraphX.Controls
         private readonly TextBlock _title;
         private readonly Rectangle _headerRect;
 
-        // veľkosť sekcie (možno upraviť z vonka)
         public double SectionWidth { get; set; } = 260;
         public double SectionHeight { get; set; } = 180;
 
@@ -25,19 +22,17 @@ namespace MasterMetrology.Core.GraphX.Controls
 
         public SectionVertexControl(GraphVertexSection vertex) : base(vertex)
         {
-            // vytvorenie VisualCollection pre tento control (môžeme ho spravovať z vnútra)
             _visualChildren = new VisualCollection(this);
 
-            // root canvas
             _rootCanvas = new Canvas
             {
                 Width = SectionWidth,
                 Height = SectionHeight,
                 Background = Brushes.Transparent,
-                IsHitTestVisible = true // nech interakcia ide cez GraphArea (optional)
+                IsHitTestVisible = true
             };
 
-            // border (box sekcie)
+
             _border = new Border
             {
                 Width = SectionWidth,
@@ -48,7 +43,7 @@ namespace MasterMetrology.Core.GraphX.Controls
                 Background = new SolidColorBrush(Color.FromArgb(40, 30, 60, 100))
             };
 
-            // header rectangle pod text
+
             _headerRect = new Rectangle
             {
                 Width = SectionWidth,
@@ -56,7 +51,7 @@ namespace MasterMetrology.Core.GraphX.Controls
                 Fill = new SolidColorBrush(Color.FromArgb(160, 30, 60, 120))
             };
 
-            // title text
+
             _title = new TextBlock
             {
                 Text = vertex?.Section?.Name + "\n" + vertex?.Section?.FullIndex ?? "(section)",
@@ -66,38 +61,20 @@ namespace MasterMetrology.Core.GraphX.Controls
                 TextAlignment = TextAlignment.Center
             };
 
-            // inner area (len vizuálna, neobsahuje sub-vertexy)
-            //var innerArea = new Canvas
-            //{
-            //    Width = SectionWidth,
-            //    Height = SectionHeight,
-            //    IsHitTestVisible = false
-            //};
-
-            // zloženie vizuálov do rootCanvas
             _rootCanvas.Children.Add(_border);
             _rootCanvas.Children.Add(_headerRect);
             Canvas.SetLeft(_headerRect, 0);
             Canvas.SetTop(_headerRect, 0);
 
-            // title umiestnenie
             _title.Width = SectionWidth - 16;
             Canvas.SetLeft(_title, 8);
             Canvas.SetTop(_title, 6);
             _rootCanvas.Children.Add(_title);
 
-            // pridaj innerArea nad border (ak potrebuješ vizuálne čiary)
-            //_rootCanvas.Children.Add(innerArea);
-            //Canvas.SetLeft(innerArea, 0);
-            //Canvas.SetTop(innerArea, 0);
-
-            // pridaj rootCanvas do vizuálnych detí controlu
             _visualChildren.Add(_rootCanvas);
 
-            // nastav veľkosť controlu
             this.Width = SectionWidth;
             this.Height = SectionHeight;
-            //this.InvalidateMeasure();
         }
 
         public void SetTitle(string newTitle)
@@ -123,7 +100,6 @@ namespace MasterMetrology.Core.GraphX.Controls
             InvalidateMeasure();
         }
 
-        // Override pre VisualCollection
         protected override int VisualChildrenCount => _visualChildren.Count;
 
         protected override Visual GetVisualChild(int index)

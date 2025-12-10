@@ -2,11 +2,9 @@
 using MasterMetrology.Models.Data;
 using MasterMetrology.Models.Visual;
 using Microsoft.Win32;
-using System;
-using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
-using System.Linq;
+using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Windows;
 using System.Windows.Data;
@@ -20,9 +18,6 @@ namespace MasterMetrology
 
         private HashSet<StateModelData> _originalChildren = new();
         private StateModelData? _originalParentModel;
-
-        // map model -> VM (jedna VM na jeden model)
-        //private readonly Dictionary<StateModelData, StateViewModel> _map = new();
 
 
         public MainWindowView(ProcessController processController, PanAndZoomController panAndZoomController)
@@ -61,7 +56,6 @@ namespace MasterMetrology
                 _selectedState = value;
                 OnPropertyChanged();
 
-                // keď zmeníš selected, naplň drafty z modelu (buffer)
                 LoadDraftFromSelected();
 
                 RefreshCandidates();
@@ -243,7 +237,7 @@ namespace MasterMetrology
                 vm.Parent = (m.Parent != null && _processController.modelToViewModel.TryGetValue(m.Parent, out var pvm)) ? pvm : null;
             }
 
-            // ak niečo bolo vybrané, skús zachovať selection
+            // to keep selection
             if (SelectedState != null && _processController.modelToViewModel.TryGetValue(SelectedState.StateModel, out var newSel))
                 SelectedState = newSel;
 
@@ -306,12 +300,14 @@ namespace MasterMetrology
 
             foreach (var m in added)
             {
+                Debug.WriteLine($"ADDED - {m.Name} {m.FullIndex}");
                 if (_processController.modelToViewModel.TryGetValue(m, out var vm))
                     vm.IsDraftAdded = true;
             }
 
             foreach (var m in removed)
             {
+                Debug.WriteLine($"REMOVED - {m.Name} {m.FullIndex}");
                 if (_processController.modelToViewModel.TryGetValue(m, out var vm))
                     vm.IsDraftRemoved = true;
             }
@@ -329,7 +325,6 @@ namespace MasterMetrology
             var draftChildModels = new HashSet<StateModelData>(DraftChildren.Select(c => c.StateModel));
             var draftParentModel = DraftParent?.StateModel;
 
-            // Parent candidates: všetko okrem self a potomkov (anti-cycle)
             var parentList = FlatStates
                 .Where(vm => vm != SelectedState)
                 .Where(vm => !IsDescendant(SelectedState.StateModel, vm.StateModel))
@@ -338,10 +333,9 @@ namespace MasterMetrology
 
             ParentCandidates = new ObservableCollection<StateViewModel>(parentList);
 
-            // Child candidates: všetko okrem self + predkov + potomkov (anti-cycle)
             var childList = FlatStates
                 .Where(vm => vm != SelectedState)
-                .Where(vm => !IsDescendant(SelectedState.StateModel, vm.StateModel))
+                //.Where(vm => !IsDescendant(SelectedState.StateModel, vm.StateModel))
                 .Where(vm => !IsDescendant(vm.StateModel, SelectedState.StateModel))
                 .Where(vm => draftParentModel == null || vm.StateModel != draftParentModel)
                 .Where(vm => !draftChildModels.Contains(vm.StateModel))
@@ -443,17 +437,10 @@ namespace MasterMetrology
         {
             if (SelectedState == null || SelectedVertex == null) return;
 
-            // 1) Name/Index/Output -> commit do modelu až tu
             SelectedState.Name = DraftName;
             SelectedState.Output = DraftOutput;
+            //SelectedState.Index = DraftIndex;
 
-            // Index meníš až tu (pozor: FullIndex sa má prerátať v tvojej logike)
-            // Ak máš UpdateStateProperties, je lepšie ho použiť – ale keď ho teraz nepoužívaš,
-            // necháme to cez tvoj existujúci ApplyPendingChildChanges (ten reindexuje/move rieši).
-            SelectedState.Index = DraftIndex;
-
-            // 2) priprav pending add/remove pre children podľa rozdielu model vs draft
-            // vyčisti pending v controlleri
             _processController.ClearPendingChildChanges();
 
             var currentChildren = SelectedState.StateModel.SubStatesData.ToList();
@@ -465,11 +452,9 @@ namespace MasterMetrology
             foreach (var rm in toRemove) _processController.Add_RemovePendingChild(rm);
             foreach (var ad in toAdd) _processController.Add_AddPendingChild(ad);
 
-            // 3) Parent commit až tu
-            var parentModel = DraftParent?.StateModel; // null => top-level
-            _processController.ApplyPendingChildChanges(SelectedVertex, parentModel);
+            var parentModel = DraftParent?.StateModel;
+            _processController.ApplyPendingChildChanges(SelectedVertex, parentModel, DraftIndex);
 
-            // 4) po apply sa modely zmenili (fullindexy/parenti) -> rebuild VM map a drafty
             RefreshFromController();
         }
 

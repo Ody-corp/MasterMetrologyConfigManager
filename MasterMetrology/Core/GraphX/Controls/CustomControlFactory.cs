@@ -1,7 +1,6 @@
 ﻿using GraphX;
 using GraphX.Controls;
 using GraphX.Controls.Models;
-using GraphX.PCL.Common.Interfaces;
 using MasterMetrology.Models.Visual;
 using System.Windows;
 
