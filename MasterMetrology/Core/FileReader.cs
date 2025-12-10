@@ -65,7 +65,6 @@ namespace MasterMetrology
                         {
                             stackIndex.Push(reader.GetAttribute("Index"));
                             string tempFullIndex;
-                            StateModelData parentState;
 
                             if (stackIndex.Count > 0)
                             {

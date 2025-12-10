@@ -28,8 +28,10 @@ namespace MasterMetrology
         private List<InputsDefModelData> inputsDefModelDatas;
         private List<OutputModelData> outputsDefModelDatas;
         private List<StateModelData> statesModelDatas = new List<StateModelData>();
-
+        
+        public ObservableCollection<StateViewModel> StatesViewModel = new ObservableCollection<StateViewModel>();
         public ObservableCollection<TransitionViewModel> AllTransitions = new ObservableCollection<TransitionViewModel>();
+        public Dictionary<StateModelData, StateViewModel> modelToViewModel = new Dictionary<StateModelData, StateViewModel>();
 
         private readonly List<StateModelData> _pendingAdds = new List<StateModelData>();
         private readonly List<StateModelData> _pendingRemoves = new List<StateModelData>();
@@ -47,6 +49,8 @@ namespace MasterMetrology
             inputsDefModelDatas = list.InputsDefinition;
             outputsDefModelDatas = list.OutputDefinition;
             statesModelDatas = list.FullListStateModelData;
+
+            BuildViewModelTreeFromModels(statesModelDatas);
 
             PopulateTransitions(statesModelDatas);
             
@@ -69,14 +73,16 @@ namespace MasterMetrology
                 {
                     if (s.TransitionsData != null)
                     {
+                        var fromVm = GetVmOfModel(s);
 
                         foreach (var t in s.TransitionsData)
                         {
-                            t.FromState = s;
-                            t.NextState = FindStateByFullIndex(t.NextStateId);
-                            Debug.WriteLine($"Transition - {s.Name} {s.FullIndex} -> {t.NextState.Name} {t.NextState.Name}");
+                            //t.FromState = s;
+                            //t.NextState = FindStateByFullIndex(t.NextStateId);
+                            var nextVm = GetVmOfModel(FindStateByFullIndex(t.NextStateId));
 
-                            AllTransitions.Add(new TransitionViewModel(t, s.FullIndex));
+                            AllTransitions.Add(new TransitionViewModel(t, fromVm, nextVm));
+                            Debug.WriteLine($"Transition - {s.Name} {s.FullIndex} -> {t.NextState.Name} {t.NextState.FullIndex}");
 
                         }
                     }
@@ -101,6 +107,44 @@ namespace MasterMetrology
 
         }
 
+        private StateViewModel CreateVmRecursive(StateModelData model, StateViewModel? parentVm = null)
+        {
+            var vm = new StateViewModel(model) { Parent = parentVm };
+            modelToViewModel[model] = vm;
+        
+            // ensure SubStates collection exists on VM (your StateViewModel should have SubStates ObservableCollection)
+            if (model.SubStatesData != null)
+            {
+                foreach (var ch in model.SubStatesData)
+                {
+                    var childVm = CreateVmRecursive(ch, vm);
+                    vm.SubStates.Add(childVm);
+                }
+            }
+            return vm;
+        }
+
+        private void BuildViewModelTreeFromModels(IEnumerable<StateModelData> roots)
+        {
+            // run on UI thread
+            void build()
+            {
+                StatesViewModel.Clear();
+                //modelToViewModel.Clear();
+                foreach (var r in roots)
+                {
+                    var rootVm = CreateVmRecursive(r, null);
+                    StatesViewModel.Add(rootVm);
+                }
+            }
+        
+            if (Application.Current?.Dispatcher != null && !Application.Current.Dispatcher.CheckAccess())
+                Application.Current.Dispatcher.Invoke(build);
+            else
+                build();
+        }
+
+
         // Vrátí "flattovaný" zoznam všetkých states (pre ComboBox target)
         public List<StateModelData> GetFlatStates()
         {
@@ -117,18 +161,33 @@ namespace MasterMetrology
             foreach (var r in statesModelDatas) collect(r);
             return result;
         }
+        public List<StateViewModel> GetFlatStateViewModels()
+        {
+            var res = new List<StateViewModel>();
+            void collect(StateViewModel svm)
+            {
+                res.Add(svm);
+                foreach (var ch in svm.SubStates) collect(ch);
+            }
+            foreach (var root in StatesViewModel) collect(root);
+            return res;
+        }
+        private StateViewModel GetVmOfModel(StateModelData state)
+        {
+            return modelToViewModel.GetValueOrDefault(state);
+        }
 
         // Delete prechod - odstráni z dát a z grafu
         public bool DeleteTransition(TransitionViewModel vm)
         {
-            if (vm == null) return false;
-            var t = vm.Transition;
-            if (t == null) return false;
+            TransitionModelData transitionToDelete = vm.TransitionData;
+            if (transitionToDelete == null) return false;
 
-            var owner = FindStateByFullIndex(statesModelDatas, vm.Transition.FromState.FullIndex);
-            if (owner != null && owner.TransitionsData != null)
+            //var owner = FindStateByFullIndex(statesModelDatas, vm.Transition.FromState.FullIndex);
+            var ownerVm = vm.FromState;
+            if (ownerVm != null && ownerVm.StateModel.TransitionsData != null)
             {
-                var removed = owner.TransitionsData.Remove(t);
+                var removed = ownerVm.StateModel.TransitionsData.Remove(transitionToDelete);
                 // odstrániť z UI kolekcie (na UI vlákne)
                 if (removed)
                 {
@@ -141,8 +200,7 @@ namespace MasterMetrology
                         AllTransitions.Remove(vm);
                     }
 
-                    // odstrániť z vizuálu (grafu)
-                    visualRender.RemoveTransition(t);
+                    visualRender.RemoveTransition(transitionToDelete);
                     return true;
                 }
             }
@@ -151,29 +209,27 @@ namespace MasterMetrology
         }
 
         // Add nový transition (cez UI): pridá do dát aj do grafu a do AllTransitions
-        public bool AddTransition(string fromFullIndex, string input, StateModelData state)
+        public bool AddTransition(StateViewModel fromStateVm, string input, StateViewModel targetStateVm)
         {
-            if (string.IsNullOrEmpty(fromFullIndex) || string.IsNullOrEmpty(state.FullIndex)) return false;
-
-            var owner = FindStateByFullIndex(statesModelDatas, fromFullIndex);
-            if (owner == null) return false;
-
-            var newT = new TransitionModelData
+            TransitionModelData newTransition = new TransitionModelData
             {
                 Input = input,
-                NextState = state,
-                FromState = owner
+                NextState = targetStateVm.StateModel,
+                NextStateId = targetStateVm.FullIndex,
+                FromState = fromStateVm.StateModel
             };
 
-            if (owner.TransitionsData == null)
-                owner.TransitionsData = new ObservableCollection<TransitionModelData>();
+            if (fromStateVm.StateModel.TransitionsData == null)
+            {
+                fromStateVm.StateModel.TransitionsData = new ObservableCollection<TransitionModelData>();
+            }
 
-            owner.TransitionsData.Add(newT);
+            fromStateVm.StateModel.TransitionsData.Add(newTransition);
 
-            var vm = new TransitionViewModel(newT, owner.FullIndex);
+            var newTransitionVm = new TransitionViewModel(newTransition, fromStateVm, targetStateVm);
 
-            AllTransitions.Add(vm);
-            visualRender.AddTransition(newT);
+            AllTransitions.Add(newTransitionVm);
+            //visualRender.AddTransition(newTransition);
 
             return true;
         }
@@ -324,9 +380,18 @@ namespace MasterMetrology
                 {
                     SetCurrentStateIndex(selectedVertex, parent.SubStatesData.ToList());
 
-                    selectedVertex.State.Parent = parent;
+                    
+                    
+                    if (selectedVertex.State.Parent == null)
+                    {
+                        statesModelDatas.Remove(selectedVertex.State);
+                    }
+                    else
+                    {
+                        selectedVertex.State.Parent.SubStatesData.Remove(selectedVertex.State);
+                    }
                     parent.SubStatesData.Add(selectedVertex.State);
-                    statesModelDatas.Remove(selectedVertex.State);
+                    selectedVertex.State.Parent = parent;
                 }
                 UpdateIndexesRecursive(selectedVertex.State);
 
@@ -568,65 +633,6 @@ namespace MasterMetrology
                 }
             }
             return null;
-        }
-
-        public bool UpdateStateProperties(string fullIndex, string newName, string newIndex, string newOutput, out string errorMessage)
-        {
-            errorMessage = string.Empty;
-            if (string.IsNullOrWhiteSpace(fullIndex)) { errorMessage = "Missing state identifier."; return false; }
-
-            var node = FindStateByFullIndex(fullIndex);
-            if (node == null) { errorMessage = $"State '{fullIndex}' not found."; return false; }
-
-            // trim newIndex
-            newIndex = (newIndex ?? "").Trim();
-
-            // get parent and siblings
-            var parent = FindParentByFullIndex(node.FullIndex);
-            IEnumerable<StateModelData> siblings = parent == null ? (statesModelDatas ?? Enumerable.Empty<StateModelData>()) : (parent.SubStatesData ?? Enumerable.Empty<StateModelData>());
-
-            // check duplicate index among siblings (excluding current node)
-            if (!string.IsNullOrEmpty(newIndex))
-            {
-                bool duplicate = siblings.Any(s => s != node && string.Equals(s.Index?.Trim(), newIndex, StringComparison.Ordinal));
-                if (duplicate)
-                {
-                    errorMessage = $"Index '{newIndex}' already exists among siblings.";
-                    return false;
-                }
-            }
-            else
-            {
-                // don't allow empty index
-                errorMessage = "Index (ID) cannot be empty.";
-                return false;
-            }
-
-            // apply simple fields
-            node.Name = newName ?? node.Name;
-            node.Output = newOutput ?? node.Output;
-
-            // if index changed -> recompute fullindex for this node and subtree, update transitions
-            var oldFull = node.FullIndex;
-            //if (!string.Equals(node.Index, newIndex, StringComparison.Ordinal))
-            //{
-            string newFull = parent == null ? newIndex : $"{parent.FullIndex}.{newIndex}";
-
-            UpdateFullIndexRecursive(node, newFull);
-            UpdateTransitionReferencesForMovedNode(oldFull, node.FullIndex);
-
-            // repopulate transitions and re-render graph to ensure visuals sync
-            PopulateTransitions(statesModelDatas);
-            visualRender.RenderGraph(statesModelDatas, viewPort, v => VertexSelected?.Invoke(v));
-            //}
-            //else
-            //{
-            //    // changed only name/output -> we still need to refresh transitions list UI and redraw maybe
-            //    PopulateTransitions(statesModelDatas);
-            //    visualRender.RenderGraph(statesModelDatas, viewPort, v => VertexSelected?.Invoke(v));
-            //}
-
-            return true;
         }
     }
 }

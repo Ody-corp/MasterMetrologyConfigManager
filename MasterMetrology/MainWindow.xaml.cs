@@ -27,12 +27,7 @@ namespace MasterMetrology
 
         private PanAndZoomController _panZoom;
         private ProcessController _processController;
-        private GraphVertex _selectedVertex;
         private MainWindowView _mainView;
-
-        private ICollectionView _transitionsView;
-
-        //private List<StateModelData> tempListAddingSubStates = new List<StateModelData>();
 
         public MainWindow()
         {
@@ -44,13 +39,19 @@ namespace MasterMetrology
         {
             _panZoom = new PanAndZoomController(DiagramBorder, ZoomTransform, PanTransform, Config.DEFAULT_VALUE_CANVAS_X);
             _processController = new ProcessController(GraphLayer);
-            _processController.VertexSelected += OnVertexSelected;
-            _panZoom.CenterView();
 
-            _mainView = new MainWindowView(_processController);
+            _mainView = new MainWindowView(_processController, _panZoom);
+            DataContext = _mainView;
+
+            _processController.VertexSelected += v =>
+            {
+                Dispatcher.Invoke(() => _mainView.SelectVertex(v));
+            };
+
+            _panZoom.CenterView();
         }
 
-        private void OnVertexSelected(GraphVertex v)
+        /*private void OnVertexSelected(GraphVertex v)
         {
             Dispatcher.Invoke(() =>
             {
@@ -86,99 +87,54 @@ namespace MasterMetrology
                 _transitionsView.Refresh();
             });
             //SetCmbChild();
-        }
-
-        private void ResetView_Click(object sender, RoutedEventArgs e)
-        {
-            _panZoom.CenterView();
-        }
-
-        private void ExitSoftware(object sender, RoutedEventArgs e)
-        {
-            Application.Current.Shutdown();
-        }
-
-        private void ImportFile_Click(object sender, RoutedEventArgs e)
-        {
-            OpenFileDialog ofd = new OpenFileDialog 
-            { 
-                Title = "Chose file",
-                Filter = "XML files (*.xml)|*.xml" 
-            };
-            
-            bool? response = ofd.ShowDialog();
-
-            if (response == true)
-            {
-                string filepath = ofd.FileName;
-
-                _processController.LoadDataXML(filepath);
-
-                // nakonfiguruj sidepanel:
-                _transitionsView = CollectionViewSource.GetDefaultView(_processController.AllTransitions);
-                LstTransitions.ItemsSource = _transitionsView;
-
-                // naplň combo box s možnými cieľmi (FullIndex)
-                var flat = _processController.GetFlatStates();
-                // zobrazíme user-friendly text a použijeme FullIndex ako Value
-                CmbTransitionTarget.ItemsSource = flat.Select(s => new { Display = $"{s.FullIndex} - {s.Name}", Value = s }).ToList();
-                CmbTransitionTarget.DisplayMemberPath = "Display";
-                CmbTransitionTarget.SelectedValuePath = "Value";
-                if (CmbTransitionTarget.Items.Count > 0) CmbTransitionTarget.SelectedIndex = 0;
-
-                
-
-                Debug.WriteLine(filepath);
-            }
-        }
-
-        private void SetLstChild()
-        {
-            _mainView.SetLstChild(_selectedVertex, LstChildren);
-        }
-        private void SetCmbChild()
-        {
-            _mainView.SetCmbChild(_selectedVertex, CmbChild);
-        }
-        private void SetCmbParent()
-        {
-            _mainView.SetCmbParent(_selectedVertex, CmbParent);
-        }
-
+        }*/
+        /*
         private void BtnRemoveTransition_Click(object sender, RoutedEventArgs e)
         {
-            if (LstTransitions.SelectedItem is TransitionViewModel vm)
+            if (_mainView.SelectedTransition is not TransitionViewModel tvm) return;
+             
+            var r = MessageBox.Show($"Delete transition {tvm.DisplayText}?", "Delete", MessageBoxButton.YesNo);
+            if (r == MessageBoxResult.Yes)
             {
-                var r = MessageBox.Show($"Delete transition {vm.DisplayText}?", "Delete", MessageBoxButton.YesNo);
-                if (r == MessageBoxResult.Yes)
-                    _processController.DeleteTransition(vm);
+                _processController.DeleteTransition(tvm);
+                _mainView.RefreshTransitionOnly();
             }
-        }
 
+        }
         private void BtnAddTransition_Click(object sender, RoutedEventArgs e)
         {
-            if (_selectedVertex == null)
+            if (_mainView.SelectedState == null)
             {
                 MessageBox.Show("Select a source state (vertex) first.");
                 return;
             }
-            var from = _selectedVertex.State?.FullIndex;
+            //var from = _selectedVertex.State?.FullIndex;
+
             var input = TxtNewTransitionInput.Text?.Trim();
-            var target = CmbTransitionTarget.SelectedValue as StateModelData;
+            if (input == null)
+            {
+                MessageBox.Show("Input cannot be empty.");
+                return;
+            }
+
+            var target = _mainView.SelectedTransitionTarget;
             if (target == null)
             {
                 MessageBox.Show("Select a target state.");
                 return;
             }
+
             // pridaj cez controller
             _processController.AddTransition(from, input, target);
 
             // update listbox selection a vyčisti input
             TxtNewTransitionInput.Text = "";
+            _mainView.RefreshTransitionsOnly();
         }
         private void BtnAddChild_Click(object sender, RoutedEventArgs e)
         {
-            var state = CmbChild.SelectedValue as StateModelData;
+            if (_mainView.SelectedState == null) return;
+            if (_mainView.ChildToAdd == null) return;
 
             if (_selectedVertex.State.SubStatesData.Any(s => s.SubStatesData.Count(ss => ss.FullIndex == state.FullIndex) == 1))
             {
@@ -221,7 +177,7 @@ namespace MasterMetrology
                 MessageBox.Show("Apply failed: " + err, "Validation error", MessageBoxButton.OK, MessageBoxImage.Warning);
                 return;
             }
-            */
+            
             // 2) nastaviť pending parent podľa vybraného comboboxu (ak tam je)
             var selParent = CmbParent.SelectedValue as string;
             //_processController.SetPendingParent(string.IsNullOrWhiteSpace(selParent) ? null : selParent);
@@ -246,7 +202,7 @@ namespace MasterMetrology
                                                                     : (_processController.FindParentByFullIndex(oldFull)?.FullIndex == null
                                                                         ? newIndex
                                                                         : $"{_processController.FindParentByFullIndex(oldFull)?.FullIndex}.{newIndex}"));
-            */
+            
             // safety: simply refresh textboxes from current _selectedVertex.State (if still valid)
             if (_selectedVertex?.State != null)
             {
@@ -265,29 +221,10 @@ namespace MasterMetrology
             SetCmbChild();
             SetCmbParent();
             SetLstChild();
-        }
+        }*/
         private void ShowDebug_Click(object sender, RoutedEventArgs e)
         {
             Debug.WriteLine(StateModelDataDumper.DumpStates(_processController.GetFlatStates()));
-        }
-
-        // ---------------------------------------- //
-        //      SECTION FOR -> SelectionChanged     //
-        // ---------------------------------------- //
-        private void LstTransitions_SelectionChanged(object sender, SelectionChangedEventArgs e)
-        {
-            if (LstTransitions.SelectedItem is TransitionViewModel selectedTransition)
-            {
-                Debug.WriteLine($"Selected Transition: {selectedTransition.DisplayText}");
-            }
-        }
-        private void CmbParent_SelectionChanged(object sender, SelectionChangedEventArgs e)
-        {
-
-        }
-        private void CmbChild_SelectionChanged(object sender, SelectionChangedEventArgs e)
-        {
-        
         }
     }
 }
