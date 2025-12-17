@@ -1,4 +1,5 @@
 ﻿using GraphX.Controls;
+using GraphX.PCL.Common.Models;
 using GraphX.PCL.Common.Enums;
 using MasterMetrology.Core.GraphX;
 using MasterMetrology.Core.GraphX.Controls;
@@ -10,6 +11,10 @@ using System.Windows.Controls;
 using System.Windows.Data;
 using System.Windows.Media;
 using System.Windows.Threading;
+using GraphX.PCL.Common.Interfaces;
+using GraphX.PCL.Logic.Models;
+using GraphX.PCL.Logic.Algorithms.LayoutAlgorithms;
+using GraphX.PCL.Logic.Algorithms.OverlapRemoval;
 
 namespace MasterMetrology.Core.Rendering
 {
@@ -17,6 +22,9 @@ namespace MasterMetrology.Core.Rendering
     {
         public StateGraphArea LastGraphArea { get; private set; }
         public StateGraph LastGraph { get; private set; }
+
+        private Dictionary<string, GraphVertex> _vertexMap = new();
+
 
         // mapovanie modelEdge -> attachable label control
         private readonly Dictionary<GraphEdge, AttachableEdgeLabelControl> _edgeLabelMap = new Dictionary<GraphEdge, AttachableEdgeLabelControl>();
@@ -32,13 +40,13 @@ namespace MasterMetrology.Core.Rendering
             var graph = new StateGraph();
             LastGraph = graph;
 
-            var vertexMap = new Dictionary<string, GraphVertex>();
+            _vertexMap = new Dictionary<string, GraphVertex>();
 
             foreach (var state in states)
-                AddStateRecursive(state, graph, vertexMap);
+                AddStateRecursive(state, graph, _vertexMap);
 
             foreach (var state in states)
-                AddTransitionsRecursive(state, graph, vertexMap);
+                AddTransitionsRecursive(state, graph, _vertexMap);
 
             var logicCore = new StateLogicCore
             {
@@ -60,6 +68,17 @@ namespace MasterMetrology.Core.Rendering
                 ControlFactory = factory
             };
 
+            logicCore.DefaultLayoutAlgorithmParams = logicCore.AlgorithmFactory.CreateLayoutParameters(LayoutAlgorithmTypeEnum.FR);
+            var frParams = logicCore.DefaultLayoutAlgorithmParams as FRLayoutParametersBase;
+            frParams.IterationLimit = 5;
+            frParams.CoolingFunction = (FRCoolingFunction)0.95;
+
+            var overlap = logicCore.AlgorithmFactory
+                .CreateOverlapRemovalParameters(OverlapRemovalAlgorithmTypeEnum.FSA);
+                ((OverlapRemovalParameters)overlap).HorizontalGap = 50;
+                ((OverlapRemovalParameters)overlap).VerticalGap = 30;
+            logicCore.DefaultOverlapRemovalAlgorithmParams = overlap;
+            graphArea.LogicCore = logicCore;
             factory.FactoryRootArea = graphArea;
             LastGraphArea = graphArea;
             graphLayer.Children.Add(graphArea);
@@ -237,7 +256,9 @@ namespace MasterMetrology.Core.Rendering
                 {
                     var child = AddStateRecursive(sub, graph, map);
                     if (child != null)
+                    {
                         sectionVertex.SubVertices.Add(child);
+                    }
                 }
             }
             else
@@ -264,13 +285,13 @@ namespace MasterMetrology.Core.Rendering
                 {
                     if (!map.TryGetValue(state.FullIndex, out var from))
                     {
-                        Debug.WriteLine($"⚠️ Missing FROM: {state.FullIndex}");
+                        Debug.WriteLine($"Missing FROM: {state.FullIndex}");
                         continue;
                     }
 
                     if (!map.TryGetValue(g.Key, out var to))
                     {
-                        Debug.WriteLine($"⚠️ Missing TO: {g.Key} (from {state.FullIndex})");
+                        Debug.WriteLine($"Missing TO: {g.Key} (from {state.FullIndex})");
                         continue;
                     }
 
@@ -380,9 +401,12 @@ namespace MasterMetrology.Core.Rendering
         {
             if (LastGraphArea == null || LastGraph == null || transition == null) return;
 
-            var from = LastGraph.Vertices.FirstOrDefault(v => v.State?.FullIndex == transition.FromState.FullIndex);
-            var to = LastGraph.Vertices.FirstOrDefault(v => v.State?.FullIndex == transition.NextState.FullIndex);
-
+            if (!_vertexMap.TryGetValue(transition.FromState.FullIndex, out var from) ||
+                !_vertexMap.TryGetValue(transition.NextState.FullIndex, out var to))
+            {
+                Debug.WriteLine($"AddTransition: vertex not found in map (from={transition.FromState.FullIndex}, to={transition.NextState.FullIndex})");
+                return;
+            }
             if (from == null || to == null)
             {
                 Debug.WriteLine($"AddTransition: source/target vertex not found (from={transition.FromState.FullIndex}, to={transition.NextState.FullIndex})");

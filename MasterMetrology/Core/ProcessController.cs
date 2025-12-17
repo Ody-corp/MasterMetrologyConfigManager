@@ -100,7 +100,6 @@ namespace MasterMetrology
             var vm = new StateViewModel(model) { Parent = parentVm };
             modelToViewModel[model] = vm;
         
-            // ensure SubStates collection exists on VM (your StateViewModel should have SubStates ObservableCollection)
             if (model.SubStatesData != null)
             {
                 foreach (var ch in model.SubStatesData)

@@ -243,7 +243,7 @@ namespace MasterMetrology
 
             RefreshCandidates();
             RefreshTransitionsFilter();
-            RaiseAllCanExecute();
+            //RaiseAllCanExecute();
         }
 
         // --------- INTERNAL HELPERS ----------
