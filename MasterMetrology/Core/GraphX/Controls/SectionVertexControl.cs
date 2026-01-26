@@ -28,7 +28,7 @@ namespace MasterMetrology.Core.GraphX.Controls
             {
                 Width = SectionWidth,
                 Height = SectionHeight,
-                Background = Brushes.Transparent,
+                Background = null,
                 IsHitTestVisible = true
             };
 
@@ -40,7 +40,8 @@ namespace MasterMetrology.Core.GraphX.Controls
                 CornerRadius = new CornerRadius(8),
                 BorderThickness = new Thickness(1.5),
                 BorderBrush = Brushes.SteelBlue,
-                Background = new SolidColorBrush(Color.FromArgb(40, 30, 60, 100))
+                Background = new SolidColorBrush(Color.FromArgb(40, 30, 60, 100)),
+                IsHitTestVisible = false
             };
 
 
@@ -48,7 +49,8 @@ namespace MasterMetrology.Core.GraphX.Controls
             {
                 Width = SectionWidth,
                 Height = 34,
-                Fill = new SolidColorBrush(Color.FromArgb(160, 30, 60, 120))
+                Fill = new SolidColorBrush(Color.FromArgb(160, 30, 60, 120)),
+                IsHitTestVisible = true
             };
 
 
@@ -58,7 +60,8 @@ namespace MasterMetrology.Core.GraphX.Controls
                 Foreground = Brushes.Black,
                 FontWeight = FontWeights.SemiBold,
                 FontSize = 12,
-                TextAlignment = TextAlignment.Center
+                TextAlignment = TextAlignment.Center,
+                IsHitTestVisible = false
             };
 
             _rootCanvas.Children.Add(_border);

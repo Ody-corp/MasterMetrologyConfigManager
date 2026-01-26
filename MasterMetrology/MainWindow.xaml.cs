@@ -23,7 +23,7 @@ namespace MasterMetrology
         private void MainWindow_Loaded(object sender, RoutedEventArgs e)
         {
             _panZoom = new PanAndZoomController(DiagramBorder, ZoomTransform, PanTransform, Config.DEFAULT_VALUE_CANVAS_X);
-            _processController = new ProcessController(GraphLayer);
+            _processController = new ProcessController(GraphLayer, DiagramCanvas);
 
             _mainView = new MainWindowView(_processController, _panZoom);
             DataContext = _mainView;

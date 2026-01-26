@@ -1,13 +1,17 @@
 ﻿using MasterMetrology.Models.Data;
 using GraphX.PCL.Common.Models;
 using System.ComponentModel;
+using GraphX.PCL.Common.Interfaces;
+using GraphX.Measure;
 
 namespace MasterMetrology.Models.Visual
 {
-    public class GraphEdge : EdgeBase<GraphVertex>, INotifyPropertyChanged
+    public class GraphEdge : EdgeBase<GraphVertex>, INotifyPropertyChanged, IRoutingInfo
     {
         // interné skladisko transitions
         public List<TransitionModelData> Transitions { get; } = new List<TransitionModelData>();
+
+        public Point[] RoutingPoints {  get; set; }
 
         // Property pre binding
         private string _text;

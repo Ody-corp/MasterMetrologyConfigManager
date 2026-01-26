@@ -8,13 +8,14 @@ using System.Diagnostics;
 
 namespace MasterMetrology
 {
-    internal class ProcessController(Canvas viewPort)
+    internal class ProcessController(Canvas viewPort, Canvas diagramCanvas)
     {
         private Canvas viewPort = viewPort;
+        private Canvas diagramCanvas = diagramCanvas;
         private FileReader _fileReader = new FileReader();
         private VisualRendering visualRender = new VisualRendering();
 
-        public event Action<GraphVertex> VertexSelected;
+        public event Action<GraphVertex?> VertexSelected;
 
         private List<InputsDefModelData> inputsDefModelDatas;
         private List<OutputModelData> outputsDefModelDatas;
@@ -45,7 +46,7 @@ namespace MasterMetrology
 
             PopulateTransitions(statesModelDatas);
             
-            visualRender.RenderGraph(statesModelDatas, viewPort, v => VertexSelected?.Invoke(v));
+            visualRender.RenderGraph(statesModelDatas, viewPort, v => VertexSelected?.Invoke(v), diagramCanvas);
         }
 
         private void SaveOldXMLPath(string filePath)
@@ -394,7 +395,7 @@ namespace MasterMetrology
             {
                 PopulateTransitions(statesModelDatas);
 
-                visualRender.RenderGraph(statesModelDatas, viewPort, v => VertexSelected?.Invoke(v));
+                visualRender.RenderGraph(statesModelDatas, viewPort, v => VertexSelected?.Invoke(v), diagramCanvas);
             }
             catch (Exception ex)
             {

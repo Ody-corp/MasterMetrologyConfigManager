@@ -1,4 +1,5 @@
-﻿using MasterMetrology.Controllers;
+﻿using GraphX.Controls;
+using MasterMetrology.Controllers;
 using MasterMetrology.Models.Data;
 using MasterMetrology.Models.Visual;
 using Microsoft.Win32;
@@ -8,6 +9,8 @@ using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Windows;
 using System.Windows.Data;
+using System.Windows.Input;
+using System.Windows.Media;
 
 namespace MasterMetrology
 {
@@ -186,7 +189,7 @@ namespace MasterMetrology
         public RelayCommand CenterViewCommand { get; }
 
         // --------- PUBLIC API CALLED FROM WINDOW ----------
-        public void SelectVertex(GraphVertex v)
+        public void SelectVertex(GraphVertex? v)
         {
             SelectedVertex = v;
 
