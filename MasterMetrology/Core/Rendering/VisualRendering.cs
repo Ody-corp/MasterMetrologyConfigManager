@@ -52,6 +52,10 @@ namespace MasterMetrology.Core.Rendering
 
         private bool _suppressVisualRefresh;
 
+        private readonly Dictionary<string, Point> _pendingPlacements = new();
+
+        private string? _pendingSelectFullIndex;
+
         public void RenderGraph(List<StateModelData> states, Canvas graphLayer, Action<GraphVertex?> onVertexSelected = null, Canvas diagramCanvas = null)
         {
             CleanupLastGraphArea(graphLayer);
@@ -153,6 +157,9 @@ namespace MasterMetrology.Core.Rendering
                     }
 
                     graphArea.UpdateLayout();
+
+                    
+
                     graphArea.GenerateAllEdges();
                     graphArea.UpdateLayout();
 
@@ -174,31 +181,32 @@ namespace MasterMetrology.Core.Rendering
                     _edgeRouter.RebuildCaches(states, graphArea);   // potrebuje roots + finálne recty
                     _edgeRouter.RouteAllEdges(graphArea);           // nastaví RoutingPoints + UpdateEdge()
 
+
+
                     graphArea.UpdateLayout(); // nech sa dobehne vizuál (labely/arrange)
+
+                    double centerX = (Config.DEFAULT_VALUE_CANVAS_X - graphArea.DesiredSize.Width) / 2;
+                    double centerY = (Config.DEFAULT_VALUE_CANVAS_Y - graphArea.DesiredSize.Height) / 2;
+                    Canvas.SetLeft(graphArea, centerX);
+                    Canvas.SetTop(graphArea, centerY);
+
+                    graphArea.UpdateLayout();
+
+                    ApplyPendingPlacements(graphArea);
+                    graphArea.UpdateLayout();
+                    
 
                     InstallEdgeAndVertexHighlighting(graphArea, onVertexSelected);
 
+                    ApplyPendingSelection(onVertexSelected);
                     RefreshEdgeVisuals();
 
                     _interaction.Attach(graphArea, states, _edgeRouter);
 
                     
 
-                    /*foreach (var vc in graphArea.VertexList.Values)
-                    {
-                        var vertexObj = vc.Vertex as GraphVertex;
-                        if (vertexObj == null) continue;
+                    graphArea.UpdateLayout(); // nech sa offset aplikuje
 
-                        vc.MouseLeftButtonUp += (s, e) =>
-                        {
-                            try
-                            {
-                                onVertexSelected?.Invoke(vertexObj);
-                                e.Handled = true;
-                            }
-                            catch { }
-                        };
-                    }*/
                 }
                 catch (Exception ex)
                 {
@@ -212,11 +220,7 @@ namespace MasterMetrology.Core.Rendering
 
             //UpdateSubPositions(graphArea, graph);
 
-            // center
-            double centerX = (Config.DEFAULT_VALUE_CANVAS_X - graphArea.DesiredSize.Width) / 2;
-            double centerY = (Config.DEFAULT_VALUE_CANVAS_Y - graphArea.DesiredSize.Height) / 2;
-            Canvas.SetLeft(graphArea, centerX);
-            Canvas.SetTop(graphArea, centerY);
+            
         }
 
         /// <summary>
@@ -1066,10 +1070,7 @@ namespace MasterMetrology.Core.Rendering
 
                 ec.MouseEnter += (_, __) => SetHover(ge, true);
                 ec.MouseLeave += (_, __) => SetHover(ge, false);
-
-                // klik na hranu nech nepadá do "background clear"
                 ec.MouseLeftButtonDown += (_, e) => e.Handled = true;
-                //ec.PreviewMouseLeftButtonDown += (_, e) => e.Handled = true;
             }
 
             // LABEL hover (ak niekedy label "odchytí" myš)
@@ -1087,8 +1088,7 @@ namespace MasterMetrology.Core.Rendering
                     {
                         ui.MouseEnter += (_, __) => SetHover(ge, true);
                         ui.MouseLeave += (_, __) => SetHover(ge, false);
-                        //ui.PreviewMouseLeftButtonDown += (_, e) => e.Handled = true;
-                        ui.MouseLeftButtonDown += (_, e) => e.Handled = true; // aby sa neclearlo pozadie
+                        ui.MouseLeftButtonDown += (_, e) => e.Handled = true;
                     }
                 }
             }
@@ -1096,8 +1096,6 @@ namespace MasterMetrology.Core.Rendering
             // VERTEX click selection
             foreach (var vc in graphArea.VertexList.Values)
             {
-                vc.PreviewMouseLeftButtonDown += (_, e) => e.Handled = true; // dôležité
-
                 vc.MouseLeftButtonUp += (_, e) =>
                 {
                     if (vc.Vertex is not GraphVertex gv) return;
@@ -1109,7 +1107,6 @@ namespace MasterMetrology.Core.Rendering
                     e.Handled = true;
                 };
 
-                // aby MouseDown na vertex nepustil event až na graphArea
                 vc.MouseLeftButtonDown += (_, e) => e.Handled = true;
             }
         }
@@ -1140,7 +1137,7 @@ namespace MasterMetrology.Core.Rendering
                 // Edge
                 if (src is EdgeControl) return true;
 
-                // Label (v GraphX je to často niečo čo implementuje IEdgeLabelControl)
+                // Label
                 if (src is IEdgeLabelControl) return true;
 
                 // pre istotu aj konkrétny attachable label
@@ -1165,12 +1162,6 @@ namespace MasterMetrology.Core.Rendering
                 ec.MouseEnter += (_, __) => SetHover(ge, true);
                 ec.MouseLeave += (_, __) => SetHover(ge, false);
 
-                ec.PreviewMouseLeftButtonDown += (_, e) =>
-                {
-                    //SetHover(ge, true);
-                    e.Handled = true;
-                };
-
                 // label hover
                 var labels = ec.GetLabelControls();
                 if (labels == null) continue;
@@ -1181,17 +1172,64 @@ namespace MasterMetrology.Core.Rendering
                     {
                         ui.MouseEnter += (_, __) => SetHover(ge, true);
                         ui.MouseLeave += (_, __) => SetHover(ge, false);
-
-                        ui.PreviewMouseLeftButtonDown += (_, e) =>
-                        {
-                            //SetHover(ge, true);
-                            e.Handled = true;
-                        };
                     }
                 }
             }
 
             RefreshEdgeVisuals();
+        }
+
+        public void RequestPlaceVertex(string fullIndex, Point worldPos)
+        {
+            if (string.IsNullOrWhiteSpace(fullIndex)) return;
+            _pendingPlacements[fullIndex] = worldPos;
+        }
+
+        private void ApplyPendingPlacements(StateGraphArea area)
+        {
+            if (_pendingPlacements.Count == 0) return;
+
+            BuildVertexControlMap(area);
+
+            var gaLeft = Canvas.GetLeft(area);
+            var gaTop = Canvas.GetTop(area);
+            if (double.IsNaN(gaLeft)) gaLeft = 0;
+            if (double.IsNaN(gaTop)) gaTop = 0;
+
+            foreach (var kv in _pendingPlacements.ToList())
+            {
+                if (TryGetVC(kv.Key, out var vc))
+                {
+                    var world = kv.Value;
+                    var local = new Point(world.X - gaLeft, world.Y - gaTop);
+
+                    Debug.WriteLine($"Place '{kv.Key}': GraphArea({gaLeft},{gaTop}) World({world.X},{world.Y}) -> Local({local.X},{local.Y})");
+
+                    vc.SetPosition(local.X, local.Y);
+
+                }
+
+                _pendingPlacements.Remove(kv.Key);
+            }
+        }
+
+        public void RequestSelectVertex(string fullIndex)
+        {
+            _pendingSelectFullIndex = fullIndex;
+        }
+
+        private void ApplyPendingSelection(Action<GraphVertex?>? onVertexSelected)
+        {
+            if (string.IsNullOrWhiteSpace(_pendingSelectFullIndex)) return;
+
+            if (_vertexMap.TryGetValue(_pendingSelectFullIndex, out var gv) && gv != null)
+            {
+                _selectedVertex = gv;
+                onVertexSelected?.Invoke(gv);
+                RefreshEdgeVisuals();
+            }
+
+            _pendingSelectFullIndex = null;
         }
 
     }

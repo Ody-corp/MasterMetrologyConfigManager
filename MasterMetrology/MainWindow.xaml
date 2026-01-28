@@ -30,7 +30,10 @@
                     <MenuItem Header="Exit" Command="{Binding ExitAppCommand}"/>
                 </MenuItem>
                 <MenuItem Header="Edit">
-
+                    <MenuItem Header="Add new state">
+                        <MenuItem Header="To root" Command="{Binding AddStateToRootCommand}"/>
+                        <MenuItem Header="As SubState" Command="{Binding AddStateAsSubStateCommand}"/>
+                    </MenuItem>
                 </MenuItem>
                 <MenuItem Header="View">
                     <MenuItem Header="_Center" Command="{Binding CenterViewCommand}"/>
@@ -47,12 +50,14 @@
                     </MenuItem>
                 </MenuItem>
             </Menu>
+
             <Grid>
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="2*"/>
                     <ColumnDefinition Width="1*"/>
                 </Grid.ColumnDefinitions>
-                <Grid Height="auto" Grid.Column="0" x:Name="ViewPort" IsHitTestVisible="True">
+                
+                    <Grid Height="auto" Grid.Column="0" x:Name="ViewPort" IsHitTestVisible="True">
                     <Border x:Name="DiagramBorder" BorderBrush="Black" BorderThickness="1" ClipToBounds="True" Height="auto" Width="auto" HorizontalAlignment="Left" VerticalAlignment="Top">
                         <Grid>
                             <!-- bottom layer (background) of canvas view with grid -->

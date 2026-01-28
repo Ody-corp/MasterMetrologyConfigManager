@@ -7,6 +7,7 @@ using System.Windows;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Controls;
+using System.Diagnostics;
 
 namespace MasterMetrology.Controllers
 {
@@ -101,5 +102,26 @@ namespace MasterMetrology.Controllers
             _panTransform.X = -(_canvasSize / 2) + _viewport.ActualWidth / 2;
             _panTransform.Y = -(_canvasSize / 2) + _viewport.ActualHeight / 2;
         }
+
+        public Point GetViewCenterWorld()
+        {
+            // stred toho, čo vidíš
+            var sx = _viewport.ActualWidth * 0.5;
+            var sy = _viewport.ActualHeight * 0.5;
+
+            var zoomX = _zoomTransform.ScaleX;
+            var zoomY = _zoomTransform.ScaleY;
+
+            var panX = _panTransform.X;
+            var panY = _panTransform.Y;
+
+            // world = (screen - pan) / zoom
+            var wx = ((sx - panX) / zoomX) - 25000;
+            var wy = ((sy - panY) / zoomY) - 25000;
+
+            Debug.WriteLine($"center screen=({sx},{sy}) pan=({panX},{panY}) zoom=({zoomX},{zoomY}) => world=({wx},{wy})");
+            return new Point(wx, wy);
+        }
+
     }
 }

@@ -43,6 +43,9 @@ namespace MasterMetrology
             ImportFileCommand = new RelayCommand(ImportFile);
             CenterViewCommand = new RelayCommand(CenterView);
 
+            AddStateToRootCommand = new RelayCommand(() => _processController.CreateNewRootStateAtViewCenter());
+            AddStateAsSubStateCommand = new RelayCommand(() => _processController.CreateNewSubState(SelectedVertex.State), () => SelectedState != null);
+
             RefreshFromController();
         }
 
@@ -187,6 +190,8 @@ namespace MasterMetrology
         public RelayCommand ExitAppCommand { get; }
         public RelayCommand ImportFileCommand { get; }
         public RelayCommand CenterViewCommand { get; }
+        public RelayCommand AddStateToRootCommand { get; }
+        public RelayCommand AddStateAsSubStateCommand { get; }
 
         // --------- PUBLIC API CALLED FROM WINDOW ----------
         public void SelectVertex(GraphVertex? v)

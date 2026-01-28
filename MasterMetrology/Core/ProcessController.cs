@@ -5,17 +5,24 @@ using MasterMetrology.Models.Data;
 using MasterMetrology.Core.Rendering;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
+using System.Windows.Media;
+using MasterMetrology.Controllers;
 
 namespace MasterMetrology
 {
-    internal class ProcessController(Canvas viewPort, Canvas diagramCanvas)
+    internal class ProcessController(Canvas viewPort, Canvas diagramCanvas, FrameworkElement diagramBorder, PanAndZoomController panAndZoom)
     {
         private Canvas viewPort = viewPort;
         private Canvas diagramCanvas = diagramCanvas;
+        private FrameworkElement diagramBorder = diagramBorder;
+        private PanAndZoomController panAndZoom = panAndZoom;
+
+        public event Action? DataChanged;
+
         private FileReader _fileReader = new FileReader();
         private VisualRendering visualRender = new VisualRendering();
 
-        public event Action<GraphVertex?> VertexSelected;
+        public event Action<GraphVertex?>? VertexSelected;
 
         private List<InputsDefModelData> inputsDefModelDatas;
         private List<OutputModelData> outputsDefModelDatas;
@@ -496,6 +503,66 @@ namespace MasterMetrology
             {
                 walk(root);
             }
+        }
+
+        public StateModelData CreateNewRootStateAtViewCenter()
+        {
+            var p = panAndZoom.GetViewCenterWorld();
+            return CreateNewStateInternal(parent: null, p);
+        }
+
+        public StateModelData CreateNewSubState(StateModelData parent)
+        {
+            var p = panAndZoom.GetViewCenterWorld();
+            return CreateNewStateInternal(parent, p);
+        }
+
+        private StateModelData CreateNewStateInternal(StateModelData? parent, Point world)
+        {
+            Debug.WriteLine($"Creating new State. World pos: X:{world.X}, Y:{world.Y}");
+            var nextIdx = GetNextIndexForParent(parent);
+            var idxStr = nextIdx.ToString();
+
+            var newState = new StateModelData
+            {
+                Name = "New state",
+                Output = "0",
+                Index = idxStr,
+                Parent = parent,
+                SubStatesData = new ObservableCollection<StateModelData>(),
+                TransitionsData = new ObservableCollection<TransitionModelData>(),
+
+                //potrebujem to?
+                LayoutX = world.X,
+                LayoutY = world.Y,
+            };
+
+            newState.FullIndex = (parent == null) ? newState.Index : $"{parent.FullIndex}.{newState.Index}";
+
+            if (parent == null)
+            {
+                statesModelDatas.Add(newState);
+            }
+            else
+            {
+                parent.SubStatesData.Add(newState);
+            }
+
+            // move vertex after render
+            visualRender.RequestPlaceVertex(newState.FullIndex, world);
+
+            // re-render + transitions
+            PopulateTransitions(statesModelDatas);
+            visualRender.RenderGraph(statesModelDatas, viewPort, v => VertexSelected?.Invoke(v), diagramCanvas);
+
+            visualRender.RequestSelectVertex(newState.FullIndex);
+
+            // notify UI lists
+            DataChanged?.Invoke();
+
+            Debug.WriteLine($"Successfuly created.");
+
+            return newState;
         }
     }
 }
