@@ -20,16 +20,24 @@ namespace MasterMetrology.Core.GraphX.Controls
 
         public Canvas RootCanvas => _rootCanvas;
 
+        private readonly GraphVertexSection _section;
+
         public SectionVertexControl(GraphVertexSection vertex) : base(vertex)
         {
             _visualChildren = new VisualCollection(this);
 
+            var cm = Application.Current.FindResource("rightClickContextMenu") as ContextMenu;
+
+            _section = vertex;
+            this.Tag = vertex;
             _rootCanvas = new Canvas
             {
                 Width = SectionWidth,
                 Height = SectionHeight,
                 Background = null,
-                IsHitTestVisible = true
+                IsHitTestVisible = true,
+                //ContextMenu = Application.Current.FindResource("rightClickContextMenu") as ContextMenu,
+                ContextMenu = cm
             };
 
 
@@ -50,16 +58,19 @@ namespace MasterMetrology.Core.GraphX.Controls
                 Width = SectionWidth,
                 Height = 34,
                 Fill = new SolidColorBrush(Color.FromArgb(160, 30, 60, 120)),
-                IsHitTestVisible = true
+                IsHitTestVisible = true,
+                //ContextMenu = (Application.Current.FindResource("rightClickContextMenu") as ContextMenu),
+
             };
 
 
             _title = new TextBlock
             {
                 Text = vertex?.Section?.Name + "\n" + vertex?.Section?.FullIndex ?? "(section)",
-                Foreground = Brushes.Black,
+                Foreground = Brushes.White,
                 FontWeight = FontWeights.SemiBold,
                 FontSize = 12,
+                TextWrapping = TextWrapping.Wrap,
                 TextAlignment = TextAlignment.Center,
                 IsHitTestVisible = false
             };
@@ -76,14 +87,10 @@ namespace MasterMetrology.Core.GraphX.Controls
 
             _visualChildren.Add(_rootCanvas);
 
+            Loaded += SectionVertexControl_Loaded;
+
             this.Width = SectionWidth;
             this.Height = SectionHeight;
-        }
-
-        public void SetTitle(string newTitle)
-        {
-            _title.Text = newTitle;
-            InvalidateVisual();
         }
 
         public void SetSize(double width, double height)
@@ -123,5 +130,39 @@ namespace MasterMetrology.Core.GraphX.Controls
             _rootCanvas.Arrange(new Rect(0, 0, _rootCanvas.Width, _rootCanvas.Height));
             return new Size(_rootCanvas.Width, _rootCanvas.Height);
         }
+        private ContextMenu GetVertexMenu()
+    => (ContextMenu)Application.Current.MainWindow.FindResource("rightClickContextMenu");
+
+        private void SectionVertexControl_Loaded(object sender, RoutedEventArgs e)
+        {
+            // ak je menu vo Window.Resources:
+            var cm = GetVertexMenu();
+
+            // nastav na celý vertex (najistejšie)
+            this.ContextMenu = cm;
+            ContextMenuService.SetContextMenu(this, cm);
+            
+            // ak chceš aj na konkrétne vnútorné elementy:
+            _rootCanvas.ContextMenu = cm;
+            _headerRect.ContextMenu = cm;
+
+            this.AddHandler(UIElement.PreviewMouseRightButtonDownEvent,
+                new System.Windows.Input.MouseButtonEventHandler(OnPreviewRightDown), true);
+
+        }
+        private void OnPreviewRightDown(object sender, System.Windows.Input.MouseButtonEventArgs e)
+        {
+            if (e.ChangedButton != System.Windows.Input.MouseButton.Right) return;
+
+            var cm = GetVertexMenu();
+            cm.DataContext = Application.Current.MainWindow.DataContext;
+
+            cm.PlacementTarget = this;
+            cm.Placement = System.Windows.Controls.Primitives.PlacementMode.MousePoint; // otvor pri kurzore
+            cm.IsOpen = true;
+
+            e.Handled = true;
+        }
+
     }
 }

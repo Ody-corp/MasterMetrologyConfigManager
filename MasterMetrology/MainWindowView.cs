@@ -44,8 +44,13 @@ namespace MasterMetrology
             CenterViewCommand = new RelayCommand(CenterView);
 
             AddStateToRootCommand = new RelayCommand(() => _processController.CreateNewRootStateAtViewCenter());
-            AddStateAsSubStateCommand = new RelayCommand(() => _processController.CreateNewSubState(SelectedVertex.State), () => SelectedState != null);
+            AddStateAsSubStateCommand = new RelayCommand(() => _processController.CreateNewSubState(SelectedVertex!.State), () => SelectedState != null);
 
+            DeleteWholeSelectedStateCommand = new RelayCommand(() => _processController.DeleteWholeState(SelectedVertex!.State), () => SelectedState != null);
+            DeleteWholeStateCommand = new RelayCommand(p => { if (p is GraphVertex gv && gv.State != null) _processController.DeleteWholeState(gv.State); }, p => p is GraphVertex gv && gv.State != null);
+
+            DeleteSingleSelectedStateCommand = new RelayCommand(() => _processController.DeleteSingleState(SelectedVertex!.State), () => SelectedVertex?.State != null);
+            DeleteSingleStateCommand = new RelayCommand(p => { if (p is GraphVertex gv && gv.State != null) _processController.DeleteSingleState(gv.State); }, p => p is GraphVertex gv && gv.State != null);
             RefreshFromController();
         }
 
@@ -60,6 +65,8 @@ namespace MasterMetrology
             {
                 if (_selectedState == value) return;
                 _selectedState = value;
+                _processController.SetSelectedVertex(SelectedVertex);
+
                 OnPropertyChanged();
 
                 LoadDraftFromSelected();
@@ -192,6 +199,10 @@ namespace MasterMetrology
         public RelayCommand CenterViewCommand { get; }
         public RelayCommand AddStateToRootCommand { get; }
         public RelayCommand AddStateAsSubStateCommand { get; }
+        public RelayCommand DeleteWholeSelectedStateCommand { get; }
+        public RelayCommand DeleteWholeStateCommand { get; }
+        public RelayCommand DeleteSingleSelectedStateCommand { get; }
+        public RelayCommand DeleteSingleStateCommand { get; }
 
         // --------- PUBLIC API CALLED FROM WINDOW ----------
         public void SelectVertex(GraphVertex? v)
@@ -390,6 +401,11 @@ namespace MasterMetrology
             RemoveChildCommand.RaiseCanExecuteChanged();
             AddTransitionCommand.RaiseCanExecuteChanged();
             RemoveTransitionCommand.RaiseCanExecuteChanged();
+            AddStateAsSubStateCommand.RaiseCanExecuteChanged();
+            DeleteWholeSelectedStateCommand.RaiseCanExecuteChanged();
+            DeleteWholeStateCommand.RaiseCanExecuteChanged();
+            DeleteSingleSelectedStateCommand.RaiseCanExecuteChanged();
+            DeleteSingleStateCommand.RaiseCanExecuteChanged();
         }
 
         // --------- COMMAND IMPLEMENTATIONS ----------

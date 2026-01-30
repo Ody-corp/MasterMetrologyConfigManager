@@ -38,6 +38,8 @@ namespace MasterMetrology
 
         private List<(string, string)> movedPairs = new List<(string oldFull, string newFull)>();
 
+        private string? _selectedFullIndex;
+
         private string filePath;
 
         public void LoadDataXML(string filePath)
@@ -551,6 +553,8 @@ namespace MasterMetrology
             // move vertex after render
             visualRender.RequestPlaceVertex(newState.FullIndex, world);
 
+            //visualRender.AddStateRuntime(newState, world);
+
             // re-render + transitions
             PopulateTransitions(statesModelDatas);
             visualRender.RenderGraph(statesModelDatas, viewPort, v => VertexSelected?.Invoke(v), diagramCanvas);
@@ -563,6 +567,157 @@ namespace MasterMetrology
             Debug.WriteLine($"Successfuly created.");
 
             return newState;
+        }
+
+        public bool DeleteWholeState(StateModelData state)
+        {
+            if (state == null) return false;
+
+            bool clearSelection = ContainsFullIndex(state, _selectedFullIndex);
+            var toDelete = new HashSet<StateModelData>();
+            void collect(StateModelData s)
+            {
+                if (s == null || toDelete.Contains(s)) return;
+                toDelete.Add(s);
+                if (s.SubStatesData != null)
+                    foreach (var ch in s.SubStatesData) collect(ch);
+            }
+            collect(state);
+
+            var deletedIds = new HashSet<string>(toDelete.Select(s => s.FullIndex).Where(x => !string.IsNullOrWhiteSpace(x)));
+
+            if (state.Parent != null)
+                state.Parent.SubStatesData.Remove(state);
+            else
+                statesModelDatas.Remove(state);
+
+            void pruneTransitions(StateModelData s)
+            {
+                if (s.TransitionsData != null)
+                {
+                    var rm = s.TransitionsData.Where(t => deletedIds.Contains(t.NextStateId)).ToList();
+                    foreach (var t in rm) s.TransitionsData.Remove(t);
+                }
+                if (s.SubStatesData != null)
+                    foreach (var ch in s.SubStatesData) pruneTransitions(ch);
+            }
+            foreach (var r in statesModelDatas) pruneTransitions(r);
+
+            if (clearSelection)
+                visualRender.ClearPendingSelection();
+
+            PopulateTransitions(statesModelDatas);
+            visualRender.RenderGraph(statesModelDatas, viewPort, v => VertexSelected?.Invoke(v), diagramCanvas);
+
+            DataChanged?.Invoke();
+            if (clearSelection)
+            {
+                visualRender.ClearSelectionState();
+                VertexSelected?.Invoke(null);
+                _selectedFullIndex = null;
+            }
+
+            return true;
+        }
+
+        public bool DeleteSingleState(StateModelData state)
+        {
+            if (state == null) return false;
+
+            bool clearSelection = state.FullIndex == _selectedFullIndex;
+
+            var parent = state.Parent;
+            var children = state.SubStatesData?.ToList() ?? new List<StateModelData>();
+
+            movedPairs = new List<(string oldFull, string newFull)>();
+
+            if (parent != null)
+                parent.SubStatesData.Remove(state);
+            else
+                statesModelDatas.Remove(state);
+
+            foreach (var ch in children)
+            {
+                state.SubStatesData.Remove(ch);
+
+                ch.Parent = parent;
+
+                if (parent != null)
+                    parent.SubStatesData.Add(ch);
+                else
+                    statesModelDatas.Add(ch);
+
+                var nextIdx = GetNextIndexForParent(parent);
+                ch.Index = nextIdx.ToString();
+
+                UpdateIndexesRecursive(ch);
+            }
+
+            var deletedId = state.FullIndex;
+
+            void prune(StateModelData s)
+            {
+                if (s.TransitionsData != null)
+                {
+                    var rm = s.TransitionsData
+                        .Where(t => t.NextStateId == deletedId)
+                        .ToList();
+                    foreach (var t in rm) s.TransitionsData.Remove(t);
+                }
+
+                if (s.SubStatesData != null)
+                    foreach (var sub in s.SubStatesData) prune(sub);
+            }
+
+            foreach (var r in statesModelDatas)
+                prune(r);
+
+            foreach (var (oldFull, newFull) in movedPairs)
+            {
+                if (!string.IsNullOrWhiteSpace(oldFull) &&
+                    !string.IsNullOrWhiteSpace(newFull) &&
+                    oldFull != newFull)
+                {
+                    UpdateTransitionReferencesForMovedNode(oldFull, newFull);
+                }
+            }
+
+            if (clearSelection)
+                visualRender.ClearPendingSelection();
+
+            PopulateTransitions(statesModelDatas);
+            visualRender.RenderGraph(statesModelDatas, viewPort, v => VertexSelected?.Invoke(v), diagramCanvas);
+
+            DataChanged?.Invoke();
+            if (clearSelection)
+            {
+                visualRender.ClearSelectionState();
+                VertexSelected?.Invoke(null);
+                _selectedFullIndex = null;
+            }
+
+            return true;
+        }
+
+        public void SetSelectedVertex(GraphVertex? vertex)
+        {
+            _selectedFullIndex = vertex?.State?.FullIndex;
+        }
+
+        private static bool ContainsFullIndex(StateModelData root, string? fullIndex)
+        {
+            if (string.IsNullOrWhiteSpace(fullIndex) || root == null) return false;
+            if (root.FullIndex == fullIndex) return true;
+            if (root.SubStatesData == null) return false;
+            foreach (var ch in root.SubStatesData)
+                if (ContainsFullIndex(ch, fullIndex)) return true;
+            return false;
+        }
+
+
+        public void test()
+        {
+            visualRender.test();
         }
     }
 }

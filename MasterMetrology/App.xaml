@@ -2,4 +2,27 @@
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              StartupUri="MainWindow.xaml">
+    <Application.Resources>
+        <ContextMenu x:Key="rightClickContextMenu" x:Name="contextMenu" x:Shared="False">
+            <MenuItem Header="New state" Command="{Binding AddStateToRootCommand}" CommandParameter="{Binding PlacementTarget.Tag, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
+            <MenuItem Header="Delete">
+                <MenuItem Header="State" Command="{Binding DeleteSingleStateCommand}" CommandParameter="{Binding PlacementTarget.Tag, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
+                <MenuItem Header="Whole section" Command="{Binding DeleteWholeStateCommand}" CommandParameter="{Binding PlacementTarget.Tag, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
+            </MenuItem>
+            <MenuItem Header="Delete transition"/>
+            <Separator/>
+            <MenuItem Header="Zoom">
+                <MenuItem Header="40%"/>
+                <MenuItem Header="60%"/>
+                <MenuItem Header="80%"/>
+                <MenuItem Header="100%"/>
+                <MenuItem Header="120%"/>
+                <MenuItem Header="150%"/>
+                <MenuItem Header="200%"/>
+                <MenuItem Header="250%"/>
+                <MenuItem Header="300%"/>
+            </MenuItem>
+            <MenuItem Header="Center view"/>
+        </ContextMenu>
+    </Application.Resources>
 </Application>

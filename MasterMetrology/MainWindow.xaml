@@ -17,14 +17,16 @@
                                 RelativeSource={RelativeSource AncestorType={x:Type Popup}}}"/>
         </Style>
         <BooleanToVisibilityConverter x:Key="BoolToVis"/>
+        
     </Window.Resources>
-    
+
     <Grid>
         <DockPanel>
             <Menu DockPanel.Dock="Top">
                 <MenuItem Header="File" >
                     <MenuItem Header="Import" Command="{Binding ImportFileCommand}"/>
                     <MenuItem Header="Show States Debug" Click="ShowDebug_Click"/>
+                    <MenuItem Header="Test" Click="Test_Test"/>
                     <MenuItem Header="Save"/>
                     <MenuItem Header="Save as"/>
                     <MenuItem Header="Exit" Command="{Binding ExitAppCommand}"/>
@@ -33,6 +35,10 @@
                     <MenuItem Header="Add new state">
                         <MenuItem Header="To root" Command="{Binding AddStateToRootCommand}"/>
                         <MenuItem Header="As SubState" Command="{Binding AddStateAsSubStateCommand}"/>
+                    </MenuItem>
+                    <MenuItem Header="Delete" >
+                        <MenuItem Header="State" Command="{Binding DeleteSingleSelectedStateCommand}"/>
+                        <MenuItem Header="Whole section" Command="{Binding DeleteWholeSelectedStateCommand}"/>
                     </MenuItem>
                 </MenuItem>
                 <MenuItem Header="View">
@@ -57,11 +63,12 @@
                     <ColumnDefinition Width="1*"/>
                 </Grid.ColumnDefinitions>
                 
-                    <Grid Height="auto" Grid.Column="0" x:Name="ViewPort" IsHitTestVisible="True">
+                <Grid Height="auto" Grid.Column="0" x:Name="ViewPort" IsHitTestVisible="True">
                     <Border x:Name="DiagramBorder" BorderBrush="Black" BorderThickness="1" ClipToBounds="True" Height="auto" Width="auto" HorizontalAlignment="Left" VerticalAlignment="Top">
                         <Grid>
                             <!-- bottom layer (background) of canvas view with grid -->
-                            <Canvas x:Name="GridCanvas" Width="50000" Height="50000">
+                            <Canvas x:Name="GridCanvas" Width="50000" Height="50000" 
+                                    >
                                 <Canvas.Background>
                                     <DrawingBrush TileMode="Tile" Viewport="0,0,50,50" ViewportUnits="Absolute">
                                         <DrawingBrush.Drawing>
@@ -91,7 +98,7 @@
                             </Canvas>
 
                             <!-- top layer: objects -->
-                            <Canvas x:Name="DiagramCanvas" Width="50000" Height="50000" Background="Transparent">
+                            <Canvas x:Name="DiagramCanvas" Width="50000" Height="50000" Background="Transparent" ContextMenu="{StaticResource rightClickContextMenu}">
                                 <Canvas x:Name="GraphLayer" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" Background="Transparent"/>
                                 <!-- PreviewMouseLeftButtonDown=GraphLayer_PreviewMouseLeftButtonDown -->
 

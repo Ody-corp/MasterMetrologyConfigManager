@@ -55,6 +55,7 @@ namespace MasterMetrology.Core.Rendering
         private readonly Dictionary<string, Point> _pendingPlacements = new();
 
         private string? _pendingSelectFullIndex;
+        private string? _selectedFullIndex;
 
         public void RenderGraph(List<StateModelData> states, Canvas graphLayer, Action<GraphVertex?> onVertexSelected = null, Canvas diagramCanvas = null)
         {
@@ -386,8 +387,9 @@ namespace MasterMetrology.Core.Rendering
             }
         }
 
-        private void CacheBaseStyleIfMissing(GraphEdge edge, EdgeControl ec, AttachableEdgeLabelControl lbl)
+        private void CacheBaseStyleIfMissing(GraphEdge edge, EdgeControl ec, AttachableEdgeLabelControl? lbl)
         {
+            if (edge == null || ec == null) return;
             if (_edgeBase.ContainsKey(edge)) return;
 
             // EdgeControl má väčšinou Path v template – ale na jednoduché nastavenia stačí:
@@ -400,7 +402,7 @@ namespace MasterMetrology.Core.Rendering
                 LabelForeground = lbl.Foreground ?? Brushes.Black,
                 LabelBackground = lbl.Background ?? Brushes.White,
                 LabelBorderBrush = lbl.BorderBrush ?? Brushes.Black,
-                LabelOpacity = lbl.Opacity
+                LabelOpacity = (lbl != null) ? lbl.Opacity : 1.0
             };
 
             _edgeBase[edge] = baseState;
@@ -973,12 +975,15 @@ namespace MasterMetrology.Core.Rendering
             var outgoing = new HashSet<GraphEdge>();
             var incoming = new HashSet<GraphEdge>();
 
-            if (_selectedVertex != null)
+            if (!string.IsNullOrWhiteSpace(_selectedFullIndex))
             {
                 foreach (var e in LastGraph.Edges.OfType<GraphEdge>())
                 {
-                    if (e.Source == _selectedVertex) outgoing.Add(e);
-                    if (e.Target == _selectedVertex) incoming.Add(e);
+                    var src = (e.Source as GraphVertex)?.State?.FullIndex;
+                    var tgt = (e.Target as GraphVertex)?.State?.FullIndex;
+
+                    if (src == _selectedFullIndex) outgoing.Add(e);
+                    if (tgt == _selectedFullIndex) incoming.Add(e);
                 }
             }
 
@@ -990,7 +995,7 @@ namespace MasterMetrology.Core.Rendering
                 // base (fallback keď ešte nie je)
                 if (!_edgeBase.TryGetValue(e, out var b))
                 {
-                    lbl ??= null;
+                    //lbl ??= null;
                     CacheBaseStyleIfMissing(e, ec, lbl);
                     b = _edgeBase[e];
                 }
@@ -1014,7 +1019,7 @@ namespace MasterMetrology.Core.Rendering
                 }
 
                 // selection (vertex)
-                if (_selectedVertex != null)
+                if (!string.IsNullOrWhiteSpace(_selectedFullIndex))
                 {
                     bool related = outgoing.Contains(e) || incoming.Contains(e);
 
@@ -1101,6 +1106,7 @@ namespace MasterMetrology.Core.Rendering
                     if (vc.Vertex is not GraphVertex gv) return;
 
                     _selectedVertex = gv;
+                    _selectedFullIndex = gv.State.FullIndex;
                     onVertexSelected?.Invoke(gv);
 
                     RefreshEdgeVisuals();
@@ -1108,15 +1114,25 @@ namespace MasterMetrology.Core.Rendering
                 };
 
                 vc.MouseLeftButtonDown += (_, e) => e.Handled = true;
+                //vc.MouseRightButtonDown += (_, e) => e.Handled = true;
             }
         }
         private void ClearSelectionAndHighlights(Action<GraphVertex>? onVertexSelected)
         {
             _selectedVertex = null;
+            _selectedFullIndex = null;
             _hovered.Clear();               // zruš aj hover stav
             onVertexSelected?.Invoke(null); // vynuluj panel
             RefreshEdgeVisuals();           // vráti farby/opacities na base
         }
+        public void ClearSelectionState()
+        {
+            _selectedVertex = null;
+            _selectedFullIndex = null;
+            _hovered.Clear();
+            //RefreshEdgeVisuals();
+        }
+
         private static bool HasAncestor<T>(DependencyObject? start) where T : DependencyObject
         {
             while (start != null)
@@ -1232,5 +1248,21 @@ namespace MasterMetrology.Core.Rendering
             _pendingSelectFullIndex = null;
         }
 
+        public void ClearPendingSelection()
+        {
+            _pendingSelectFullIndex = null;
+        }
+
+
+        public void test()
+        {
+            //(LastGraphArea.VertexList.First().Value as SimpleVertexControl).SetBiggerBorder();
+            //LastGraphArea.AddVertex()
+        }
+
+        internal void AddStateRuntime(StateModelData newState, Point world)
+        {
+            throw new NotImplementedException();
+        }
     }
 }
