@@ -99,9 +99,20 @@ namespace MasterMetrology.Controllers
 
         public void CenterView()
         {
-            _panTransform.X = -(_canvasSize / 2) + _viewport.ActualWidth / 2;
-            _panTransform.Y = -(_canvasSize / 2) + _viewport.ActualHeight / 2;
+            var centerX = _viewport.ActualWidth * 0.5;
+            var centerY = _viewport.ActualHeight * 0.5;
+
+            var zoomX = _zoomTransform.ScaleX;
+            var zoomY = _zoomTransform.ScaleY;
+
+            var offset = _canvasSize * 0.5; // namiesto hardcoded 25000
+
+            _panTransform.X = centerX - (offset * zoomX);
+            _panTransform.Y = centerY - (offset * zoomY);
+
+            ClampPan();
         }
+
 
         public Point GetViewCenterWorld()
         {
@@ -115,9 +126,11 @@ namespace MasterMetrology.Controllers
             var panX = _panTransform.X;
             var panY = _panTransform.Y;
 
+            var offset = _canvasSize * 0.5;
+
             // world = (screen - pan) / zoom
-            var wx = ((sx - panX) / zoomX) - 25000;
-            var wy = ((sy - panY) / zoomY) - 25000;
+            var wx = ((sx - panX) / zoomX) - offset;
+            var wy = ((sy - panY) / zoomY) - offset;
 
             Debug.WriteLine($"center screen=({sx},{sy}) pan=({panX},{panY}) zoom=({zoomX},{zoomY}) => world=({wx},{wy})");
             return new Point(wx, wy);
