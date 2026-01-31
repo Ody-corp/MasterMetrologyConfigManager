@@ -10,6 +10,7 @@ namespace MasterMetrology.Models.Data
         private bool updateParameters;
         private bool updateCalibration;
         private bool updateMeasuredData;
+        private bool updateProcessedData;
         public string Name 
         { 
             get => name;
@@ -80,6 +81,18 @@ namespace MasterMetrology.Models.Data
                 {
                     updateMeasuredData = value;
                     OnPropertyChanged(nameof(UpdateMeasuredData));
+                }
+            }
+        }
+        public bool UpdateProcessedData
+        {
+            get => updateProcessedData;
+            set
+            {
+                if (updateProcessedData != value)
+                {
+                    updateProcessedData = value;
+                    OnPropertyChanged(nameof(UpdateProcessedData));
                 }
             }
         }

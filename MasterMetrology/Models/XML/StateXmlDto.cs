@@ -9,11 +9,11 @@ namespace MasterMetrology.Models.XML
 {
     public class StateXmlDto
     {
-        [XmlAttribute("Index")]
-        public string? Index { get; set; }
-
         [XmlAttribute("Name")]
         public string? Name { get; set; }
+
+        [XmlAttribute("Index")]
+        public string? Index { get; set; }
 
         [XmlAttribute("Output")]
         public string? Output { get; set; }

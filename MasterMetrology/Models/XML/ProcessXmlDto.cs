@@ -16,8 +16,7 @@ namespace MasterMetrology.Models.Xml
         [XmlArrayItem("Output")]
         public List<OutputXmlDto> Outputs { get; set; } = new();
 
-        [XmlArray("StateMachine")]
-        [XmlArrayItem("State")]
-        public List<StateXmlDto> States { get; set; } = new(); // top-level roots
+        [XmlElement("StateMachine")]
+        public StateMachineXmlDto StateMachine { get; set; } = new();
     }
 }

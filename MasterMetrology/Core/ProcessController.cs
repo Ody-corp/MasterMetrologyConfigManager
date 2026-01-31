@@ -40,7 +40,10 @@ namespace MasterMetrology
 
         private string? _selectedFullIndex;
 
+        public bool CanSave => !string.IsNullOrWhiteSpace(filePath);
+        public bool HasGraph => statesModelDatas != null && statesModelDatas.Count > 0;
         private string filePath;
+        public string? CurrentFilePath => filePath;
 
         public void LoadDataXML(string filePath)
         {
@@ -62,6 +65,30 @@ namespace MasterMetrology
         {
             this.filePath = filePath;
         }
+        public bool Save()
+        {
+            if (!CanSave) return false;
+            return SaveToFile(filePath);
+        }
+
+        public bool SaveAs(string newPath)
+        {
+            if (string.IsNullOrWhiteSpace(newPath)) return false;
+            filePath = newPath;
+            return SaveToFile(filePath);
+        }
+
+        private bool SaveToFile(string path)
+        {
+            if (statesModelDatas == null) return false;
+
+            // !!! dôležité: Exportujeme “roots” = top-level statesModelDatas
+            var dto = ProcessXmlExporter.Build(inputsDefModelDatas, outputsDefModelDatas, statesModelDatas);
+
+            ProcessXmlWriter.Save(path, dto);
+            return true;
+        }
+
 
         private void PopulateTransitions(List<StateModelData> roots)
         {

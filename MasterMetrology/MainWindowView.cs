@@ -53,6 +53,9 @@ namespace MasterMetrology
 
             DeleteSingleSelectedStateCommand = new RelayCommand(() => _processController.DeleteSingleState(SelectedVertex!.State), () => SelectedVertex?.State != null);
             DeleteSingleStateCommand = new RelayCommand(p => { if (p is GraphVertex gv && gv.State != null) _processController.DeleteSingleState(gv.State); }, p => p is GraphVertex gv && gv.State != null);
+
+            SaveCommand = new RelayCommand(Save, () => _processController.CanSave);
+            SaveAsCommand = new RelayCommand(SaveAs, () => _processController.HasGraph);
             RefreshFromController();
         }
 
@@ -73,6 +76,8 @@ namespace MasterMetrology
         public RelayCommand DeleteWholeStateCommand { get; }
         public RelayCommand DeleteSingleSelectedStateCommand { get; }
         public RelayCommand DeleteSingleStateCommand { get; }
+        public RelayCommand SaveCommand { get; }
+        public RelayCommand SaveAsCommand { get; }
 
         // --------- SELECTION ----------
         public GraphVertex? SelectedVertex { get; private set; }
@@ -411,6 +416,8 @@ namespace MasterMetrology
             DeleteWholeStateCommand.RaiseCanExecuteChanged();
             DeleteSingleSelectedStateCommand.RaiseCanExecuteChanged();
             DeleteSingleStateCommand.RaiseCanExecuteChanged();
+            SaveCommand.RaiseCanExecuteChanged();
+            SaveAsCommand.RaiseCanExecuteChanged();
         }
 
         // --------- COMMAND IMPLEMENTATIONS ----------
@@ -514,6 +521,32 @@ namespace MasterMetrology
         private void CenterView()
         {
             _panAndZoomController.CenterView();
+        }
+
+        private void Save()
+        {
+            if (_processController.Save())
+            {
+                Debug.WriteLine($"Successfuly saved file");
+            }
+            RaiseAllCanExecute();
+        }
+
+        private void SaveAs()
+        {
+            var sfd = new SaveFileDialog
+            {
+                Title = "Save as",
+                Filter = "XML files (*.xml)|*.xml",
+                FileName = "process.xml"
+            };
+
+            if (sfd.ShowDialog() == true)
+            {
+                _processController.SaveAs(sfd.FileName);
+            }
+
+            RaiseAllCanExecute();
         }
 
         // --------- INotifyPropertyChanged ----------

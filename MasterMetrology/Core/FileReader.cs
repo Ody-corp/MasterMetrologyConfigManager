@@ -39,6 +39,7 @@ namespace MasterMetrology
                                 UpdateParameters = Boolean.Parse(reader.GetAttribute("UpdateParameters")),
                                 UpdateCalibration = Boolean.Parse(reader.GetAttribute("UpdateCalibration")),
                                 UpdateMeasuredData = Boolean.Parse(reader.GetAttribute("UpdateMeasuredData")),
+                                UpdateProcessedData = Boolean.Parse(reader.GetAttribute("UpdateMeasuredData"))
 
                             };
                             OutputDefinition.Add(output);
