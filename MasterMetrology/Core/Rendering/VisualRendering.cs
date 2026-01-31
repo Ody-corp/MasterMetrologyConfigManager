@@ -17,6 +17,7 @@ using GraphX.PCL.Logic.Algorithms.LayoutAlgorithms;
 using GraphX.PCL.Logic.Algorithms.OverlapRemoval;
 using MasterMetrology.Utils;
 using System.Windows.Input;
+using GraphX;
 
 namespace MasterMetrology.Core.Rendering
 {
@@ -196,9 +197,11 @@ namespace MasterMetrology.Core.Rendering
                     ApplyPendingPlacements(graphArea);
                     graphArea.UpdateLayout();
                     
+                    BuildVertexControlMap(graphArea);
+                    InstallSectionDragClampFast(graphArea);
 
                     InstallEdgeAndVertexHighlighting(graphArea, onVertexSelected);
-
+                    
                     ApplyPendingSelection(onVertexSelected);
                     RefreshEdgeVisuals();
 
@@ -1251,6 +1254,120 @@ namespace MasterMetrology.Core.Rendering
         public void ClearPendingSelection()
         {
             _pendingSelectFullIndex = null;
+        }
+
+        private static double GetW(FrameworkElement fe, double fallback)
+        {
+            var w = fe.ActualWidth;
+            if (double.IsNaN(w) || w <= 0) w = fe.Width;
+            if (double.IsNaN(w) || w <= 0) w = fallback;
+            return w;
+        }
+
+        private static double GetH(FrameworkElement fe, double fallback)
+        {
+            var h = fe.ActualHeight;
+            if (double.IsNaN(h) || h <= 0) h = fe.Height;
+            if (double.IsNaN(h) || h <= 0) h = fallback;
+            return h;
+        }
+
+        private struct InnerBounds
+        {
+            public double MinX, MaxX, MinY, MaxY;
+        }
+
+        // vypočíta "vnútorný" obdlžník sekcie, kam sa môžu ukladať/ťahať deti
+        private InnerBounds GetInnerBounds(VertexControl parentVc, VertexControl childVc)
+        {
+            // rovnaké konštanty ako používaš v PlaceChildrenRecursive / ComputeDesiredSizeRecursive
+            const double PAD_X = 18;
+            const double PAD_Y = 16;
+            const double HEADER_H = 40;
+
+            // parent pozícia v GraphArea súradniciach
+            double px = GraphAreaBase.GetFinalX(parentVc);
+            double py = GraphAreaBase.GetFinalY(parentVc);
+
+            // parent rozmery (sekcie)
+            double pw = GetW(parentVc, 260);
+            double ph = GetH(parentVc, 180);
+
+            // child rozmery
+            double cw = GetW(childVc, 120);
+            double ch = GetH(childVc, 60);
+
+            var minX = px + PAD_X;
+            var maxX = px + pw - PAD_X - cw;
+
+            var minY = py + HEADER_H + PAD_Y;
+            var maxY = py + ph - PAD_Y - ch;
+
+            // safety
+            if (maxX < minX) maxX = minX;
+            if (maxY < minY) maxY = minY;
+
+            return new InnerBounds { MinX = minX, MaxX = maxX, MinY = minY, MaxY = maxY };
+        }
+
+        private void InstallSectionDragClampFast(StateGraphArea area)
+        {
+            // _vcByFullIndex už máš a je O(1)
+            // Uisti sa, že je naplnená cez BuildVertexControlMap(area) pred volaním.
+
+            foreach (var kv in area.VertexList)
+            {
+                if (kv.Key is not GraphVertex gv) continue;
+                if (kv.Value is not VertexControl childVc) continue;
+
+                var childModel = gv.State;
+                if (childModel == null) continue;
+
+                // clamp len pre uzly, ktoré majú parenta => sú "vnútri sekcie"
+                var parentModel = childModel.Parent;
+                if (parentModel == null) continue;
+
+                var parentFull = parentModel.FullIndex;
+                if (string.IsNullOrWhiteSpace(parentFull)) continue;
+
+                if (!_vcByFullIndex.TryGetValue(parentFull, out var parentVc) || parentVc == null)
+                    continue;
+
+                // vždy aktivuj snapping/modifiers (nie iba Shift)
+                DragBehaviour.SetIsSnappingPredicate(childVc, _ => true);
+
+                // X clamp
+                DragBehaviour.SetXSnapModifier(childVc, (a, obj, x) =>
+                {
+                    // obj je ten ťahaný prvok
+                    if (obj is not VertexControl movingVc) return x;
+
+                    // parent môže byť po regen/rebuild iný objekt; vytiahni si ho vždy z mapy
+                    if (!_vcByFullIndex.TryGetValue(parentFull, out var pVc) || pVc == null)
+                        return x;
+
+                    var b = GetInnerBounds(pVc, movingVc);
+
+                    if (x < b.MinX) x = b.MinX;
+                    if (x > b.MaxX) x = b.MaxX;
+                    return x;
+                });
+
+                // Y clamp
+                DragBehaviour.SetYSnapModifier(childVc, (a, obj, y) =>
+                {
+                    if (obj is not VertexControl movingVc) return y;
+
+                    if (!_vcByFullIndex.TryGetValue(parentFull, out var pVc) || pVc == null)
+                        return y;
+
+                    var b = GetInnerBounds(pVc, movingVc);
+
+                    if (y < b.MinY) y = b.MinY;
+                    if (y > b.MaxY) y = b.MaxY;
+                    return y;
+                });
+            }
         }
 
 

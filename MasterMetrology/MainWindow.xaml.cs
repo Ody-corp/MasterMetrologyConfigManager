@@ -1,6 +1,7 @@
 ﻿using MasterMetrology.Controllers;
 using System.Diagnostics;
 using System.Windows;
+using System.Windows.Input;
 
 namespace MasterMetrology
 {
@@ -39,6 +40,27 @@ namespace MasterMetrology
             };
 
             _panZoom.CenterView();
+        }
+
+        private void DiagramCanvas_PreviewMouseRightButtonDown(object sender, MouseButtonEventArgs e)
+        {
+            if (e.ChangedButton != MouseButton.Right) return;
+
+            // pozícia kliknutia vo VIEW (border / viewport)
+            var pView = e.GetPosition(DiagramBorder);
+
+            // transform poradie: Scale potom Translate => inverse: (p - translate) / scale
+            var s = ZoomTransform.ScaleX; // predpoklad: ScaleY rovnaké
+            if (s == 0) s = 1;
+
+            var world = new Point(
+                ((pView.X - PanTransform.X) / s) - 25000,
+                ((pView.Y - PanTransform.Y) / s) - 25000
+            );
+
+            // uložíme do menu, aby si to MenuItem zobral cez CommandParameter
+            if (DiagramCanvas.ContextMenu != null)
+                DiagramCanvas.ContextMenu.Tag = world;
         }
 
         private void ShowDebug_Click(object sender, RoutedEventArgs e)

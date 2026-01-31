@@ -4,7 +4,10 @@
              StartupUri="MainWindow.xaml">
     <Application.Resources>
         <ContextMenu x:Key="rightClickContextMenu" x:Name="contextMenu" x:Shared="False">
-            <MenuItem Header="New state" Command="{Binding AddStateToRootCommand}" CommandParameter="{Binding PlacementTarget.Tag, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
+            <MenuItem Header="New state">
+                <MenuItem Header="To root" Command="{Binding AddStateToRootAtPointCommand}" CommandParameter="{Binding RelativeSource={RelativeSource AncestorType=ContextMenu}, Path=Tag}"/>
+                <MenuItem Header="As SubState" Command="{Binding AddStateAsSubStateCMCommand}" CommandParameter="{Binding PlacementTarget.Tag, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
+            </MenuItem>
             <MenuItem Header="Delete">
                 <MenuItem Header="State" Command="{Binding DeleteSingleStateCommand}" CommandParameter="{Binding PlacementTarget.Tag, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
                 <MenuItem Header="Whole section" Command="{Binding DeleteWholeStateCommand}" CommandParameter="{Binding PlacementTarget.Tag, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>

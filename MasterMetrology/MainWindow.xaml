@@ -32,7 +32,7 @@
                     <MenuItem Header="Exit" Command="{Binding ExitAppCommand}"/>
                 </MenuItem>
                 <MenuItem Header="Edit">
-                    <MenuItem Header="Add new state">
+                    <MenuItem Header="New state">
                         <MenuItem Header="To root" Command="{Binding AddStateToRootCommand}"/>
                         <MenuItem Header="As SubState" Command="{Binding AddStateAsSubStateCommand}"/>
                     </MenuItem>
@@ -98,7 +98,7 @@
                             </Canvas>
 
                             <!-- top layer: objects -->
-                            <Canvas x:Name="DiagramCanvas" Width="50000" Height="50000" Background="Transparent" ContextMenu="{StaticResource rightClickContextMenu}">
+                            <Canvas x:Name="DiagramCanvas" Width="50000" Height="50000" Background="Transparent" ContextMenu="{StaticResource rightClickContextMenu}" PreviewMouseRightButtonDown="DiagramCanvas_PreviewMouseRightButtonDown">
                                 <Canvas x:Name="GraphLayer" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" Background="Transparent"/>
                                 <!-- PreviewMouseLeftButtonDown=GraphLayer_PreviewMouseLeftButtonDown -->
 

@@ -515,8 +515,7 @@ namespace MasterMetrology
 
         public StateModelData CreateNewSubState(StateModelData parent)
         {
-            var p = panAndZoom.GetViewCenterWorld();
-            return CreateNewStateInternal(parent, p);
+            return CreateNewStateInternal(parent, default);
         }
 
         private StateModelData CreateNewStateInternal(StateModelData? parent, Point world)
@@ -551,7 +550,8 @@ namespace MasterMetrology
             }
 
             // move vertex after render
-            visualRender.RequestPlaceVertex(newState.FullIndex, world);
+            if (parent == null) 
+                visualRender.RequestPlaceVertex(newState.FullIndex, world);
 
             //visualRender.AddStateRuntime(newState, world);
 
@@ -712,6 +712,11 @@ namespace MasterMetrology
             foreach (var ch in root.SubStatesData)
                 if (ContainsFullIndex(ch, fullIndex)) return true;
             return false;
+        }
+
+        public StateModelData CreateNewRootStateAt(Point world)
+        {
+            return CreateNewStateInternal(parent: null, world);
         }
 
 

@@ -44,7 +44,9 @@ namespace MasterMetrology
             CenterViewCommand = new RelayCommand(CenterView);
 
             AddStateToRootCommand = new RelayCommand(() => _processController.CreateNewRootStateAtViewCenter());
+            AddStateToRootAtPointCommand = new RelayCommand(p => { if (p is Point pt) _processController.CreateNewRootStateAt(pt); }, p => p is Point);
             AddStateAsSubStateCommand = new RelayCommand(() => _processController.CreateNewSubState(SelectedVertex!.State), () => SelectedState != null);
+            AddStateAsSubStateCMCommand = new RelayCommand(p => { if (p is GraphVertex gv && gv.State != null) _processController.CreateNewSubState(gv.State); }, p => p is GraphVertex gv && gv.State != null);
 
             DeleteWholeSelectedStateCommand = new RelayCommand(() => _processController.DeleteWholeState(SelectedVertex!.State), () => SelectedState != null);
             DeleteWholeStateCommand = new RelayCommand(p => { if (p is GraphVertex gv && gv.State != null) _processController.DeleteWholeState(gv.State); }, p => p is GraphVertex gv && gv.State != null);
@@ -53,6 +55,24 @@ namespace MasterMetrology
             DeleteSingleStateCommand = new RelayCommand(p => { if (p is GraphVertex gv && gv.State != null) _processController.DeleteSingleState(gv.State); }, p => p is GraphVertex gv && gv.State != null);
             RefreshFromController();
         }
+
+        // --------- COMMANDS ----------
+        public RelayCommand ApplyCommand { get; }
+        public RelayCommand AddChildCommand { get; }
+        public RelayCommand RemoveChildCommand { get; }
+        public RelayCommand AddTransitionCommand { get; }
+        public RelayCommand RemoveTransitionCommand { get; }
+        public RelayCommand ExitAppCommand { get; }
+        public RelayCommand ImportFileCommand { get; }
+        public RelayCommand CenterViewCommand { get; }
+        public RelayCommand AddStateToRootCommand { get; }
+        public RelayCommand AddStateToRootAtPointCommand { get; }
+        public RelayCommand AddStateAsSubStateCommand { get; }
+        public RelayCommand AddStateAsSubStateCMCommand { get; }
+        public RelayCommand DeleteWholeSelectedStateCommand { get; }
+        public RelayCommand DeleteWholeStateCommand { get; }
+        public RelayCommand DeleteSingleSelectedStateCommand { get; }
+        public RelayCommand DeleteSingleStateCommand { get; }
 
         // --------- SELECTION ----------
         public GraphVertex? SelectedVertex { get; private set; }
@@ -187,22 +207,6 @@ namespace MasterMetrology
                 RaiseAllCanExecute(); 
             }
         }
-
-        // --------- COMMANDS ----------
-        public RelayCommand ApplyCommand { get; }
-        public RelayCommand AddChildCommand { get; }
-        public RelayCommand RemoveChildCommand { get; }
-        public RelayCommand AddTransitionCommand { get; }
-        public RelayCommand RemoveTransitionCommand { get; }
-        public RelayCommand ExitAppCommand { get; }
-        public RelayCommand ImportFileCommand { get; }
-        public RelayCommand CenterViewCommand { get; }
-        public RelayCommand AddStateToRootCommand { get; }
-        public RelayCommand AddStateAsSubStateCommand { get; }
-        public RelayCommand DeleteWholeSelectedStateCommand { get; }
-        public RelayCommand DeleteWholeStateCommand { get; }
-        public RelayCommand DeleteSingleSelectedStateCommand { get; }
-        public RelayCommand DeleteSingleStateCommand { get; }
 
         // --------- PUBLIC API CALLED FROM WINDOW ----------
         public void SelectVertex(GraphVertex? v)
@@ -402,6 +406,7 @@ namespace MasterMetrology
             AddTransitionCommand.RaiseCanExecuteChanged();
             RemoveTransitionCommand.RaiseCanExecuteChanged();
             AddStateAsSubStateCommand.RaiseCanExecuteChanged();
+            AddStateAsSubStateCMCommand.RaiseCanExecuteChanged();
             DeleteWholeSelectedStateCommand.RaiseCanExecuteChanged();
             DeleteWholeStateCommand.RaiseCanExecuteChanged();
             DeleteSingleSelectedStateCommand.RaiseCanExecuteChanged();
