@@ -24,10 +24,11 @@ namespace MasterMetrology
 
         public event Action<GraphVertex?>? VertexSelected;
 
-        private List<InputsDefModelData> inputsDefModelDatas;
+        private ObservableCollection<InputsDefModelData> inputsDefModelDatas = new ObservableCollection<InputsDefModelData>();
         private List<OutputModelData> outputsDefModelDatas;
         private List<StateModelData> statesModelDatas = new List<StateModelData>();
-        
+
+        public ObservableCollection<InputsDefModelData> InputsDef => inputsDefModelDatas;
         public ObservableCollection<StateViewModel> StatesViewModel = new ObservableCollection<StateViewModel>();
         public ObservableCollection<TransitionViewModel> AllTransitions = new ObservableCollection<TransitionViewModel>();
         public Dictionary<StateModelData, StateViewModel> modelToViewModel = new Dictionary<StateModelData, StateViewModel>();
@@ -50,7 +51,10 @@ namespace MasterMetrology
             SaveOldXMLPath(filePath);
             var list = _fileReader.LoadDataFromFile(filePath);
 
-            inputsDefModelDatas = list.InputsDefinition;
+            inputsDefModelDatas.Clear();
+            foreach (var i in list.InputsDefinition)
+                inputsDefModelDatas.Add(i);
+
             outputsDefModelDatas = list.OutputDefinition;
             statesModelDatas = list.FullListStateModelData;
 
@@ -181,17 +185,6 @@ namespace MasterMetrology
 
             foreach (var r in statesModelDatas) collect(r);
             return result;
-        }
-        public List<StateViewModel> GetFlatStateViewModels()
-        {
-            var res = new List<StateViewModel>();
-            void collect(StateViewModel svm)
-            {
-                res.Add(svm);
-                foreach (var ch in svm.SubStates) collect(ch);
-            }
-            foreach (var root in StatesViewModel) collect(root);
-            return res;
         }
         private StateViewModel GetVmOfModel(StateModelData state)
         {

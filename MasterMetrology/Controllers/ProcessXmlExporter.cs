@@ -3,6 +3,7 @@ using MasterMetrology.Models.Xml;
 using MasterMetrology.Models.XML;
 using QuickGraph.Algorithms.Search;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.Linq;
 
 namespace MasterMetrology.Controllers
@@ -10,7 +11,7 @@ namespace MasterMetrology.Controllers
     internal static class ProcessXmlExporter
     {
         public static ProcessXmlDto Build(
-            List<InputsDefModelData> inputs,
+            ObservableCollection<InputsDefModelData> inputs,
             List<OutputModelData> outputs,
             List<StateModelData> roots)
         {

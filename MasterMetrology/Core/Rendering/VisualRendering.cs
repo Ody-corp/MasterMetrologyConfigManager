@@ -58,6 +58,13 @@ namespace MasterMetrology.Core.Rendering
         private string? _pendingSelectFullIndex;
         private string? _selectedFullIndex;
 
+        private Point _bgDownPos;
+        private bool _bgMaybeClear;
+        private bool _bgDragged;
+
+        private const double BG_CLICK_THRESHOLD = 4.0; // px
+
+
         public void RenderGraph(List<StateModelData> states, Canvas graphLayer, Action<GraphVertex?> onVertexSelected = null, Canvas diagramCanvas = null)
         {
             CleanupLastGraphArea(graphLayer);
@@ -111,7 +118,7 @@ namespace MasterMetrology.Core.Rendering
                 graphLayer.Background = Brushes.Transparent;
 
             // CLEAR selection pri kliknutí mimo interaktívnych prvkov
-            diagramCanvas.AddHandler(UIElement.PreviewMouseLeftButtonDownEvent,
+            /*diagramCanvas.AddHandler(UIElement.PreviewMouseLeftButtonDownEvent,
                 new MouseButtonEventHandler((s, e) =>
                 {
                     Debug.WriteLine("BACKGROUND CLICK");
@@ -122,7 +129,59 @@ namespace MasterMetrology.Core.Rendering
                         ClearSelectionAndHighlights(onVertexSelected);
                     }
                 }),
+                true);*/
+            //InstallBackgroundClear(diagramCanvas, onVertexSelected);
+
+            // --- BACKGROUND click vs drag detection ---
+            Point? bgDownPos = null;
+            bool bgDragging = false;
+            const double DragThreshold = 6; // px
+
+            diagramCanvas.AddHandler(UIElement.PreviewMouseLeftButtonDownEvent,
+                new MouseButtonEventHandler((s, e) =>
+                {
+                    var src = e.OriginalSource as DependencyObject;
+
+                    // keď klikáš na vertex/edge/label -> nič (GraphX)
+                    if (IsInteractiveClick(src)) return;
+
+                    // potential background click/drag
+                    bgDownPos = e.GetPosition(diagramCanvas);
+                    bgDragging = false;
+                }),
                 true);
+
+            diagramCanvas.AddHandler(UIElement.PreviewMouseMoveEvent,
+                new MouseEventHandler((s, e) =>
+                {
+                    if (bgDownPos == null) return;
+                    if (e.LeftButton != MouseButtonState.Pressed) return;
+
+                    var p = e.GetPosition(diagramCanvas);
+                    var d = p - bgDownPos.Value;
+
+                    if (!bgDragging && (Math.Abs(d.X) > DragThreshold || Math.Abs(d.Y) > DragThreshold))
+                        bgDragging = true; // už je to drag (pan)
+                }),
+                true);
+
+            diagramCanvas.AddHandler(UIElement.PreviewMouseLeftButtonUpEvent,
+                new MouseButtonEventHandler((s, e) =>
+                {
+                    var src = e.OriginalSource as DependencyObject;
+
+                    // ak to nebolo na backgrounde, nič
+                    if (IsInteractiveClick(src)) { bgDownPos = null; bgDragging = false; return; }
+
+                    // ak to bol iba click (bez drag) -> clear
+                    if (bgDownPos != null && !bgDragging)
+                        ClearSelectionAndHighlights(onVertexSelected);
+
+                    bgDownPos = null;
+                    bgDragging = false;
+                }),
+                true);
+
 
             // generate graph (do NOT call ShowAllEdgesLabels here - manage labels ourselves)
             graphArea.GenerateGraph(true);
@@ -1368,6 +1427,62 @@ namespace MasterMetrology.Core.Rendering
                     return y;
                 });
             }
+        }
+        private bool _bgHandlersInstalled;
+
+        private void InstallBackgroundClear(Canvas diagramCanvas, Action<GraphVertex?>? onVertexSelected)
+        {
+            // Uisti sa, že diagramCanvas má Background, inak "prázdno" nechytí klik
+            //if (diagramCanvas.Background == null)
+            //    diagramCanvas.Background = Brushes.Transparent;
+
+            if (_bgHandlersInstalled) return;
+                _bgHandlersInstalled = true;
+
+
+            diagramCanvas.AddHandler(UIElement.PreviewMouseLeftButtonDownEvent,
+                new MouseButtonEventHandler((s, e) =>
+                {
+                    var src = e.OriginalSource as DependencyObject;
+
+                    // ak klik na vertex/edge/label, tak nič (neclearujeme)
+                    if (IsInteractiveClick(src))
+                    {
+                        _bgMaybeClear = false;
+                        return;
+                    }
+
+                    _bgMaybeClear = true;
+                    _bgDownPos = e.GetPosition(diagramCanvas);
+                }),
+                true);
+
+            diagramCanvas.AddHandler(UIElement.PreviewMouseLeftButtonUpEvent,
+                new MouseButtonEventHandler((s, e) =>
+                {
+                    if (!_bgMaybeClear) return;
+
+                    // ak počas toho niekto držal capture (pan/drag), tak to nie je "klik do prázdna"
+                    if (Mouse.Captured != null)
+                    {
+                        _bgMaybeClear = false;
+                        return;
+                    }
+
+                    var upPos = e.GetPosition(diagramCanvas);
+                    var dx = upPos.X - _bgDownPos.X;
+                    var dy = upPos.Y - _bgDownPos.Y;
+
+                    // ak sa to nepohlo (alebo minimálne), je to click => clear selection
+                    //if ((dx * dx + dy * dy) <= (BG_CLICK_THRESHOLD * BG_CLICK_THRESHOLD))
+                    //{
+                        ClearSelectionAndHighlights(onVertexSelected);
+                    //}
+
+                    _bgMaybeClear = false;
+                }),
+                true);
+
         }
 
 

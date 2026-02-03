@@ -8,6 +8,7 @@ using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Controls;
 using System.Diagnostics;
+using GraphX.Controls;
 
 namespace MasterMetrology.Controllers
 {
@@ -18,11 +19,13 @@ namespace MasterMetrology.Controllers
         private readonly TranslateTransform _panTransform;
         private readonly double _canvasSize;
 
+        private Point? _downPos;
         private Point _lastMousePos;
         private bool _isPanning;
 
         private const double MinZoom = 0.4;
         private const double MaxZoom = 3.0;
+        private const double DragThreshold = 6; // px
 
         public PanAndZoomController(FrameworkElement viewport, ScaleTransform zoom, TranslateTransform pan, double canvasSize)
         {
@@ -32,37 +35,66 @@ namespace MasterMetrology.Controllers
             _canvasSize = canvasSize;
 
             _viewport.MouseWheel += OnMouseWheel;
-            _viewport.MouseDown += OnMouseDown;
-            _viewport.MouseMove += OnMouseMove;
-            _viewport.MouseUp += OnMouseUp;
+            _viewport.PreviewMouseDown += OnMouseDown;
+            _viewport.PreviewMouseMove += OnMouseMove;
+            _viewport.PreviewMouseUp += OnMouseUp;
         }
 
         private void OnMouseDown(object sender, MouseButtonEventArgs e)
         {
-            if (e.ChangedButton == MouseButton.Middle || e.ChangedButton == MouseButton.Left)
-            {
-                _isPanning = true;
-                _lastMousePos = e.GetPosition(_viewport);
-                _viewport.CaptureMouse();
-            }
+            // len LMB
+            if (e.ChangedButton != MouseButton.Left) return;
+
+            // ak klik na vertex/edge/label -> GraphX
+            if (IsInteractiveClick(e.OriginalSource as DependencyObject))
+                return;
+
+            _downPos = e.GetPosition(_viewport);
+            _lastMousePos = _downPos.Value;
+
+            // NE-capture-ujeme tu, aby click fungoval normálne.
+            // Capture spravíme až keď sa z toho stane pan (po prahu).
         }
 
         private void OnMouseUp(object sender, MouseButtonEventArgs e)
         {
-            _isPanning = false;
-            _viewport.ReleaseMouseCapture();
+            if (e.ChangedButton != MouseButton.Left) return;
+
+            if (_isPanning)
+            {
+                _isPanning = false;
+                _viewport.ReleaseMouseCapture();
+                e.Handled = true;
+            }
+
+            _downPos = null;
         }
 
         private void OnMouseMove(object sender, MouseEventArgs e)
         {
-            if (_isPanning && e.LeftButton == MouseButtonState.Pressed)
+            if (_downPos == null) return;
+            if (e.LeftButton != MouseButtonState.Pressed) return;
+
+            var pos = e.GetPosition(_viewport);
+
+            if (!_isPanning)
             {
-                var pos = e.GetPosition(_viewport);
-                _panTransform.X += pos.X - _lastMousePos.X;
-                _panTransform.Y += pos.Y - _lastMousePos.Y;
-                _lastMousePos = pos;
-                ClampPan();
+                var d = pos - _downPos.Value;
+                if (Math.Abs(d.X) <= DragThreshold && Math.Abs(d.Y) <= DragThreshold)
+                    return;
+
+                // od teraz je to pan
+                _isPanning = true;
+                _viewport.CaptureMouse();
             }
+
+            // panning
+            _panTransform.X += pos.X - _lastMousePos.X;
+            _panTransform.Y += pos.Y - _lastMousePos.Y;
+            _lastMousePos = pos;
+
+            ClampPan();
+            e.Handled = true; // len keď už panujeme
         }
 
         private void OnMouseWheel(object sender, MouseWheelEventArgs e)
@@ -97,6 +129,18 @@ namespace MasterMetrology.Controllers
             _panTransform.Y = Math.Min(0, Math.Max(minY, _panTransform.Y));
         }
 
+        private static bool IsInteractiveClick(DependencyObject? src)
+        {
+            while (src != null)
+            {
+                if (src is VertexControl) return true;
+                if (src is EdgeControl) return true;
+                if (src is IEdgeLabelControl) return true;
+                src = VisualTreeHelper.GetParent(src);
+            }
+            return false;
+        }
+
         public void CenterView()
         {
             var centerX = _viewport.ActualWidth * 0.5;
@@ -116,13 +160,15 @@ namespace MasterMetrology.Controllers
 
         public Point GetViewCenterWorld()
         {
-            // stred toho, čo vidíš
+            // screen what you see
             var sx = _viewport.ActualWidth * 0.5;
             var sy = _viewport.ActualHeight * 0.5;
 
+            // zoom
             var zoomX = _zoomTransform.ScaleX;
             var zoomY = _zoomTransform.ScaleY;
 
+            // pan
             var panX = _panTransform.X;
             var panY = _panTransform.Y;
 

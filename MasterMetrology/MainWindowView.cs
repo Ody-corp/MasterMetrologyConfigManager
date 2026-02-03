@@ -22,6 +22,8 @@ namespace MasterMetrology
         private HashSet<StateModelData> _originalChildren = new();
         private StateModelData? _originalParentModel;
 
+        
+
 
         public MainWindowView(ProcessController processController, PanAndZoomController panAndZoomController)
         {
@@ -212,6 +214,8 @@ namespace MasterMetrology
                 RaiseAllCanExecute(); 
             }
         }
+        // --------- INPUTS DEFINITIONS ----------
+        public ObservableCollection<InputsDefModelData> InputsDef => _processController.InputsDef;
 
         // --------- PUBLIC API CALLED FROM WINDOW ----------
         public void SelectVertex(GraphVertex? v)
@@ -272,6 +276,8 @@ namespace MasterMetrology
             RefreshCandidates();
             RefreshTransitionsFilter();
             //RaiseAllCanExecute();
+
+            OnPropertyChanged(nameof(InputsDef));
         }
 
         // --------- INTERNAL HELPERS ----------
