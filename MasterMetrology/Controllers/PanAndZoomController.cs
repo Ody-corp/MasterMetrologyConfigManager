@@ -51,9 +51,6 @@ namespace MasterMetrology.Controllers
 
             _downPos = e.GetPosition(_viewport);
             _lastMousePos = _downPos.Value;
-
-            // NE-capture-ujeme tu, aby click fungoval normálne.
-            // Capture spravíme až keď sa z toho stane pan (po prahu).
         }
 
         private void OnMouseUp(object sender, MouseButtonEventArgs e)
