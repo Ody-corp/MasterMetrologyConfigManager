@@ -18,7 +18,7 @@ namespace MasterMetrology
         public static bool GetEnable(DependencyObject element) => (bool)element.GetValue(EnableProperty);
 
         private static string draftTextValue = "";
-
+        private static MainWindowView mv;
         private static void OnEnableChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
         {
             if (d is not TextBox tb) return;
@@ -95,8 +95,35 @@ namespace MasterMetrology
         {
             if (tb == null) return;
 
-            tb.IsReadOnly = true;
-            tb.Focusable = false;
+            
+
+            if (tb.Text.Trim().Length <= 0)
+                tb.Text = draftTextValue.Trim();
+
+            if (mv == null)
+                mv = Window.GetWindow(tb).DataContext as MainWindowView;
+                    
+            if (tb.Name == "ID" && mv.CheckDuplicity())
+            {
+                tb.Text = draftTextValue;
+
+                MessageBox.Show(
+                    "This ID number already exists.",
+                    "ID diplicity detected",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Warning
+                );
+
+                return;
+            }
+            else
+            {
+                tb.IsReadOnly = true;
+                tb.Focusable = false;
+            }
+
+            mv.CheckInNeedSort_Inputs();
+            
 
             Keyboard.ClearFocus();
         }

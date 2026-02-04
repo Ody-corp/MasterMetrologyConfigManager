@@ -1,4 +1,5 @@
 ﻿using System.ComponentModel;
+using System.Text.RegularExpressions;
 
 namespace MasterMetrology.Models.Data
 {
@@ -12,6 +13,9 @@ namespace MasterMetrology.Models.Data
             get => id;
             set
             {
+                if (!Regex.IsMatch(value, @"^\d*$"))
+                    return;
+
                 if (id != value)
                 {
                     id = value;

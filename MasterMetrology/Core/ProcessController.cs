@@ -739,10 +739,37 @@ namespace MasterMetrology
             return CreateNewStateInternal(parent: null, world);
         }
 
+        public string GetNextInputID()
+        {
+            var max = inputsDefModelDatas
+                .Select(i => i.ID)
+                .Where(id => !string.IsNullOrWhiteSpace(id))
+                .Select(id => int.TryParse(id, out var n) ? n : 0)
+                .DefaultIfEmpty(0)
+                .Max();
+
+            return (max + 1).ToString();
+        }
 
         public void test()
         {
             visualRender.test();
+        }
+
+        internal void SortInputsDefByIdInPlace()
+        {
+            var ordered = InputsDef
+             .OrderBy(x => int.TryParse(x.ID, out var n) ? n : int.MaxValue)
+             .ThenBy(x => x.ID)
+             .ToList();
+
+            for (int targetIndex = 0; targetIndex < ordered.Count; targetIndex++)
+            {
+                var item = ordered[targetIndex];
+                int currentIndex = InputsDef.IndexOf(item);
+                if (currentIndex != targetIndex && currentIndex >= 0)
+                    InputsDef.Move(currentIndex, targetIndex);
+            }
         }
     }
 }

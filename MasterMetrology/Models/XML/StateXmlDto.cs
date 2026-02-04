@@ -18,12 +18,10 @@ namespace MasterMetrology.Models.XML
         [XmlAttribute("Output")]
         public string? Output { get; set; }
 
-        //[XmlArray("Transitions")]
-        [XmlArrayItem("Transition")]
+        [XmlElement("Transition")]
         public List<TransitionXmlDto> Transitions { get; set; } = new();
 
-        //[XmlArray("SubStates")]
-        [XmlArrayItem("State")]
+        [XmlElement("State")]
         public List<StateXmlDto> SubStates { get; set; } = new();
     }
 }

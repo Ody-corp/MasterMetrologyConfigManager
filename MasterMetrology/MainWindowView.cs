@@ -58,6 +58,10 @@ namespace MasterMetrology
 
             SaveCommand = new RelayCommand(Save, () => _processController.CanSave);
             SaveAsCommand = new RelayCommand(SaveAs, () => _processController.HasGraph);
+
+            AddInputCommand = new RelayCommand(AddInput);
+            RemoveInputCommand = new RelayCommand(RemoveInput, () => SelectedInput != null);
+
             RefreshFromController();
         }
 
@@ -80,6 +84,8 @@ namespace MasterMetrology
         public RelayCommand DeleteSingleStateCommand { get; }
         public RelayCommand SaveCommand { get; }
         public RelayCommand SaveAsCommand { get; }
+        public RelayCommand AddInputCommand { get; }
+        public RelayCommand RemoveInputCommand { get; }
 
         // --------- SELECTION ----------
         public GraphVertex? SelectedVertex { get; private set; }
@@ -217,11 +223,27 @@ namespace MasterMetrology
         // --------- INPUTS DEFINITIONS ----------
         public ObservableCollection<InputsDefModelData> InputsDef => _processController.InputsDef;
 
+        private string oldID = "";
+        private InputsDefModelData? _selectedInput;
+        public InputsDefModelData? SelectedInput
+        {
+            get => _selectedInput;
+            set 
+            { 
+                _selectedInput = value;
+                oldID = _selectedInput?.ID;
+
+                OnPropertyChanged(); 
+                RaiseAllCanExecute(); 
+           
+            }
+        }
+
         // --------- PUBLIC API CALLED FROM WINDOW ----------
         public void SelectVertex(GraphVertex? v)
         {
             SelectedVertex = v;
-
+            
             if (v?.State == null)
             {
                 SelectedState = null;
@@ -319,12 +341,6 @@ namespace MasterMetrology
         }
         private void UpdateDraftMarkers()
         {
-            //foreach (var vm in FlatStates)
-            //{
-            //    vm.IsDraftAdded = false;
-            //    vm.IsDraftRemoved = false;
-            //}
-
             if (SelectedState == null) return;
 
             var draftModels = new HashSet<StateModelData>(DraftChildren.Select(c => c.StateModel));
@@ -424,6 +440,8 @@ namespace MasterMetrology
             DeleteSingleStateCommand.RaiseCanExecuteChanged();
             SaveCommand.RaiseCanExecuteChanged();
             SaveAsCommand.RaiseCanExecuteChanged();
+            AddInputCommand.RaiseCanExecuteChanged();
+            RemoveInputCommand.RaiseCanExecuteChanged();
         }
 
         // --------- COMMAND IMPLEMENTATIONS ----------
@@ -555,9 +573,43 @@ namespace MasterMetrology
             RaiseAllCanExecute();
         }
 
+        private void AddInput()
+        {
+            InputsDef.Add(new InputsDefModelData
+            {
+                ID = _processController.GetNextInputID(),
+                Name = "NEW_INPUT"
+            });
+
+            RaiseAllCanExecute();
+        }
+
+        private void RemoveInput()
+        {
+            InputsDef.Remove(SelectedInput!);
+            SelectedInput = null;
+
+            RaiseAllCanExecute();
+        }
+
+        public void CheckInNeedSort_Inputs()
+        {
+            if (SelectedInput.ID == oldID)
+            {
+                return;
+            }
+
+            _processController.SortInputsDefByIdInPlace();
+        }
+
         // --------- INotifyPropertyChanged ----------
         public event PropertyChangedEventHandler? PropertyChanged;
         private void OnPropertyChanged([CallerMemberName] string? name = null)
             => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
+
+        internal bool CheckDuplicity()
+        {
+            return InputsDef.Any(i => !ReferenceEquals(i, _selectedInput) && i.ID == _selectedInput.ID);
+        }
     }
 }
