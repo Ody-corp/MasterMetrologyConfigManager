@@ -1,4 +1,5 @@
-﻿using System.Windows;
+﻿using MasterMetrology.Models.Data;
+using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 
@@ -55,6 +56,16 @@ namespace MasterMetrology
         {
             if (sender is not TextBox tb) return;
 
+            var lbi = FindAncestor<ListBoxItem>(tb);
+            if (lbi != null)
+            {
+                lbi.IsSelected = true;
+
+                var lb = FindAncestor<ListBox>(lbi);
+                lb?.ScrollIntoView(lbi.DataContext);
+                lb?.Focus();
+            }
+
             tb.IsReadOnly = false;
             tb.Focusable = true;
             tb.Focus();
@@ -102,8 +113,12 @@ namespace MasterMetrology
 
             if (mv == null)
                 mv = Window.GetWindow(tb).DataContext as MainWindowView;
-                    
-            if (tb.Name == "ID" && mv.CheckDuplicity())
+
+            var selected = tb.DataContext;
+
+            if (tb.Name == "ID" && (
+                (selected is OutputModelData output && mv.CheckDuplicity_OutputID())
+                    || (selected is InputModelData input && mv.CheckDuplicity_InputID())))
             {
                 tb.Text = draftTextValue;
 
@@ -122,10 +137,27 @@ namespace MasterMetrology
                 tb.Focusable = false;
             }
 
-            mv.CheckInNeedSort_Inputs();
-            
+            if (selected is InputModelData)
+                mv.CheckInNeedSort_Inputs();
+            else if (selected is OutputModelData)
+                mv.CheckInNeedSort_Outputs();
 
             Keyboard.ClearFocus();
+        }
+
+        private static void KeepFocus(TextBox tb)
+        {
+            
+        }
+
+        private static T? FindAncestor<T>(DependencyObject? current) where T : DependencyObject
+        {
+            while (current != null)
+            {
+                if (current is T t) return t;
+                current = System.Windows.Media.VisualTreeHelper.GetParent(current);
+            }
+            return null;
         }
     }
 }

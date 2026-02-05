@@ -11,8 +11,8 @@ namespace MasterMetrology.Controllers
     internal static class ProcessXmlExporter
     {
         public static ProcessXmlDto Build(
-            ObservableCollection<InputsDefModelData> inputs,
-            List<OutputModelData> outputs,
+            ObservableCollection<InputModelData> inputs,
+            ObservableCollection<OutputModelData> outputs,
             List<StateModelData> roots)
         {
             var states = roots?.Select(MapStateRecursive).ToList() ?? new List<StateXmlDto>();
@@ -30,7 +30,7 @@ namespace MasterMetrology.Controllers
             };
         }
 
-        private static InputDefXmlDto MapInput(InputsDefModelData m)
+        private static InputDefXmlDto MapInput(InputModelData m)
         {
             return new InputDefXmlDto
             {

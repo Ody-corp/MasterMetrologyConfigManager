@@ -3,7 +3,7 @@ using System.Text.RegularExpressions;
 
 namespace MasterMetrology.Models.Data
 {
-    internal class InputsDefModelData : INotifyPropertyChanged
+    internal class InputModelData : INotifyPropertyChanged
     {
         private string id;
         private string name;

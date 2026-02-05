@@ -62,6 +62,9 @@ namespace MasterMetrology
             AddInputCommand = new RelayCommand(AddInput);
             RemoveInputCommand = new RelayCommand(RemoveInput, () => SelectedInput != null);
 
+            AddOutputCommand = new RelayCommand(AddOutput);
+            RemoveOutputCommand = new RelayCommand(RemoveOutput, () => SelectedOutput != null);
+
             RefreshFromController();
         }
 
@@ -86,6 +89,8 @@ namespace MasterMetrology
         public RelayCommand SaveAsCommand { get; }
         public RelayCommand AddInputCommand { get; }
         public RelayCommand RemoveInputCommand { get; }
+        public RelayCommand AddOutputCommand { get; }
+        public RelayCommand RemoveOutputCommand { get; }
 
         // --------- SELECTION ----------
         public GraphVertex? SelectedVertex { get; private set; }
@@ -221,21 +226,38 @@ namespace MasterMetrology
             }
         }
         // --------- INPUTS DEFINITIONS ----------
-        public ObservableCollection<InputsDefModelData> InputsDef => _processController.InputsDef;
+        public ObservableCollection<InputModelData> InputsDef => _processController.InputsDef;
 
-        private string oldID = "";
-        private InputsDefModelData? _selectedInput;
-        public InputsDefModelData? SelectedInput
+        private string oldID_Input_temp = "";
+        private InputModelData? _selectedInput;
+        public InputModelData? SelectedInput
         {
             get => _selectedInput;
             set 
             { 
                 _selectedInput = value;
-                oldID = _selectedInput?.ID;
+                oldID_Input_temp = _selectedInput?.ID;
 
                 OnPropertyChanged(); 
                 RaiseAllCanExecute(); 
            
+            }
+        }
+        // --------- OUTPUT DEFINITIONS ----------
+        public ObservableCollection<OutputModelData> OutputsDef => _processController.OutputsDef;
+
+        private string oldID_Output_temp = "";
+        private OutputModelData? _selectedOutput;
+        public OutputModelData? SelectedOutput
+        {
+            get => _selectedOutput;
+            set 
+            { 
+                _selectedOutput = value; 
+                oldID_Output_temp = _selectedOutput?.ID;
+
+                OnPropertyChanged(); 
+                RaiseAllCanExecute(); 
             }
         }
 
@@ -300,6 +322,7 @@ namespace MasterMetrology
             //RaiseAllCanExecute();
 
             OnPropertyChanged(nameof(InputsDef));
+            OnPropertyChanged(nameof(OutputsDef));
         }
 
         // --------- INTERNAL HELPERS ----------
@@ -442,6 +465,8 @@ namespace MasterMetrology
             SaveAsCommand.RaiseCanExecuteChanged();
             AddInputCommand.RaiseCanExecuteChanged();
             RemoveInputCommand.RaiseCanExecuteChanged();
+            AddOutputCommand.RaiseCanExecuteChanged();
+            RemoveOutputCommand.RaiseCanExecuteChanged();
         }
 
         // --------- COMMAND IMPLEMENTATIONS ----------
@@ -575,7 +600,7 @@ namespace MasterMetrology
 
         private void AddInput()
         {
-            InputsDef.Add(new InputsDefModelData
+            InputsDef.Add(new InputModelData
             {
                 ID = _processController.GetNextInputID(),
                 Name = "NEW_INPUT"
@@ -594,12 +619,53 @@ namespace MasterMetrology
 
         public void CheckInNeedSort_Inputs()
         {
-            if (SelectedInput.ID == oldID)
+            if (SelectedInput.ID == oldID_Input_temp)
             {
                 return;
             }
 
             _processController.SortInputsDefByIdInPlace();
+        }
+        public void CheckInNeedSort_Outputs()
+        {
+            if (SelectedOutput.ID == oldID_Output_temp)
+            {
+                return;
+            }
+
+            _processController.SortOutputsDefByIdInPlace();
+        }
+
+        private void AddOutput()
+        {
+            OutputsDef.Add(new OutputModelData
+            {
+                ID = _processController.GetNextOutputID(),
+                Name = "NEW_OUTPUT",
+                UpdateDefinition = false,
+                UpdateParameters = false,
+                UpdateCalibration = false,
+                UpdateMeasuredData = false,
+                UpdateProcessedData = false
+            });
+
+            RaiseAllCanExecute();
+        }
+
+        private void RemoveOutput()
+        {
+            OutputsDef.Remove(SelectedOutput!);
+            SelectedOutput = null;
+
+            RaiseAllCanExecute();
+        }
+        internal bool CheckDuplicity_InputID()
+        {
+            return InputsDef.Any(i => !ReferenceEquals(i, _selectedInput) && i.ID == _selectedInput.ID);
+        }
+        internal bool CheckDuplicity_OutputID()
+        {
+            return OutputsDef.Any(o => !ReferenceEquals(o, _selectedOutput) && o.ID == _selectedOutput.ID);
         }
 
         // --------- INotifyPropertyChanged ----------
@@ -607,9 +673,6 @@ namespace MasterMetrology
         private void OnPropertyChanged([CallerMemberName] string? name = null)
             => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
 
-        internal bool CheckDuplicity()
-        {
-            return InputsDef.Any(i => !ReferenceEquals(i, _selectedInput) && i.ID == _selectedInput.ID);
-        }
+
     }
 }

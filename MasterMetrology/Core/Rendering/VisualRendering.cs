@@ -630,31 +630,6 @@ namespace MasterMetrology.Core.Rendering
 
         }
 
-        private void ApplyCustomLayout(List<StateModelData> roots, StateGraphArea area)
-        {
-            const double ROOT_GAP_X = 120;
-            const double ROOT_GAP_Y = 60;
-            const double START_X = 60;
-            const double START_Y = 60;
-
-            const double SECTION_INNER_PAD_X = 18;
-            const double SECTION_INNER_PAD_Y = 16;
-            const double SECTION_HEADER_H = 40;
-            const double SECTION_CHILD_GAP_X = 24;
-            const double SECTION_CHILD_GAP_Y = 20;
-
-            double maxColumnHeight = 1800;
-
-            var orderedRoots = roots.OrderBy(m => m.FullIndex, FullIndexComparer.Instance).ToList();
-            LayoutRootsMultiColumn(orderedRoots, area, START_X, START_Y, ROOT_GAP_X, ROOT_GAP_Y, maxColumnHeight);
-
-            // 2) pre každú sekciu rozlož jej subStates dovnútra + uprav veľkosť sekcie
-            //    (musí sa robiť po tom, čo sekcia už má pozíciu)
-            foreach (var root in orderedRoots)
-                ApplySectionLayoutRecursive(root, area,
-                    SECTION_HEADER_H, SECTION_INNER_PAD_X, SECTION_INNER_PAD_Y, SECTION_CHILD_GAP_X, SECTION_CHILD_GAP_Y);
-
-        }
         private void LayoutRootsMultiColumn(List<StateModelData> roots, StateGraphArea area, double startX, double startY, double gapX, double gapY, double maxColumnHeight)
         {
             double x = startX;
@@ -688,13 +663,12 @@ namespace MasterMetrology.Core.Rendering
         {
             if (model == null) return;
 
-            // ak je to sekcia (má subStates), rozlož jej deti dovnútra
             if (model.SubStatesData != null && model.SubStatesData.Count > 0)
             {
                 LayoutSectionContents(model, area, headerH, padX, padY, childGapX, childGapY);
             }
 
-            // rekurzia na submodely (kvôli nested sekciám)
+            // recursive for substates (states in state)
             if (model.SubStatesData != null)
             {
                 foreach (var sub in model.SubStatesData)
@@ -705,26 +679,22 @@ namespace MasterMetrology.Core.Rendering
         {
             if (!TryGetVertexControlByFullIndex(area, sectionModel.FullIndex, out var vcSection)) return;
 
-            // musí to byť SectionVertexControl, inak nemá zmysel resize
             if (vcSection is not SectionVertexControl sectionControl) return;
 
-            // pozícia sekcie
+            // section pos
             var secPos = vcSection.GetPosition();
             double secX = secPos.X;
             double secY = secPos.Y;
 
-            // zoradené deti podľa FullIndex
+            // order by ID
             var children = sectionModel.SubStatesData
                 .OrderBy(m => m.FullIndex, FullIndexComparer.Instance)
                 .ToList();
 
-            // vnútorný layout box
+            // inner layer vertex
             double innerStartX = secX + padX;
             double innerStartY = secY + headerH + padY;
 
-            // max výška “vnútorného stĺpca”
-            // podľa aktuálnej výšky sekcie (ak je default 180, môže byť málo)
-            // dáme minimálne 400, alebo niečo rozumné
             double innerMaxHeight = Math.Max(400, sectionControl.SectionHeight - headerH - (padY * 2));
 
             double x = innerStartX;
@@ -742,7 +712,7 @@ namespace MasterMetrology.Core.Rendering
                 double w = size.Width;
                 double h = size.Height;
 
-                // wrap do ďalšieho stĺpca vnútri sekcie
+                // wrap
                 if (y + h > innerStartY + innerMaxHeight)
                 {
                     x += colMaxWidth + gapX;

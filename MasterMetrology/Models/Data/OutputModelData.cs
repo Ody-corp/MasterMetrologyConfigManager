@@ -1,4 +1,5 @@
 ﻿using System.ComponentModel;
+using System.Text.RegularExpressions;
 
 namespace MasterMetrology.Models.Data
 {
@@ -11,6 +12,21 @@ namespace MasterMetrology.Models.Data
         private bool updateCalibration;
         private bool updateMeasuredData;
         private bool updateProcessedData;
+        public string ID
+        {
+            get => id;
+            set
+            {
+                if (!Regex.IsMatch(value, @"^\d*$"))
+                    return;
+
+                if (id != value)
+                {
+                    id = value;
+                    OnPropertyChanged(nameof(ID));
+                }
+            }
+        }
         public string Name 
         { 
             get => name;
@@ -21,20 +37,7 @@ namespace MasterMetrology.Models.Data
                     name = value;
                     OnPropertyChanged(nameof(Name));
                 }
-            }
-             
-        }
-        public string ID 
-        { 
-            get => id;
-            set
-            {
-                if (id != value)
-                {
-                    id = value;
-                    OnPropertyChanged(nameof(ID));
-                }
-            }
+            }    
         }
         public bool UpdateDefinition
         {

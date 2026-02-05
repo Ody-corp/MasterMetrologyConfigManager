@@ -24,11 +24,12 @@ namespace MasterMetrology
 
         public event Action<GraphVertex?>? VertexSelected;
 
-        private ObservableCollection<InputsDefModelData> inputsDefModelDatas = new ObservableCollection<InputsDefModelData>();
-        private List<OutputModelData> outputsDefModelDatas;
+        private ObservableCollection<InputModelData> inputsDefModelDatas = new ObservableCollection<InputModelData>();
+        private ObservableCollection<OutputModelData> outputsDefModelDatas = new ObservableCollection<OutputModelData>();
         private List<StateModelData> statesModelDatas = new List<StateModelData>();
 
-        public ObservableCollection<InputsDefModelData> InputsDef => inputsDefModelDatas;
+        public ObservableCollection<OutputModelData> OutputsDef => outputsDefModelDatas;
+        public ObservableCollection<InputModelData> InputsDef => inputsDefModelDatas;
         public ObservableCollection<StateViewModel> StatesViewModel = new ObservableCollection<StateViewModel>();
         public ObservableCollection<TransitionViewModel> AllTransitions = new ObservableCollection<TransitionViewModel>();
         public Dictionary<StateModelData, StateViewModel> modelToViewModel = new Dictionary<StateModelData, StateViewModel>();
@@ -55,7 +56,10 @@ namespace MasterMetrology
             foreach (var i in list.InputsDefinition)
                 inputsDefModelDatas.Add(i);
 
-            outputsDefModelDatas = list.OutputDefinition;
+            outputsDefModelDatas.Clear();
+            foreach (var o in list.OutputDefinition)
+                outputsDefModelDatas.Add(o);
+            
             statesModelDatas = list.FullListStateModelData;
 
             BuildViewModelTreeFromModels(statesModelDatas);
@@ -751,6 +755,18 @@ namespace MasterMetrology
             return (max + 1).ToString();
         }
 
+        public string GetNextOutputID()
+        {
+            var max = outputsDefModelDatas
+                .Select(o => o.ID)
+                .Where(id => !string.IsNullOrWhiteSpace(id))
+                .Select(id => int.TryParse(id, out var n) ? n : 0)
+                .DefaultIfEmpty(0)
+                .Max();
+
+            return (max + 1).ToString();
+        }
+
         public void test()
         {
             visualRender.test();
@@ -769,6 +785,21 @@ namespace MasterMetrology
                 int currentIndex = InputsDef.IndexOf(item);
                 if (currentIndex != targetIndex && currentIndex >= 0)
                     InputsDef.Move(currentIndex, targetIndex);
+            }
+        }
+        internal void SortOutputsDefByIdInPlace()
+        {
+            var ordered = OutputsDef
+             .OrderBy(x => int.TryParse(x.ID, out var n) ? n : int.MaxValue)
+             .ThenBy(x => x.ID)
+             .ToList();
+
+            for (int targetIndex = 0; targetIndex < ordered.Count; targetIndex++)
+            {
+                var item = ordered[targetIndex];
+                int currentIndex = OutputsDef.IndexOf(item);
+                if (currentIndex != targetIndex && currentIndex >= 0)
+                    OutputsDef.Move(currentIndex, targetIndex);
             }
         }
     }

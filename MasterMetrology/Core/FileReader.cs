@@ -6,14 +6,14 @@ namespace MasterMetrology
 {
     internal class FileReader
     {
-        ObservableCollection<InputsDefModelData> InputsDefinition = new ObservableCollection<InputsDefModelData>();
+        ObservableCollection<InputModelData> InputsDefinition = new ObservableCollection<InputModelData>();
         List<OutputModelData> OutputDefinition = new List<OutputModelData>();
         List<StateModelData> FullListStateModelData = new List<StateModelData>();
         Stack<StateModelData> stack = new Stack<StateModelData>();
 
         Stack<string> stackIndex = new Stack<string>();
 
-        public (ObservableCollection<InputsDefModelData> InputsDefinition, List<OutputModelData> OutputDefinition, List<StateModelData> FullListStateModelData) LoadDataFromFile(string filePath)
+        public (ObservableCollection<InputModelData> InputsDefinition, List<OutputModelData> OutputDefinition, List<StateModelData> FullListStateModelData) LoadDataFromFile(string filePath)
         {
             using (XmlReader reader = XmlReader.Create(filePath))
             {
@@ -23,7 +23,7 @@ namespace MasterMetrology
                     {
                         if (reader.Name == "Input")
                         {
-                            var input = new InputsDefModelData()
+                            var input = new InputModelData()
                             {
                                 Name = reader.GetAttribute("Name"),
                                 ID = reader.GetAttribute("ID")
