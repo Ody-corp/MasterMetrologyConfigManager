@@ -7,6 +7,7 @@ using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
+using System.Text.RegularExpressions;
 using System.Windows;
 using System.Windows.Data;
 using System.Windows.Input;
@@ -121,21 +122,39 @@ namespace MasterMetrology
         public string DraftName
         {
             get => _draftName;
-            set { _draftName = value; OnPropertyChanged(); }
+            set 
+            { 
+                _draftName = value; 
+                OnPropertyChanged(); 
+            }
         }
 
         private string _draftIndex = "";
         public string DraftIndex
         {
             get => _draftIndex;
-            set { _draftIndex = value; OnPropertyChanged(); }
+            set 
+            {
+                if (!Regex.IsMatch(value, @"^\d*$"))
+                    return;
+
+                _draftIndex = value; 
+                OnPropertyChanged(); 
+            }
         }
 
         private string _draftOutput = "";
         public string DraftOutput
         {
             get => _draftOutput;
-            set { _draftOutput = value; OnPropertyChanged(); }
+            set 
+            {
+                if (!Regex.IsMatch(value, @"^\d*$"))
+                    return;
+
+                _draftOutput = value;
+                OnPropertyChanged(); 
+            }
         }
 
         private StateViewModel? _draftParent;
@@ -167,7 +186,12 @@ namespace MasterMetrology
         public StateViewModel? ChildToAdd
         {
             get => _childToAdd;
-            set { _childToAdd = value; OnPropertyChanged(); RaiseAllCanExecute(); }
+            set 
+            { 
+                _childToAdd = value; 
+                OnPropertyChanged(); 
+                RaiseAllCanExecute(); 
+            }
         }
 
         // --------- STATES LISTS ----------
@@ -207,7 +231,10 @@ namespace MasterMetrology
         {
             get => _newTransitionInput;
             set 
-            { 
+            {
+                if (!Regex.IsMatch(value, @"^\d*$"))
+                    return;
+
                 _newTransitionInput = value; 
                 OnPropertyChanged(); 
                 RaiseAllCanExecute(); 

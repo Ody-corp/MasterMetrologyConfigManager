@@ -43,7 +43,7 @@ namespace MasterMetrology
         private string? _selectedFullIndex;
 
         public bool CanSave => !string.IsNullOrWhiteSpace(filePath);
-        public bool HasGraph => statesModelDatas != null && statesModelDatas.Count > 0;
+        public bool HasGraph => (statesModelDatas != null && statesModelDatas.Count > 0);
         private string filePath;
         public string? CurrentFilePath => filePath;
 

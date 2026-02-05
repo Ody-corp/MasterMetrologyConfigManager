@@ -424,7 +424,6 @@
                  ScrollViewer.VerticalScrollBarVisibility="Auto">
                                     <ListBox.ItemContainerStyle>
                                         <Style TargetType="ListBoxItem">
-                                            <!-- klik na riadok vyberie item -->
                                             <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
                                             <Setter Property="Padding" Value="2"/>
                                             <Setter Property="Background" Value="Transparent"/>
