@@ -10,11 +10,11 @@ using System.Windows.Controls;
 using System.Diagnostics;
 using GraphX.Controls;
 
-namespace MasterMetrology.Controllers
+namespace MasterMetrology.Core.UI.Controllers
 {
     internal class PanAndZoomController
     {
-        private readonly FrameworkElement _viewport;   
+        private readonly FrameworkElement _viewport;
         private readonly ScaleTransform _zoomTransform;
         private readonly TranslateTransform _panTransform;
         private readonly double _canvasSize;
@@ -148,8 +148,8 @@ namespace MasterMetrology.Controllers
 
             var offset = _canvasSize * 0.5; // namiesto hardcoded 25000
 
-            _panTransform.X = centerX - (offset * zoomX);
-            _panTransform.Y = centerY - (offset * zoomY);
+            _panTransform.X = centerX - offset * zoomX;
+            _panTransform.Y = centerY - offset * zoomY;
 
             ClampPan();
         }
@@ -172,8 +172,8 @@ namespace MasterMetrology.Controllers
             var offset = _canvasSize * 0.5;
 
             // world = (screen - pan) / zoom
-            var wx = ((sx - panX) / zoomX) - offset;
-            var wy = ((sy - panY) / zoomY) - offset;
+            var wx = (sx - panX) / zoomX - offset;
+            var wy = (sy - panY) / zoomY - offset;
 
             Debug.WriteLine($"center screen=({sx},{sy}) pan=({panX},{panY}) zoom=({zoomX},{zoomY}) => world=({wx},{wy})");
             return new Point(wx, wy);

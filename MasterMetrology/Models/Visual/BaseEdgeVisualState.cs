@@ -1,6 +1,6 @@
 ﻿using System.Windows.Media;
 
-namespace MasterMetrology
+namespace MasterMetrology.Models.Visual
 {
     internal class BaseEdgeVisualState
     {

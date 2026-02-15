@@ -1,4 +1,5 @@
-﻿using MasterMetrology.Controllers;
+﻿using MasterMetrology.Core.UI;
+using MasterMetrology.Core.UI.Controllers;
 using System.Diagnostics;
 using System.Windows;
 using System.Windows.Input;
@@ -46,11 +47,9 @@ namespace MasterMetrology
         {
             if (e.ChangedButton != MouseButton.Right) return;
 
-            // pozícia kliknutia vo VIEW (border / viewport)
             var pView = e.GetPosition(DiagramBorder);
 
-            // transform poradie: Scale potom Translate => inverse: (p - translate) / scale
-            var s = ZoomTransform.ScaleX; // predpoklad: ScaleY rovnaké
+            var s = ZoomTransform.ScaleX;
             if (s == 0) s = 1;
 
             var world = new Point(
@@ -58,7 +57,6 @@ namespace MasterMetrology
                 ((pView.Y - PanTransform.Y) / s) - 25000
             );
 
-            // uložíme do menu, aby si to MenuItem zobral cez CommandParameter
             if (DiagramCanvas.ContextMenu != null)
                 DiagramCanvas.ContextMenu.Tag = world;
         }

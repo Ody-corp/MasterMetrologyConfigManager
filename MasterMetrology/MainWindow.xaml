@@ -3,7 +3,7 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-        xmlns:local="clr-namespace:MasterMetrology"
+        xmlns:localCoreUiControl="clr-namespace:MasterMetrology.Core.UI.Controllers"
         mc:Ignorable="d"
         Title="MainWindow" Height="1080" Width="1920" WindowState="Maximized">
     <Window.Resources>
@@ -66,7 +66,7 @@
                 </Grid.ColumnDefinitions>
                 
                 <Grid Height="auto" Grid.Column="0" x:Name="ViewPort" IsHitTestVisible="True">
-                    <Border x:Name="DiagramBorder" BorderBrush="Black" BorderThickness="1" ClipToBounds="True" Height="auto" Width="auto" HorizontalAlignment="Left" VerticalAlignment="Top">
+                    <Border x:Name="DiagramBorder" BorderBrush="Black" BorderThickness="1" ClipToBounds="True" Height="auto" Width="auto" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="14,0,0,14">
                         <Grid>
                             <!-- bottom layer (background) of canvas view with grid -->
                             <Canvas x:Name="GridCanvas" Width="50000" Height="50000" 
@@ -375,7 +375,7 @@
                                                      Text="{Binding ID, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
                                                      Focusable="False"
                                                      IsReadOnly="True"
-                                                     local:InlineEditBehavior.Enable="True"/>
+                                                     localCoreUiControl:InlineEditBehavior.Enable="True"/>
 
                                                 <!-- editable Name (toto sa roztiahne na full) -->
                                                 <TextBox Grid.Column="1"
@@ -385,7 +385,7 @@
                                                      Text="{Binding Name, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
                                                      Focusable="False"
                                                      IsReadOnly="True"
-                                                     local:InlineEditBehavior.Enable="True"/>
+                                                     localCoreUiControl:InlineEditBehavior.Enable="True"/>
                                             </Grid>
                                         </DataTemplate>
                                     </ListBox.ItemTemplate>
@@ -467,7 +467,7 @@
                                      BorderThickness="0"
                                      Background="Transparent"
                                      IsReadOnly="True"
-                                     local:InlineEditBehavior.Enable="True"
+                                     localCoreUiControl:InlineEditBehavior.Enable="True"
                                      Text="{Binding ID, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
 
                                                     <TextBox x:Name="Name"
@@ -475,7 +475,7 @@
                                      BorderThickness="0"
                                      Background="Transparent"
                                      IsReadOnly="True"
-                                     local:InlineEditBehavior.Enable="True"
+                                     localCoreUiControl:InlineEditBehavior.Enable="True"
                                      Text="{Binding Name, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
                                                 </Grid>
 

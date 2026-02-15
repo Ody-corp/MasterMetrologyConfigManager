@@ -29,14 +29,13 @@ namespace MasterMetrology.Utils
                 if (c != 0) return c;
             }
 
-            // kratší prefix ide skôr: "1.2" < "1.2.1"
             return sa.Length.CompareTo(sb.Length);
         }
 
         private int TryParseInt(string s)
         {
             if (int.TryParse(s, out var v)) return v;
-            return int.MaxValue; // ak by tam bolo niečo divné, hoď na koniec
+            return int.MaxValue;
         }
     }
 }

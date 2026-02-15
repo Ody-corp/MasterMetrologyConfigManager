@@ -6,7 +6,7 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
 
-namespace MasterMetrology.Controllers
+namespace MasterMetrology.Core
 {
     internal static class ProcessXmlExporter
     {

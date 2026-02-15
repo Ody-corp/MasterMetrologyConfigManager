@@ -1,19 +1,22 @@
 ﻿using MasterMetrology.Models.Data;
-using System.Collections.ObjectModel;
 using System.Xml;
 
 namespace MasterMetrology
 {
     internal class FileReader
     {
-        ObservableCollection<InputModelData> InputsDefinition = new ObservableCollection<InputModelData>();
+        List<InputModelData> InputsDefinition = new List<InputModelData>();
         List<OutputModelData> OutputDefinition = new List<OutputModelData>();
         List<StateModelData> FullListStateModelData = new List<StateModelData>();
         Stack<StateModelData> stack = new Stack<StateModelData>();
 
         Stack<string> stackIndex = new Stack<string>();
 
-        public (ObservableCollection<InputModelData> InputsDefinition, List<OutputModelData> OutputDefinition, List<StateModelData> FullListStateModelData) LoadDataFromFile(string filePath)
+        public (
+            List<InputModelData> InputsDefinition, 
+            List<OutputModelData> OutputDefinition, 
+            List<StateModelData> FullListStateModelData) 
+            LoadDataFromFile(string filePath)
         {
             using (XmlReader reader = XmlReader.Create(filePath))
             {

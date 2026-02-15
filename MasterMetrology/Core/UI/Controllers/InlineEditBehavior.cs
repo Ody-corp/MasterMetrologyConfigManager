@@ -3,7 +3,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 
-namespace MasterMetrology
+namespace MasterMetrology.Core.UI.Controllers
 {
     public static class InlineEditBehavior
     {
@@ -96,7 +96,7 @@ namespace MasterMetrology
             {
                 tb.Text = draftTextValue;
                 draftTextValue = "";
-                    
+
                 EndEdit(tb);
                 e.Handled = true;
             }
@@ -106,7 +106,7 @@ namespace MasterMetrology
         {
             if (tb == null) return;
 
-            
+
 
             if (tb.Text.Trim().Length <= 0)
                 tb.Text = draftTextValue.Trim();
@@ -117,8 +117,8 @@ namespace MasterMetrology
             var selected = tb.DataContext;
 
             if (tb.Name == "ID" && (
-                (selected is OutputModelData output && mv.CheckDuplicity_OutputID())
-                    || (selected is InputModelData input && mv.CheckDuplicity_InputID())))
+                selected is OutputModelData output && mv.CheckDuplicity_OutputID()
+                    || selected is InputModelData input && mv.CheckDuplicity_InputID()))
             {
                 tb.Text = draftTextValue;
 
@@ -147,7 +147,7 @@ namespace MasterMetrology
 
         private static void KeepFocus(TextBox tb)
         {
-            
+
         }
 
         private static T? FindAncestor<T>(DependencyObject? current) where T : DependencyObject

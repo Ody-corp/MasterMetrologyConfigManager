@@ -1,7 +1,8 @@
 ﻿using GraphX.Controls;
-using MasterMetrology.Controllers;
+using MasterMetrology.Core.UI.Controllers;
 using MasterMetrology.Models.Data;
 using MasterMetrology.Models.Visual;
+using MasterMetrology.Utils;
 using Microsoft.Win32;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
@@ -13,7 +14,7 @@ using System.Windows.Data;
 using System.Windows.Input;
 using System.Windows.Media;
 
-namespace MasterMetrology
+namespace MasterMetrology.Core.UI
 {
     internal class MainWindowView : INotifyPropertyChanged
     {
@@ -23,7 +24,7 @@ namespace MasterMetrology
         private HashSet<StateModelData> _originalChildren = new();
         private StateModelData? _originalParentModel;
 
-        
+
 
 
         public MainWindowView(ProcessController processController, PanAndZoomController panAndZoomController)
@@ -122,10 +123,10 @@ namespace MasterMetrology
         public string DraftName
         {
             get => _draftName;
-            set 
-            { 
-                _draftName = value; 
-                OnPropertyChanged(); 
+            set
+            {
+                _draftName = value;
+                OnPropertyChanged();
             }
         }
 
@@ -133,13 +134,13 @@ namespace MasterMetrology
         public string DraftIndex
         {
             get => _draftIndex;
-            set 
+            set
             {
                 if (!Regex.IsMatch(value, @"^\d*$"))
                     return;
 
-                _draftIndex = value; 
-                OnPropertyChanged(); 
+                _draftIndex = value;
+                OnPropertyChanged();
             }
         }
 
@@ -147,13 +148,13 @@ namespace MasterMetrology
         public string DraftOutput
         {
             get => _draftOutput;
-            set 
+            set
             {
                 if (!Regex.IsMatch(value, @"^\d*$"))
                     return;
 
                 _draftOutput = value;
-                OnPropertyChanged(); 
+                OnPropertyChanged();
             }
         }
 
@@ -161,15 +162,15 @@ namespace MasterMetrology
         public StateViewModel? DraftParent
         {
             get => _draftParent;
-            set 
-            { 
+            set
+            {
                 if (_draftParent == value) return;
-                _draftParent = value; 
-                OnPropertyChanged(); 
+                _draftParent = value;
+                OnPropertyChanged();
 
                 RefreshCandidates();
                 UpdateDraftMarkers();
-                RaiseAllCanExecute(); 
+                RaiseAllCanExecute();
             }
         }
 
@@ -186,11 +187,11 @@ namespace MasterMetrology
         public StateViewModel? ChildToAdd
         {
             get => _childToAdd;
-            set 
-            { 
-                _childToAdd = value; 
-                OnPropertyChanged(); 
-                RaiseAllCanExecute(); 
+            set
+            {
+                _childToAdd = value;
+                OnPropertyChanged();
+                RaiseAllCanExecute();
             }
         }
 
@@ -218,11 +219,11 @@ namespace MasterMetrology
         public TransitionViewModel? SelectedTransition
         {
             get => _selectedTransition;
-            set 
-            { 
-                _selectedTransition = value; 
-                OnPropertyChanged(); 
-                RaiseAllCanExecute(); 
+            set
+            {
+                _selectedTransition = value;
+                OnPropertyChanged();
+                RaiseAllCanExecute();
             }
         }
 
@@ -230,14 +231,14 @@ namespace MasterMetrology
         public string NewTransitionInput
         {
             get => _newTransitionInput;
-            set 
+            set
             {
                 if (!Regex.IsMatch(value, @"^\d*$"))
                     return;
 
-                _newTransitionInput = value; 
-                OnPropertyChanged(); 
-                RaiseAllCanExecute(); 
+                _newTransitionInput = value;
+                OnPropertyChanged();
+                RaiseAllCanExecute();
             }
         }
 
@@ -245,11 +246,11 @@ namespace MasterMetrology
         public StateViewModel? SelectedTransitionTarget
         {
             get => _selectedTransitionTarget;
-            set 
-            { 
-                _selectedTransitionTarget = value; 
-                OnPropertyChanged(); 
-                RaiseAllCanExecute(); 
+            set
+            {
+                _selectedTransitionTarget = value;
+                OnPropertyChanged();
+                RaiseAllCanExecute();
             }
         }
         // --------- INPUTS DEFINITIONS ----------
@@ -260,14 +261,14 @@ namespace MasterMetrology
         public InputModelData? SelectedInput
         {
             get => _selectedInput;
-            set 
-            { 
+            set
+            {
                 _selectedInput = value;
                 oldID_Input_temp = _selectedInput?.ID;
 
-                OnPropertyChanged(); 
-                RaiseAllCanExecute(); 
-           
+                OnPropertyChanged();
+                RaiseAllCanExecute();
+
             }
         }
         // --------- OUTPUT DEFINITIONS ----------
@@ -278,13 +279,13 @@ namespace MasterMetrology
         public OutputModelData? SelectedOutput
         {
             get => _selectedOutput;
-            set 
-            { 
-                _selectedOutput = value; 
+            set
+            {
+                _selectedOutput = value;
                 oldID_Output_temp = _selectedOutput?.ID;
 
-                OnPropertyChanged(); 
-                RaiseAllCanExecute(); 
+                OnPropertyChanged();
+                RaiseAllCanExecute();
             }
         }
 
@@ -292,7 +293,7 @@ namespace MasterMetrology
         public void SelectVertex(GraphVertex? v)
         {
             SelectedVertex = v;
-            
+
             if (v?.State == null)
             {
                 SelectedState = null;
@@ -337,7 +338,7 @@ namespace MasterMetrology
                         vm.SubStates.Add(childVm);
                 }
 
-                vm.Parent = (m.Parent != null && _processController.modelToViewModel.TryGetValue(m.Parent, out var pvm)) ? pvm : null;
+                vm.Parent = m.Parent != null && _processController.modelToViewModel.TryGetValue(m.Parent, out var pvm) ? pvm : null;
             }
 
             // to keep selection

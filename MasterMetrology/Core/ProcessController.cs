@@ -2,11 +2,12 @@
 using System.Windows.Controls;
 using System.Windows;
 using MasterMetrology.Models.Data;
-using MasterMetrology.Core.Rendering;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.Windows.Media;
-using MasterMetrology.Controllers;
+using MasterMetrology.Core;
+using MasterMetrology.Core.UI.Rendering;
+using MasterMetrology.Core.UI.Controllers;
 
 namespace MasterMetrology
 {

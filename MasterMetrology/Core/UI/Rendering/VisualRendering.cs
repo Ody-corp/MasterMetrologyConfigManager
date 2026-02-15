@@ -18,8 +18,9 @@ using GraphX.PCL.Logic.Algorithms.OverlapRemoval;
 using MasterMetrology.Utils;
 using System.Windows.Input;
 using GraphX;
+using MasterMetrology.Core.UI.Controllers;
 
-namespace MasterMetrology.Core.Rendering
+namespace MasterMetrology.Core.UI.Rendering
 {
     internal class VisualRendering
     {
@@ -45,7 +46,7 @@ namespace MasterMetrology.Core.Rendering
             SectionMargin = 18,
         };
 
-        private List<StateModelData> _lastRoots; // aby si vedel reroutovať aj pri Add/RemoveTransition
+        private List<StateModelData> _lastRoots;
         private readonly GraphInteractionController _interaction = new GraphInteractionController();
 
         private readonly Dictionary<GraphEdge, BaseEdgeVisualState> _edgeBase = new();
@@ -64,6 +65,15 @@ namespace MasterMetrology.Core.Rendering
 
         private const double BG_CLICK_THRESHOLD = 4.0; // px
 
+        private const double SEC_HEADER_H = 44;
+        private const double SEC_PAD_X = 36;
+        private const double SEC_PAD_Y = 28;
+        private const double SEC_GAP_X = 70;
+        private const double SEC_GAP_Y = 44;
+        private const double SEC_INNER_MAX_H = 900;
+
+        private const double SEC_ROUTE_MARGIN_X = 80;
+        private const double SEC_ROUTE_MARGIN_Y = 60;
 
         public void RenderGraph(List<StateModelData> states, Canvas graphLayer, Action<GraphVertex?> onVertexSelected = null, Canvas diagramCanvas = null)
         {
@@ -89,10 +99,10 @@ namespace MasterMetrology.Core.Rendering
                 Graph = graph,
                 DefaultLayoutAlgorithm = LayoutAlgorithmTypeEnum.SimpleRandom,
                 DefaultOverlapRemovalAlgorithm = OverlapRemovalAlgorithmTypeEnum.OneWayFSA,
-                DefaultEdgeRoutingAlgorithm = EdgeRoutingAlgorithmTypeEnum.None,
+                DefaultEdgeRoutingAlgorithm = EdgeRoutingAlgorithmTypeEnum.Bundling,
                 EnableParallelEdges = true,
                 EdgeCurvingEnabled = false,
-                
+
             };
 
             var factory = new CustomControlFactory();
@@ -106,7 +116,7 @@ namespace MasterMetrology.Core.Rendering
                 Height = Config.DEFAULT_VALUE_CANVAS_Y,
                 Background = Brushes.Transparent,
                 ControlFactory = factory
-                
+
             };
 
             factory.FactoryRootArea = graphArea;
@@ -116,21 +126,6 @@ namespace MasterMetrology.Core.Rendering
             // aby Canvas vždy chytal klik (aj keď je "prázdny")
             if (graphLayer.Background == null)
                 graphLayer.Background = Brushes.Transparent;
-
-            // CLEAR selection pri kliknutí mimo interaktívnych prvkov
-            /*diagramCanvas.AddHandler(UIElement.PreviewMouseLeftButtonDownEvent,
-                new MouseButtonEventHandler((s, e) =>
-                {
-                    Debug.WriteLine("BACKGROUND CLICK");
-                    var src = e.OriginalSource as DependencyObject;
-
-                    if (!IsInteractiveClick(src))
-                    {
-                        ClearSelectionAndHighlights(onVertexSelected);
-                    }
-                }),
-                true);*/
-            //InstallBackgroundClear(diagramCanvas, onVertexSelected);
 
             // --- BACKGROUND click vs drag detection ---
             Point? bgDownPos = null;
@@ -142,10 +137,8 @@ namespace MasterMetrology.Core.Rendering
                 {
                     var src = e.OriginalSource as DependencyObject;
 
-                    // keď klikáš na vertex/edge/label -> nič (GraphX)
                     if (IsInteractiveClick(src)) return;
 
-                    // potential background click/drag
                     bgDownPos = e.GetPosition(diagramCanvas);
                     bgDragging = false;
                 }),
@@ -161,7 +154,7 @@ namespace MasterMetrology.Core.Rendering
                     var d = p - bgDownPos.Value;
 
                     if (!bgDragging && (Math.Abs(d.X) > DragThreshold || Math.Abs(d.Y) > DragThreshold))
-                        bgDragging = true; // už je to drag (pan)
+                        bgDragging = true;
                 }),
                 true);
 
@@ -170,10 +163,8 @@ namespace MasterMetrology.Core.Rendering
                 {
                     var src = e.OriginalSource as DependencyObject;
 
-                    // ak to nebolo na backgrounde, nič
                     if (IsInteractiveClick(src)) { bgDownPos = null; bgDragging = false; return; }
 
-                    // ak to bol iba click (bez drag) -> clear
                     if (bgDownPos != null && !bgDragging)
                         ClearSelectionAndHighlights(onVertexSelected);
 
@@ -182,11 +173,9 @@ namespace MasterMetrology.Core.Rendering
                 }),
                 true);
 
-
-            // generate graph (do NOT call ShowAllEdgesLabels here - manage labels ourselves)
             graphArea.GenerateGraph(true);
             graphArea.SetVerticesDrag(true, true);
-            
+
             // Attach labels for generated edges (after GenerateGraph)
             var dispatcher = graphArea.Dispatcher ?? Dispatcher.CurrentDispatcher;
             dispatcher.BeginInvoke(new Action(() =>
@@ -197,8 +186,6 @@ namespace MasterMetrology.Core.Rendering
 
                     BuildVertexControlMap(graphArea);
 
-                    //ApplyCustomLayout(states, graphArea);
-
                     _sizeByFullIndex.Clear();
                     foreach (var r in states.OrderBy(s => s.FullIndex, FullIndexComparer.Instance))
                     {
@@ -207,7 +194,6 @@ namespace MasterMetrology.Core.Rendering
 
                     ApplySectionSizes(graphArea);
                     graphArea.UpdateLayout();
-                    //graphArea.GenerateAllEdges();
 
                     LayoutRootColumns(states, graphArea);
                     graphArea.UpdateLayout();
@@ -218,8 +204,6 @@ namespace MasterMetrology.Core.Rendering
                     }
 
                     graphArea.UpdateLayout();
-
-                    
 
                     graphArea.GenerateAllEdges();
                     graphArea.UpdateLayout();
@@ -240,11 +224,9 @@ namespace MasterMetrology.Core.Rendering
 
                     // --- CUSTOM ROUTING (section-aware) ---
                     _edgeRouter.RebuildCaches(states, graphArea);   // potrebuje roots + finálne recty
-                    _edgeRouter.RouteAllEdges(graphArea);           // nastaví RoutingPoints + UpdateEdge()
+                    _edgeRouter.RouteAllEdges(graphArea);           // nastaví RoutingPoints
 
-
-
-                    graphArea.UpdateLayout(); // nech sa dobehne vizuál (labely/arrange)
+                    graphArea.UpdateLayout();
 
                     double centerX = (Config.DEFAULT_VALUE_CANVAS_X - graphArea.DesiredSize.Width) / 2;
                     double centerY = (Config.DEFAULT_VALUE_CANVAS_Y - graphArea.DesiredSize.Height) / 2;
@@ -255,20 +237,18 @@ namespace MasterMetrology.Core.Rendering
 
                     ApplyPendingPlacements(graphArea);
                     graphArea.UpdateLayout();
-                    
+
                     BuildVertexControlMap(graphArea);
                     InstallSectionDragClampFast(graphArea);
 
                     InstallEdgeAndVertexHighlighting(graphArea, onVertexSelected);
-                    
+
                     ApplyPendingSelection(onVertexSelected);
                     RefreshEdgeVisuals();
 
                     _interaction.Attach(graphArea, states, _edgeRouter);
 
-                    
-
-                    graphArea.UpdateLayout(); // nech sa offset aplikuje
+                    graphArea.UpdateLayout();
 
                 }
                 catch (Exception ex)
@@ -278,12 +258,6 @@ namespace MasterMetrology.Core.Rendering
 
             }
             ), DispatcherPriority.Loaded);
-            
-            
-
-            //UpdateSubPositions(graphArea, graph);
-
-            
         }
 
         /// <summary>
@@ -454,7 +428,6 @@ namespace MasterMetrology.Core.Rendering
             if (edge == null || ec == null) return;
             if (_edgeBase.ContainsKey(edge)) return;
 
-            // EdgeControl má väčšinou Path v template – ale na jednoduché nastavenia stačí:
             var baseState = new BaseEdgeVisualState
             {
                 Stroke = ec.Foreground ?? Brushes.Black,
@@ -464,7 +437,7 @@ namespace MasterMetrology.Core.Rendering
                 LabelForeground = lbl.Foreground ?? Brushes.Black,
                 LabelBackground = lbl.Background ?? Brushes.White,
                 LabelBorderBrush = lbl.BorderBrush ?? Brushes.Black,
-                LabelOpacity = (lbl != null) ? lbl.Opacity : 1.0
+                LabelOpacity = lbl != null ? lbl.Opacity : 1.0
             };
 
             _edgeBase[edge] = baseState;
@@ -492,7 +465,7 @@ namespace MasterMetrology.Core.Rendering
         public void RemoveTransition(TransitionModelData transition)
         {
             if (LastGraphArea == null || LastGraph == null || transition == null) return;
-            
+
             var modelEdge = LastGraph.Edges.OfType<GraphEdge>().FirstOrDefault(e => e.Transitions.Contains(transition));
             if (modelEdge == null)
             {
@@ -534,7 +507,7 @@ namespace MasterMetrology.Core.Rendering
 
                 LastGraphArea.Dispatcher.BeginInvoke(new Action(() =>
                 {
-                   ReinstallHoverHandlers();
+                    ReinstallHoverHandlers();
                     _suppressVisualRefresh = false;
                     RefreshEdgeVisuals();
                 }), DispatcherPriority.Render);
@@ -545,7 +518,7 @@ namespace MasterMetrology.Core.Rendering
                 Debug.WriteLine("RemoveTransition: GenerateAllEdges failed: " + ex.Message);
             }
 
-            
+
 
         }
 
@@ -695,7 +668,7 @@ namespace MasterMetrology.Core.Rendering
             double innerStartX = secX + padX;
             double innerStartY = secY + headerH + padY;
 
-            double innerMaxHeight = Math.Max(400, sectionControl.SectionHeight - headerH - (padY * 2));
+            double innerMaxHeight = Math.Max(400, sectionControl.SectionHeight - headerH - padY * 2);
 
             double x = innerStartX;
             double y = innerStartY;
@@ -729,15 +702,13 @@ namespace MasterMetrology.Core.Rendering
                 usedMaxBottom = Math.Max(usedMaxBottom, y);
             }
 
-            // resize sekcie aby obsiahla deti + padding
-            double requiredWidth = (usedMaxRight - secX) + padX;
-            double requiredHeight = (usedMaxBottom - secY) + padY;
+            // resize sekcie aby obsiahla subStates + padding
+            double requiredWidth = usedMaxRight - secX + padX;
+            double requiredHeight = usedMaxBottom - secY + padY;
 
-            // minimá aby sekcia nebola príliš malá
             requiredWidth = Math.Max(requiredWidth, 260);
             requiredHeight = Math.Max(requiredHeight, 180);
 
-            // ak zmeníme veľkosť, je dobré to spraviť pred ďalšími prepočtami
             sectionControl.SetSize(requiredWidth, requiredHeight);
         }
         private bool TryGetVertexControlByFullIndex(StateGraphArea area, string fullIndex, out VertexControl vc)
@@ -745,7 +716,6 @@ namespace MasterMetrology.Core.Rendering
             vc = null;
             if (area?.VertexList == null || string.IsNullOrWhiteSpace(fullIndex)) return false;
 
-            // VertexList: Dictionary<IVertex, VertexControl>
             foreach (var kv in area.VertexList)
             {
                 if (kv.Key is GraphVertex gv && gv.State?.FullIndex == fullIndex)
@@ -760,8 +730,8 @@ namespace MasterMetrology.Core.Rendering
         {
             if (vc == null) return new Size(80, 40);
 
-            double w = vc.ActualWidth > 0 ? vc.ActualWidth : (vc.Width > 0 ? vc.Width : 80);
-            double h = vc.ActualHeight > 0 ? vc.ActualHeight : (vc.Height > 0 ? vc.Height : 40);
+            double w = vc.ActualWidth > 0 ? vc.ActualWidth : vc.Width > 0 ? vc.Width : 80;
+            double h = vc.ActualHeight > 0 ? vc.ActualHeight : vc.Height > 0 ? vc.Height : 40;
 
             return new Size(w, h);
         }
@@ -780,8 +750,8 @@ namespace MasterMetrology.Core.Rendering
 
         private static Size MeasuredSize(VertexControl vc)
         {
-            double w = vc.ActualWidth > 0 ? vc.ActualWidth : (vc.Width > 0 ? vc.Width : 80);
-            double h = vc.ActualHeight > 0 ? vc.ActualHeight : (vc.Height > 0 ? vc.Height : 40);
+            double w = vc.ActualWidth > 0 ? vc.ActualWidth : vc.Width > 0 ? vc.Width : 80;
+            double h = vc.ActualHeight > 0 ? vc.ActualHeight : vc.Height > 0 ? vc.Height : 40;
             return new Size(w, h);
         }
         private Size ComputeDesiredSizeRecursive(StateModelData model)
@@ -802,7 +772,7 @@ namespace MasterMetrology.Core.Rendering
                 return new Size(120, 60);
             }
 
-            // sekcia: najprv spočítaj sizes detí
+            // sekcia: najprv spočítaj sizes SubStates
             var children = model.SubStatesData
                 .OrderBy(m => m.FullIndex, FullIndexComparer.Instance)
                 .ToList();
@@ -814,16 +784,12 @@ namespace MasterMetrology.Core.Rendering
                 childSizes.Add((ch, cs));
             }
 
-            // --- layout “na sucho” (bez pozícií) len pre výpočet potrebnej veľkosti ---
-            const double HEADER_H = 40;
-            const double PAD_X = 18;
-            const double PAD_Y = 16;
-            const double GAP_X = 24;
-            const double GAP_Y = 20;
-
-            // výška jedného vnútorného stĺpca – fixná (nie podľa starej SectionHeight!)
-            // doladíš podľa veľkosti grafu
-            const double INNER_MAX_H = 700;
+            double HEADER_H = SEC_HEADER_H;
+            double PAD_X = SEC_PAD_X;
+            double PAD_Y = SEC_PAD_Y;
+            double GAP_X = SEC_GAP_X;
+            double GAP_Y = SEC_GAP_Y;
+            double INNER_MAX_H = SEC_INNER_MAX_H;
 
             double x = 0, y = 0, colMaxW = 0;
             double usedMaxRight = 0;
@@ -838,7 +804,6 @@ namespace MasterMetrology.Core.Rendering
                     colMaxW = 0;
                 }
 
-                // “položenie” vnútri sekcie (relatívne)
                 usedMaxRight = Math.Max(usedMaxRight, x + s.Width);
                 usedMaxBottom = Math.Max(usedMaxBottom, y + s.Height);
 
@@ -849,9 +814,8 @@ namespace MasterMetrology.Core.Rendering
             double requiredW = PAD_X * 2 + usedMaxRight;
             double requiredH = HEADER_H + PAD_Y * 2 + usedMaxBottom;
 
-            // minimá
-            requiredW = Math.Max(requiredW, 260);
-            requiredH = Math.Max(requiredH, 180);
+            requiredW = Math.Max(requiredW, 200);
+            requiredH = Math.Max(requiredH, 100);
 
             var secSize = new Size(requiredW, requiredH);
             _sizeByFullIndex[model.FullIndex] = secSize;
@@ -876,7 +840,7 @@ namespace MasterMetrology.Core.Rendering
             const double GAP_X = 140;
             const double GAP_Y = 70;
 
-            const double MAX_COL_H = 1800; // wrap do ďalšieho stĺpca
+            const double MAX_COL_H = 1800; // wrap do ďalšieho stĺpca 
 
             double x = START_X, y = START_Y;
             double colMaxW = 0;
@@ -885,7 +849,6 @@ namespace MasterMetrology.Core.Rendering
             {
                 if (!TryGetVC(r.FullIndex, out var vc)) continue;
 
-                // použijeme vypočítanú veľkosť (lepšie ako Actual pri sekciách)
                 var size = _sizeByFullIndex.TryGetValue(r.FullIndex, out var s) ? s : MeasuredSize(vc);
 
                 if (y + size.Height > START_Y + MAX_COL_H && y > START_Y)
@@ -912,12 +875,13 @@ namespace MasterMetrology.Core.Rendering
             double secX = secPos.X;
             double secY = secPos.Y;
 
-            const double HEADER_H = 40;
-            const double PAD_X = 18;
-            const double PAD_Y = 16;
-            const double GAP_X = 24;
-            const double GAP_Y = 20;
-            const double INNER_MAX_H = 700; // rovnaké ako v ComputeDesiredSizeRecursive
+            double HEADER_H = SEC_HEADER_H;
+            double PAD_X = SEC_PAD_X;
+            double PAD_Y = SEC_PAD_Y;
+            double GAP_X = SEC_GAP_X;
+            double GAP_Y = SEC_GAP_Y;
+            double INNER_MAX_H = SEC_INNER_MAX_H;
+
 
             double startX = secX + PAD_X;
             double startY = secY + HEADER_H + PAD_Y;
@@ -934,7 +898,7 @@ namespace MasterMetrology.Core.Rendering
                 var size = _sizeByFullIndex.TryGetValue(ch.FullIndex, out var s) ? s : MeasuredSize(vcChild);
 
                 // wrap vnútri sekcie
-                if ((y - startY) + size.Height > INNER_MAX_H && y > startY)
+                if (y - startY + size.Height > INNER_MAX_H && y > startY)
                 {
                     x += colMaxW + GAP_X;
                     y = startY;
@@ -960,13 +924,13 @@ namespace MasterMetrology.Core.Rendering
             if (!_suppressVisualRefresh) RefreshEdgeVisuals();
         }
         private void ApplyEdgeStyle(
-            GraphEdge edge, 
-            Brush stroke, 
-            double thickness, 
+            GraphEdge edge,
+            Brush stroke,
+            double thickness,
             double opacity,
-            Brush labelFg, 
-            Brush labelBg, 
-            Brush labelBorder, 
+            Brush labelFg,
+            Brush labelBg,
+            Brush labelBorder,
             double labelOpacity)
         {
             if (!LastGraphArea.EdgesList.TryGetValue(edge, out var ecObj)) return;
@@ -1024,10 +988,8 @@ namespace MasterMetrology.Core.Rendering
                 if (!LastGraphArea.EdgesList.TryGetValue(e, out var ecObj) || ecObj is not EdgeControl ec) continue;
                 _edgeLabelMap.TryGetValue(e, out var lbl);
 
-                // base (fallback keď ešte nie je)
                 if (!_edgeBase.TryGetValue(e, out var b))
                 {
-                    //lbl ??= null;
                     CacheBaseStyleIfMissing(e, ec, lbl);
                     b = _edgeBase[e];
                 }
@@ -1146,33 +1108,21 @@ namespace MasterMetrology.Core.Rendering
                 };
 
                 vc.MouseLeftButtonDown += (_, e) => e.Handled = true;
-                //vc.MouseRightButtonDown += (_, e) => e.Handled = true;
             }
         }
         private void ClearSelectionAndHighlights(Action<GraphVertex>? onVertexSelected)
         {
             _selectedVertex = null;
             _selectedFullIndex = null;
-            _hovered.Clear();               // zruš aj hover stav
-            onVertexSelected?.Invoke(null); // vynuluj panel
-            RefreshEdgeVisuals();           // vráti farby/opacities na base
+            _hovered.Clear();               
+            onVertexSelected?.Invoke(null); 
+            RefreshEdgeVisuals();           
         }
         public void ClearSelectionState()
         {
             _selectedVertex = null;
             _selectedFullIndex = null;
             _hovered.Clear();
-            //RefreshEdgeVisuals();
-        }
-
-        private static bool HasAncestor<T>(DependencyObject? start) where T : DependencyObject
-        {
-            while (start != null)
-            {
-                if (start is T) return true;
-                start = VisualTreeHelper.GetParent(start);
-            }
-            return false;
         }
 
         private static bool IsInteractiveClick(DependencyObject? src)
@@ -1310,9 +1260,10 @@ namespace MasterMetrology.Core.Rendering
         private InnerBounds GetInnerBounds(VertexControl parentVc, VertexControl childVc)
         {
             // rovnaké konštanty ako používaš v PlaceChildrenRecursive / ComputeDesiredSizeRecursive
-            const double PAD_X = 18;
-            const double PAD_Y = 16;
-            const double HEADER_H = 40;
+            double PAD_X = SEC_PAD_X;
+            double PAD_Y = SEC_PAD_Y;
+            double HEADER_H = SEC_HEADER_H;
+
 
             // parent pozícia v GraphArea súradniciach
             double px = GraphAreaBase.GetFinalX(parentVc);
@@ -1341,9 +1292,6 @@ namespace MasterMetrology.Core.Rendering
 
         private void InstallSectionDragClampFast(StateGraphArea area)
         {
-            // _vcByFullIndex už máš a je O(1)
-            // Uisti sa, že je naplnená cez BuildVertexControlMap(area) pred volaním.
-
             foreach (var kv in area.VertexList)
             {
                 if (kv.Key is not GraphVertex gv) continue;
@@ -1400,71 +1348,10 @@ namespace MasterMetrology.Core.Rendering
         }
         private bool _bgHandlersInstalled;
 
-        private void InstallBackgroundClear(Canvas diagramCanvas, Action<GraphVertex?>? onVertexSelected)
-        {
-            // Uisti sa, že diagramCanvas má Background, inak "prázdno" nechytí klik
-            //if (diagramCanvas.Background == null)
-            //    diagramCanvas.Background = Brushes.Transparent;
-
-            if (_bgHandlersInstalled) return;
-                _bgHandlersInstalled = true;
-
-
-            diagramCanvas.AddHandler(UIElement.PreviewMouseLeftButtonDownEvent,
-                new MouseButtonEventHandler((s, e) =>
-                {
-                    var src = e.OriginalSource as DependencyObject;
-
-                    // ak klik na vertex/edge/label, tak nič (neclearujeme)
-                    if (IsInteractiveClick(src))
-                    {
-                        _bgMaybeClear = false;
-                        return;
-                    }
-
-                    _bgMaybeClear = true;
-                    _bgDownPos = e.GetPosition(diagramCanvas);
-                }),
-                true);
-
-            diagramCanvas.AddHandler(UIElement.PreviewMouseLeftButtonUpEvent,
-                new MouseButtonEventHandler((s, e) =>
-                {
-                    if (!_bgMaybeClear) return;
-
-                    // ak počas toho niekto držal capture (pan/drag), tak to nie je "klik do prázdna"
-                    if (Mouse.Captured != null)
-                    {
-                        _bgMaybeClear = false;
-                        return;
-                    }
-
-                    var upPos = e.GetPosition(diagramCanvas);
-                    var dx = upPos.X - _bgDownPos.X;
-                    var dy = upPos.Y - _bgDownPos.Y;
-
-                    // ak sa to nepohlo (alebo minimálne), je to click => clear selection
-                    //if ((dx * dx + dy * dy) <= (BG_CLICK_THRESHOLD * BG_CLICK_THRESHOLD))
-                    //{
-                        ClearSelectionAndHighlights(onVertexSelected);
-                    //}
-
-                    _bgMaybeClear = false;
-                }),
-                true);
-
-        }
-
-
         public void test()
         {
             //(LastGraphArea.VertexList.First().Value as SimpleVertexControl).SetBiggerBorder();
             //LastGraphArea.AddVertex()
-        }
-
-        internal void AddStateRuntime(StateModelData newState, Point world)
-        {
-            throw new NotImplementedException();
         }
     }
 }

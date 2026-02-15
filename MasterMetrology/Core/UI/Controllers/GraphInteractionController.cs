@@ -1,5 +1,6 @@
 ﻿using GraphX.Controls;
 using MasterMetrology.Core.GraphX;
+using MasterMetrology.Core.UI.Rendering;
 using MasterMetrology.Models.Data;
 using MasterMetrology.Models.Visual;
 using System;
@@ -10,7 +11,7 @@ using System.Windows;
 using System.Windows.Input;
 using System.Windows.Threading;
 
-namespace MasterMetrology.Core.Rendering
+namespace MasterMetrology.Core.UI.Controllers
 {
     internal sealed class GraphInteractionController
     {
@@ -49,7 +50,6 @@ namespace MasterMetrology.Core.Rendering
 
         private void HookVertex(VertexControl vc)
         {
-            // preview = dostaneš event aj keď GraphX drag už "handled"
             vc.PreviewMouseLeftButtonDown += OnDown;
             vc.PreviewMouseMove += OnMove;
             vc.PreviewMouseLeftButtonUp += OnUp;
@@ -82,7 +82,6 @@ namespace MasterMetrology.Core.Rendering
             {
                 _lastPos.Remove(vc);
 
-                // finálny reroute (istota)
                 RequestReroute(immediate: true);
             }
         }
@@ -107,7 +106,7 @@ namespace MasterMetrology.Core.Rendering
 
             _lastPos[vc] = cur;
 
-            // AK je to sekcia -> posuň jej sub-vertexy spolu
+            // AK je to sekcia -> posuň jej subStates spolu
             if (IsSectionVC(vc))
             {
                 if (vc.Vertex is GraphVertexSection sectionVertex)
@@ -123,7 +122,7 @@ namespace MasterMetrology.Core.Rendering
 
         private void MoveSectionChildren(GraphVertexSection section, double dx, double dy)
         {
-            // rekurzívne cez všetky sub-vertexy (aj nested sekcie)
+            // rekurzívne cez všetky subStates (aj nested sekcie)
             var stack = new Stack<GraphVertex>();
             foreach (var sv in section.SubVertices.OfType<GraphVertex>())
                 stack.Push(sv);
@@ -170,16 +169,12 @@ namespace MasterMetrology.Core.Rendering
 
             try
             {
-                // 1) nech sú finálne recty
                 _area.UpdateLayout();
 
-                // 2) rebuild caches (section/leaf recty + kontajnery)
                 _router.RebuildCaches(_roots, _area);
 
-                // 3) route
                 _router.RouteAllEdges(_area);
 
-                // 4) dobehni vizuál (labely/arrange)
                 _area.UpdateLayout();
             }
             catch (Exception ex)

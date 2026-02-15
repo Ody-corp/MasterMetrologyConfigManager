@@ -12,7 +12,6 @@
                 <MenuItem Header="State" Command="{Binding DeleteSingleStateCommand}" CommandParameter="{Binding PlacementTarget.Tag, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
                 <MenuItem Header="Whole section" Command="{Binding DeleteWholeStateCommand}" CommandParameter="{Binding PlacementTarget.Tag, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
             </MenuItem>
-            <MenuItem Header="Delete transition"/>
             <Separator/>
             <MenuItem Header="View">
                 <MenuItem Header="Center" Command="{Binding CenterViewCommand}"/>

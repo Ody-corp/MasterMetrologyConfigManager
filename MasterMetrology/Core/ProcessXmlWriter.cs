@@ -4,7 +4,7 @@ using System.Text;
 using System.Xml;
 using System.Xml.Serialization;
 
-namespace MasterMetrology.Controllers
+namespace MasterMetrology.Core
 {
     internal static class ProcessXmlWriter
     {
@@ -16,12 +16,11 @@ namespace MasterMetrology.Controllers
             {
                 Indent = true,
                 Encoding = new UTF8Encoding(encoderShouldEmitUTF8Identifier: false),
-                //NewLineHandling = NewLineHandling.Entitize,
                 OmitXmlDeclaration = false
             };
 
             var ns = new XmlSerializerNamespaces();
-            ns.Add("", ""); // bez xmlns
+            ns.Add("", "");
 
             using var fs = File.Create(path);
             using var writer = XmlWriter.Create(fs, settings);

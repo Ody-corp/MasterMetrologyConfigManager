@@ -15,8 +15,8 @@ namespace MasterMetrology.Core.GraphX.Controls
         private readonly TextBlock _title;
         private readonly Rectangle _headerRect;
 
-        public double SectionWidth { get; set; } = 260;
-        public double SectionHeight { get; set; } = 180;
+        public double SectionWidth { get; set; } = 200;
+        public double SectionHeight { get; set; } = 100;
 
         public Canvas RootCanvas => _rootCanvas;
 
@@ -46,9 +46,9 @@ namespace MasterMetrology.Core.GraphX.Controls
                 Width = SectionWidth,
                 Height = SectionHeight,
                 CornerRadius = new CornerRadius(8),
-                BorderThickness = new Thickness(1.5),
+                BorderThickness = new Thickness(3),
                 BorderBrush = Brushes.SteelBlue,
-                Background = new SolidColorBrush(Color.FromArgb(40, 30, 60, 100)),
+                //Background = new SolidColorBrush(Color.FromArgb(40, 30, 60, 100)),
                 IsHitTestVisible = false
             };
 
@@ -56,9 +56,10 @@ namespace MasterMetrology.Core.GraphX.Controls
             _headerRect = new Rectangle
             {
                 Width = SectionWidth,
-                Height = 34,
+                Height = 44,
                 Fill = new SolidColorBrush(Color.FromArgb(160, 30, 60, 120)),
                 IsHitTestVisible = true,
+                
                 //ContextMenu = (Application.Current.FindResource("rightClickContextMenu") as ContextMenu),
 
             };
@@ -70,7 +71,7 @@ namespace MasterMetrology.Core.GraphX.Controls
                 Foreground = Brushes.White,
                 FontWeight = FontWeights.SemiBold,
                 FontSize = 12,
-                TextWrapping = TextWrapping.Wrap,
+                //TextWrapping = TextWrapping.Wrap,
                 TextAlignment = TextAlignment.Center,
                 IsHitTestVisible = false
             };
@@ -80,7 +81,7 @@ namespace MasterMetrology.Core.GraphX.Controls
             Canvas.SetLeft(_headerRect, 0);
             Canvas.SetTop(_headerRect, 0);
 
-            _title.Width = SectionWidth - 16;
+            _title.Width = SectionWidth;
             Canvas.SetLeft(_title, 8);
             Canvas.SetTop(_title, 6);
             _rootCanvas.Children.Add(_title);
@@ -101,6 +102,7 @@ namespace MasterMetrology.Core.GraphX.Controls
             _border.Width = width;
             _border.Height = height;
             _headerRect.Width = width;
+            _title.Width = width;
 
             _rootCanvas.Width = width;
             _rootCanvas.Height = height;
