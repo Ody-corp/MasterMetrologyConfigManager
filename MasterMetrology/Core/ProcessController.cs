@@ -8,6 +8,7 @@ using System.Windows.Media;
 using MasterMetrology.Core;
 using MasterMetrology.Core.UI.Rendering;
 using MasterMetrology.Core.UI.Controllers;
+using System.ComponentModel;
 
 namespace MasterMetrology
 {
@@ -43,10 +44,25 @@ namespace MasterMetrology
 
         private string? _selectedFullIndex;
 
-        public bool CanSave => !string.IsNullOrWhiteSpace(filePath);
-        public bool HasGraph => (statesModelDatas != null && statesModelDatas.Count > 0);
+        public bool CanSave => !string.IsNullOrWhiteSpace(filePath) && _isDirty;
+        public bool CanSaveAs => (statesModelDatas.Count > 0 || inputsDefModelDatas.Count > 0 || outputsDefModelDatas.Count > 0) && _isDirty;
         private string filePath;
         public string? CurrentFilePath => filePath;
+
+        private bool _isDirty;
+        public bool IsDirty
+        {
+            get => _isDirty;
+            private set
+            {
+                if (_isDirty == value) return;
+                _isDirty = value;
+                DataChanged?.Invoke();
+            }
+        }
+
+        public void MarkDirty() => IsDirty = true;
+        public void MarkSaved() => IsDirty = false;
 
         public void LoadDataXML(string filePath)
         {
@@ -67,6 +83,8 @@ namespace MasterMetrology
 
             PopulateTransitions(statesModelDatas);
             
+            //WireMonitorChanges();
+
             visualRender.RenderGraph(statesModelDatas, viewPort, v => VertexSelected?.Invoke(v), diagramCanvas);
         }
 
@@ -91,10 +109,11 @@ namespace MasterMetrology
         {
             if (statesModelDatas == null) return false;
 
-            // !!! dôležité: Exportujeme “roots” = top-level statesModelDatas
             var dto = ProcessXmlExporter.Build(inputsDefModelDatas, outputsDefModelDatas, statesModelDatas);
 
             ProcessXmlWriter.Save(path, dto);
+            MarkSaved();
+
             return true;
         }
 
@@ -244,7 +263,6 @@ namespace MasterMetrology
 
             AllTransitions.Add(newTransitionVm);
             visualRender.AddTransition(newTransition);
-
             return true;
         }
 
@@ -273,19 +291,9 @@ namespace MasterMetrology
             if (!_pendingAdds.Contains(child)) _pendingAdds.Add(child);
         }
 
-        public void Remove_AddPendingChild(StateModelData child)
-        {
-            _pendingAdds.Remove(child);
-        }
-
         public void Add_RemovePendingChild(StateModelData child)
         {
             if (!_pendingRemoves.Contains(child)) _pendingRemoves.Add(child);
-        }
-
-        public void Remove_RemovePendingChild(StateModelData child)
-        {
-            _pendingRemoves.Remove(child);
         }
 
         public void ClearPendingChildChanges()
@@ -435,6 +443,8 @@ namespace MasterMetrology
             {
                 Debug.WriteLine("OnPendingChildrenApplied handler failed: " + ex.Message);
             }
+
+            MarkSaved();
         }
 
         private bool IsIndexAvailable(string newIndex, StateModelData? parent)
@@ -802,6 +812,44 @@ namespace MasterMetrology
                 if (currentIndex != targetIndex && currentIndex >= 0)
                     OutputsDef.Move(currentIndex, targetIndex);
             }
+        }
+
+        public void WireMonitorChanges()
+        {
+            InputsDef.CollectionChanged += (_, e) =>
+            {
+                if (e.NewItems != null)
+                    foreach (InputModelData it in e.NewItems)
+                        it.PropertyChanged += ItemChanged;
+
+                if (e.OldItems != null)
+                    foreach (InputModelData it in e.OldItems)
+                        it.PropertyChanged -= ItemChanged;
+
+                MarkDirty();
+            };
+
+            OutputsDef.CollectionChanged += (_, e) =>
+            {
+                if (e.NewItems != null)
+                    foreach (OutputModelData it in e.NewItems)
+                        it.PropertyChanged += ItemChanged;
+
+                if (e.OldItems != null)
+                    foreach (OutputModelData it in e.OldItems)
+                        it.PropertyChanged -= ItemChanged;
+
+                MarkDirty();
+            };
+
+            foreach (var item in InputsDef) item.PropertyChanged += ItemChanged;
+            foreach (var item in OutputsDef) item.PropertyChanged += ItemChanged;
+        }
+
+        private void ItemChanged(object? sender, PropertyChangedEventArgs e)
+        {
+            Debug.WriteLine("Change");
+            MarkDirty();
         }
     }
 }

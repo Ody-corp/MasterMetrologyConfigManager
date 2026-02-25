@@ -36,36 +36,42 @@ namespace MasterMetrology.Core.UI
             TransitionsView = CollectionViewSource.GetDefaultView(_processController.AllTransitions);
 
             // Commands
-            ApplyCommand = new RelayCommand(Apply, () => SelectedState != null && SelectedVertex != null);
-            AddChildCommand = new RelayCommand(AddChild, () => SelectedState != null && ChildToAdd != null);
-            RemoveChildCommand = new RelayCommand(RemoveChild, () => SelectedState != null && SelectedChild != null);
+            ApplyCommand = new RelayCommand(() => { Apply(); _processController.MarkDirty(); }, () => SelectedState != null && SelectedVertex != null);
+            AddChildCommand = new RelayCommand(() => { AddChild(); _processController.MarkDirty(); }, () => SelectedState != null && ChildToAdd != null);
+            RemoveChildCommand = new RelayCommand(() => { RemoveChild(); _processController.MarkDirty(); }, () => SelectedState != null && SelectedChild != null);
 
-            AddTransitionCommand = new RelayCommand(AddTransition, () => SelectedState != null && SelectedTransitionTarget != null && !string.IsNullOrWhiteSpace(NewTransitionInput));
-            RemoveTransitionCommand = new RelayCommand(RemoveTransition, () => SelectedTransition != null);
+            AddTransitionCommand = new RelayCommand(() => { AddTransition(); _processController.MarkDirty(); }, () => SelectedState != null && SelectedTransitionTarget != null && !string.IsNullOrWhiteSpace(NewTransitionInput));
+            RemoveTransitionCommand = new RelayCommand(() => { RemoveTransition(); _processController.MarkDirty(); }, () => SelectedTransition != null);
 
             ExitAppCommand = new RelayCommand(ExitApp);
             ImportFileCommand = new RelayCommand(ImportFile);
             CenterViewCommand = new RelayCommand(CenterView);
 
-            AddStateToRootCommand = new RelayCommand(() => _processController.CreateNewRootStateAtViewCenter());
-            AddStateToRootAtPointCommand = new RelayCommand(p => { if (p is Point pt) _processController.CreateNewRootStateAt(pt); }, p => p is Point);
-            AddStateAsSubStateCommand = new RelayCommand(() => _processController.CreateNewSubState(SelectedVertex!.State), () => SelectedState != null);
-            AddStateAsSubStateCMCommand = new RelayCommand(p => { if (p is GraphVertex gv && gv.State != null) _processController.CreateNewSubState(gv.State); }, p => p is GraphVertex gv && gv.State != null);
+            AddStateToRootCommand = new RelayCommand(() => { _processController.CreateNewRootStateAtViewCenter(); _processController.MarkDirty(); });
+            AddStateToRootAtPointCommand = new RelayCommand(p => { if (p is Point pt) _processController.CreateNewRootStateAt(pt); _processController.MarkDirty(); }, p => p is Point);
+            AddStateAsSubStateCommand = new RelayCommand(() => { _processController.CreateNewSubState(SelectedVertex!.State); _processController.MarkDirty(); }, () => SelectedState != null);
+            AddStateAsSubStateCMCommand = new RelayCommand(p => { if (p is GraphVertex gv && gv.State != null) _processController.CreateNewSubState(gv.State); _processController.MarkDirty(); }, p => p is GraphVertex gv && gv.State != null);
 
-            DeleteWholeSelectedStateCommand = new RelayCommand(() => _processController.DeleteWholeState(SelectedVertex!.State), () => SelectedState != null);
-            DeleteWholeStateCommand = new RelayCommand(p => { if (p is GraphVertex gv && gv.State != null) _processController.DeleteWholeState(gv.State); }, p => p is GraphVertex gv && gv.State != null);
+            DeleteWholeSelectedStateCommand = new RelayCommand(() => { _processController.DeleteWholeState(SelectedVertex!.State); _processController.MarkDirty(); }, () => SelectedState != null);
+            DeleteWholeStateCommand = new RelayCommand(p => { if (p is GraphVertex gv && gv.State != null) _processController.DeleteWholeState(gv.State); _processController.MarkDirty(); }, p => p is GraphVertex gv && gv.State != null);
 
-            DeleteSingleSelectedStateCommand = new RelayCommand(() => _processController.DeleteSingleState(SelectedVertex!.State), () => SelectedVertex?.State != null);
-            DeleteSingleStateCommand = new RelayCommand(p => { if (p is GraphVertex gv && gv.State != null) _processController.DeleteSingleState(gv.State); }, p => p is GraphVertex gv && gv.State != null);
+            DeleteSingleSelectedStateCommand = new RelayCommand(() => { _processController.DeleteSingleState(SelectedVertex!.State); _processController.MarkDirty(); }, () => SelectedVertex?.State != null);
+            DeleteSingleStateCommand = new RelayCommand(p => { if (p is GraphVertex gv && gv.State != null) _processController.DeleteSingleState(gv.State); _processController.MarkDirty(); }, p => p is GraphVertex gv && gv.State != null);
 
             SaveCommand = new RelayCommand(Save, () => _processController.CanSave);
-            SaveAsCommand = new RelayCommand(SaveAs, () => _processController.HasGraph);
+            SaveAsCommand = new RelayCommand(SaveAs, () => _processController.CanSaveAs);
 
-            AddInputCommand = new RelayCommand(AddInput);
-            RemoveInputCommand = new RelayCommand(RemoveInput, () => SelectedInput != null);
+            AddInputCommand = new RelayCommand(() => { AddInput(); _processController.MarkDirty(); });
+            RemoveInputCommand = new RelayCommand(() => { RemoveInput(); _processController.MarkDirty(); }, () => SelectedInput != null);
 
-            AddOutputCommand = new RelayCommand(AddOutput);
-            RemoveOutputCommand = new RelayCommand(RemoveOutput, () => SelectedOutput != null);
+            AddOutputCommand = new RelayCommand(() => { AddOutput(); _processController.MarkDirty(); });
+            RemoveOutputCommand = new RelayCommand(() => { RemoveOutput(); _processController.MarkDirty(); }, () => SelectedOutput != null);
+
+            _processController.DataChanged += () =>
+            {
+                SaveCommand.RaiseCanExecuteChanged();
+                SaveAsCommand.RaiseCanExecuteChanged();
+            };
 
             RefreshFromController();
         }

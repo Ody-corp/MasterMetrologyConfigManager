@@ -40,6 +40,8 @@ namespace MasterMetrology
                 Dispatcher.Invoke(() => _mainView.SelectVertex(v));
             };
 
+            _processController.WireMonitorChanges();
+
             _panZoom.CenterView();
         }
 

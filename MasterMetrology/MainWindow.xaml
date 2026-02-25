@@ -220,16 +220,17 @@
                                                                 </Style.Triggers>
                                                             </Style>
                                                         </TextBlock.Style>
-                                <Run Text="{Binding FullIndex}"/>
-                                <Run Text=" - "/>
-                                <Run Text="{Binding Name}"/>
-                                <InlineUIContainer>
-                                    <TextBlock Text="(added)"
-                                               Margin="6,0,0,0"
-                                               Foreground="Green"
-                                               Visibility="{Binding IsDraftAdded, Converter={StaticResource BoolToVis}}"/>
-                                </InlineUIContainer>        
-                        </TextBlock>
+                                                        <Run Text="{Binding FullIndex}"/>
+                                                        <Run Text=" - "/>
+                                                        <Run Text="{Binding Name}"/>
+                                                        <InlineUIContainer>
+                                                            <TextBlock Text="(added)"
+                                                                       Margin="6,0,0,0"
+                                                                       Foreground="Green"
+                                                                       Visibility="{Binding IsDraftAdded, 
+                                                                                    Converter={StaticResource BoolToVis}}"/>
+                                                        </InlineUIContainer>            
+                                                    </TextBlock>
                                                 </DataTemplate>
                                             </ListBox.ItemTemplate>
                                         </ListBox>
