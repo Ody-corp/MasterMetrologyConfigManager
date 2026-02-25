@@ -5,6 +5,7 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:localCoreUiControl="clr-namespace:MasterMetrology.Core.UI.Controllers"
         mc:Ignorable="d"
+        xmlns:utils="clr-namespace:MasterMetrology.Utils"
         Title="MainWindow" Height="1080" Width="1920" WindowState="Maximized">
     <Window.Resources>
         <Style TargetType="{x:Type ComboBoxItem}"
@@ -17,7 +18,7 @@
                                 RelativeSource={RelativeSource AncestorType={x:Type Popup}}}"/>
         </Style>
         <BooleanToVisibilityConverter x:Key="BoolToVis"/>
-        
+        <utils:InverseBoolConverter x:Key="InverseBoolConverter"/>
     </Window.Resources>
 
     <Grid>
@@ -180,7 +181,8 @@
 
                                         <Label Grid.Row="3" Grid.Column="0" Content="Output"/>
                                         <TextBox Grid.Row="3" Grid.Column="1" Margin="2.5"
-                    Text="{Binding DraftOutput, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
+                                                Text="{Binding DraftOutput, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                                 IsEnabled="{Binding SelectedState.IsSection, Converter={StaticResource InverseBoolConverter}}"/>
 
                                         <!-- PARENT: combobox instead of simple textbox -->
                                         <Label Grid.Row="4" Grid.Column="0" Content="Parent"/>

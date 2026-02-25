@@ -7,6 +7,8 @@ namespace MasterMetrology.Models.Visual
 {
     internal class StateViewModel : INotifyPropertyChanged
     {
+        public bool IsSection => StateModel.SubStatesData.Count > 0;
+
         public StateModelData StateModel { get; }
         private StateViewModel _parent;
 
