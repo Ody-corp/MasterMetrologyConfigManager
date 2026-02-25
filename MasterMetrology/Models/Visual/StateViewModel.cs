@@ -14,6 +14,7 @@ namespace MasterMetrology.Models.Visual
         {
             StateModel = model;
             SubStates = new ObservableCollection<StateViewModel>();
+            SubStates.CollectionChanged += (_, __) => EnforceOutputRule();
         }
 
         public string Name
@@ -80,19 +81,8 @@ namespace MasterMetrology.Models.Visual
                 
             }
         }
-        public ObservableCollection<StateViewModel> SubStates { get; }
+        public ObservableCollection<StateViewModel> SubStates { get; } = new ObservableCollection<StateViewModel>();
 
-        //UI-only flags
-        private bool _isSelected;
-        public bool IsSelected
-        {
-            get => _isSelected;
-            set
-            {
-                _isSelected = value;
-                OnPropertyChanged();
-            }
-        }
         private bool _isDraftAdded = false;
         public bool IsDraftAdded
         {
@@ -116,6 +106,19 @@ namespace MasterMetrology.Models.Visual
             }
         }
 
+        public void EnforceOutputRule()
+        {
+            if (StateModel.SubStatesData.Count > 0)
+            {
+                if (Output != "-1")
+                    Output = "-1";
+            }
+            else
+            {
+                if (string.IsNullOrWhiteSpace(Output) || Output == "-1")
+                    Output = "0";
+            }
+        }
 
         public event PropertyChangedEventHandler? PropertyChanged;
         protected void OnPropertyChanged([CallerMemberName] string? name = null)

@@ -388,7 +388,7 @@ namespace MasterMetrology.Core.UI
 
             DraftName = SelectedState.Name ?? "";
             DraftIndex = SelectedState.Index ?? "";
-            DraftOutput = SelectedState.Output ?? "";
+            DraftOutput = (SelectedState.Output == "-1") ? "" : (SelectedState.Output ?? "");
             DraftParent = SelectedState.Parent;
 
             foreach (var ch in SelectedState.SubStates)
