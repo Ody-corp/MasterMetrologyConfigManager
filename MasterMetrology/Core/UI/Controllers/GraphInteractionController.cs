@@ -15,7 +15,7 @@ namespace MasterMetrology.Core.UI.Controllers
 {
     internal sealed class GraphInteractionController
     {
-        private readonly DispatcherTimer _rerouteTimer;
+        //private readonly DispatcherTimer _rerouteTimer;
         private bool _reroutePending;
 
         private StateGraphArea _area;
@@ -25,18 +25,6 @@ namespace MasterMetrology.Core.UI.Controllers
         // drag tracking
         private readonly Dictionary<VertexControl, Point> _lastPos = new();
         private readonly HashSet<VertexControl> _dragging = new();
-
-        public int RerouteThrottleMs { get; set; } = 120;
-
-        public GraphInteractionController()
-        {
-            _rerouteTimer = new DispatcherTimer(DispatcherPriority.Background);
-            _rerouteTimer.Tick += (s, e) =>
-            {
-                _rerouteTimer.Stop();
-                if (_reroutePending) DoReroute();
-            };
-        }
 
         public void Attach(StateGraphArea area, List<StateModelData> roots, SectionAwareEdgeRouter router)
         {
@@ -151,14 +139,9 @@ namespace MasterMetrology.Core.UI.Controllers
 
             if (immediate)
             {
-                _rerouteTimer.Stop();
                 DoReroute();
                 return;
             }
-
-            _rerouteTimer.Interval = TimeSpan.FromMilliseconds(RerouteThrottleMs);
-            if (!_rerouteTimer.IsEnabled)
-                _rerouteTimer.Start();
         }
 
         private void DoReroute()
