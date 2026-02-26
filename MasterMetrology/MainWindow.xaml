@@ -6,20 +6,20 @@
         xmlns:localCoreUiControl="clr-namespace:MasterMetrology.Core.UI.Controllers"
         mc:Ignorable="d"
         xmlns:utils="clr-namespace:MasterMetrology.Utils"
+        xmlns:local="clr-namespace:MasterMetrology"
         Title="MainWindow" Height="1080" Width="1920" WindowState="Maximized">
         
     <Window.Resources>
         <Style TargetType="{x:Type ComboBoxItem}"
            BasedOn="{StaticResource {x:Type ComboBoxItem}}">
             <Setter Property="HorizontalContentAlignment"
-                Value="{Binding Path=PlacementTarget.HorizontalContentAlignment,
-                                RelativeSource={RelativeSource AncestorType={x:Type Popup}}}"/>
+                    Value="{Binding Path=PlacementTarget.HorizontalContentAlignment, RelativeSource={RelativeSource AncestorType={x:Type Popup}}}"/>
             <Setter Property="VerticalContentAlignment"
-                Value="{Binding Path=PlacementTarget.VerticalContentAlignment,
-                                RelativeSource={RelativeSource AncestorType={x:Type Popup}}}"/>
+                    Value="{Binding Path=PlacementTarget.VerticalContentAlignment, RelativeSource={RelativeSource AncestorType={x:Type Popup}}}"/>
         </Style>
         <BooleanToVisibilityConverter x:Key="BoolToVis"/>
         <utils:InverseBoolConverter x:Key="InverseBoolConverter"/>
+        
     </Window.Resources>
 
     <Grid>
@@ -170,26 +170,61 @@
 
                                         <Label Grid.Row="0" Grid.Column="0" Content="Name"/>
                                         <TextBox Grid.Row="0" Grid.Column="1" Margin="2.5"
-                        Text="{Binding DraftName, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
+                                                 Text="{Binding DraftName, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                                 IsReadOnly="{Binding IsSelectedVertex}">
+                                            <TextBox.Style>
+                                                <Style TargetType="TextBox">
+                                                    <Setter Property="Background" Value="LightGray"/>
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding IsSelectedVertex}" Value="False">
+                                                            <Setter Property="Background" Value="White"/>
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </TextBox.Style>
+                                        </TextBox>
 
                                         <Label Grid.Row="1" Grid.Column="0" Content="ID"/>
                                         <TextBox Grid.Row="1" Grid.Column="1" Margin="2.5"
-                        Text="{Binding DraftIndex, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
+                                                 Text="{Binding DraftIndex, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                                 IsReadOnly="{Binding IsSelectedVertex}">
+                                            <TextBox.Style>
+                                                <Style TargetType="TextBox">
+                                                    <Setter Property="Background" Value="LightGray"/>
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding IsSelectedVertex}" Value="False">
+                                                            <Setter Property="Background" Value="White"/>
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </TextBox.Style>
+                                        </TextBox>
 
                                         <Label Grid.Row="2" Grid.Column="0" Content="Full Index"/>
                                         <TextBox Grid.Row="2" Grid.Column="1" Margin="2.5" IsReadOnly="True" Background="LightGray"
-                        Text="{Binding SelectedState.FullIndex}"/>
+                                                 Text="{Binding SelectedState.FullIndex}">
+                                            <TextBox.Style>
+                                                <Style TargetType="TextBox">
+                                                    <Setter Property="Background" Value="LightGray"/>
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding IsSelectedVertex}" Value="True">
+                                                            <Setter Property="Background" Value="White"/>
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </TextBox.Style>
+                                        </TextBox>
 
                                         <Label Grid.Row="3" Grid.Column="0" Content="Output"/>
                                         <TextBox Grid.Row="3" Grid.Column="1" Margin="2.5"
-                                                Text="{Binding DraftOutput, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                                                 IsReadOnly="{Binding SelectedState.IsSection, Converter={StaticResource InverseBoolConverter}}">
+                                                 Text="{Binding DraftOutput, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                                 IsReadOnly="{Binding IsSelectedVertexAndSection}">
                                             <TextBox.Style>
                                                 <Style TargetType="TextBox">
-                                                    <Setter Property="Background" Value="White"/>
+                                                    <Setter Property="Background" Value="LightGray"/>
                                                     <Style.Triggers>
-                                                        <DataTrigger Binding="{Binding SelectedState.IsSection}" Value="True">
-                                                            <Setter Property="Background" Value="LightGray"/>
+                                                        <DataTrigger Binding="{Binding IsSelectedVertexAndSection}" Value="False">
+                                                            <Setter Property="Background" Value="White"/>
                                                         </DataTrigger>
                                                     </Style.Triggers>
                                                 </Style>
@@ -199,14 +234,15 @@
                                         <!-- PARENT: combobox instead of simple textbox -->
                                         <Label Grid.Row="4" Grid.Column="0" Content="Parent"/>
                                         <ComboBox Grid.Row="4" Grid.Column="1" Margin="2.5"
-                      ItemsSource="{Binding ParentCandidates}"
-                      SelectedItem="{Binding DraftParent, Mode=TwoWay}">
+                                                  ItemsSource="{Binding ParentCandidates}"
+                                                  SelectedItem="{Binding DraftParent, Mode=TwoWay}"
+                                                  IsEnabled="{Binding IsSelectedVertex, Converter={StaticResource InverseBoolConverter}}">
                                             <ComboBox.ItemTemplate>
                                                 <DataTemplate>
                                                     <TextBlock>
-                            <Run Text="{Binding FullIndex}"/>
-                            <Run Text=" - "/>
-                            <Run Text="{Binding Name}"/>
+                                                        <Run Text="{Binding FullIndex}"/>
+                                                        <Run Text=" - "/>
+                                                        <Run Text="{Binding Name}"/>
                                                     </TextBlock>
                                                 </DataTemplate>
                                             </ComboBox.ItemTemplate>
@@ -216,11 +252,11 @@
                                         <Label Grid.Row="5" Grid.Column="0" Content="Children" VerticalAlignment="Top"/>
 
                                         <ListBox Grid.Row="5" Grid.Column="1" Height="150"
-                     x:Name="LstChildren"
-                     Margin="2.5"
-                     SelectionMode="Single"
-                     ItemsSource="{Binding DraftChildren}"
-                     SelectedItem="{Binding SelectedChild, Mode=TwoWay}">
+                                                 x:Name="LstChildren"
+                                                 Margin="2.5"
+                                                 SelectionMode="Single"
+                                                 ItemsSource="{Binding DraftChildren}"
+                                                 SelectedItem="{Binding SelectedChild, Mode=TwoWay}">
                                             <ListBox.ItemTemplate>
                                                 <DataTemplate>
                                                     <TextBlock>
@@ -250,8 +286,9 @@
                                         </ListBox>
 
                                         <ComboBox Grid.Row="6" Grid.Column="1" x:Name="CmbChild" Width="Auto" Margin="2,0,2,0"
-                          ItemsSource="{Binding ChildCandidates}"
-                          SelectedItem="{Binding ChildToAdd, Mode=TwoWay}">
+                                                  ItemsSource="{Binding ChildCandidates}"
+                                                  SelectedItem="{Binding ChildToAdd, Mode=TwoWay}"
+                                                  IsEnabled="{Binding IsSelectedVertex, Converter={StaticResource InverseBoolConverter}}">
                                             <ComboBox.ItemTemplate>
                                                 <DataTemplate>
                                                     <TextBlock>
@@ -288,11 +325,12 @@
                         Command="{Binding RemoveChildCommand}"/>
                                         </StackPanel>
                                         <Button Grid.Row="8" Grid.Column="1"
-                    Content="Apply"
-                    Width="100"
-                    Margin="0,10,2.5,2.5"
-                    HorizontalAlignment="Right"
-                    Command="{Binding ApplyCommand}"/>
+                                                Content="Apply"
+                                                Width="100"
+                                                Margin="0,10,2.5,2.5"
+                                                HorizontalAlignment="Right"
+                                                Command="{Binding ApplyCommand}"
+                                                IsEnabled="{Binding StatePanelDataChange}"/>
 
                                     </Grid>
                                 </GroupBox>
@@ -302,18 +340,32 @@
                                     <DockPanel>
                                         <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="25,4,0,8">
                                             <Label>Input</Label>
-                                            <TextBox MinWidth="40" MaxWidth="50" Margin="0,3,8,3" Text="{Binding NewTransitionInput, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
+                                            <TextBox MinWidth="40" MaxWidth="50" Margin="0,3,8,3" 
+                                                     Text="{Binding NewTransitionInput, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                                     IsReadOnly="{Binding IsSelectedVertex}">
+                                                <TextBox.Style>
+                                                    <Style TargetType="TextBox">
+                                                        <Setter Property="Background" Value="LightGray"/>
+                                                        <Style.Triggers>
+                                                            <DataTrigger Binding="{Binding IsSelectedVertex}" Value="False">
+                                                                <Setter Property="Background" Value="White"/>
+                                                            </DataTrigger>
+                                                        </Style.Triggers>
+                                                    </Style>
+                                                </TextBox.Style>
+                                            </TextBox>
 
                                             <Label>Target</Label>
                                             <ComboBox x:Name="CmbTransitionTarget" MinWidth="300" Margin="0,3,8,3"
-                          ItemsSource="{Binding FlatStates}"
-                          SelectedItem="{Binding SelectedTransitionTarget, Mode=TwoWay}">
+                                                      ItemsSource="{Binding FlatStates}"
+                                                      SelectedItem="{Binding SelectedTransitionTarget, Mode=TwoWay}"
+                                                      IsEnabled="{Binding IsSelectedVertex, Converter={StaticResource InverseBoolConverter}}">
                                                 <ComboBox.ItemTemplate>
                                                     <DataTemplate>
                                                         <TextBlock>
-                                <Run Text="{Binding FullIndex}"/>
-                                <Run Text=" - "/>
-                                <Run Text="{Binding Name}"/>
+                                                            <Run Text="{Binding FullIndex}"/>
+                                                            <Run Text=" - "/>
+                                                            <Run Text="{Binding Name}"/>
                                                         </TextBlock>
                                                     </DataTemplate>
                                                 </ComboBox.ItemTemplate>
@@ -323,13 +375,13 @@
                                         </StackPanel>
                                         <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="25,4,0,8">
                                             <Button Content="Add" Width="50" Margin="0,3,8,3" 
-                        Command="{Binding AddTransitionCommand}"/>
+                                                    Command="{Binding AddTransitionCommand}"/>
                                             <Button Content="Remove selected" Margin="0,3,0,3" Width="120"
-                        Command="{Binding RemoveTransitionCommand}"/>
+                                                    Command="{Binding RemoveTransitionCommand}"/>
                                         </StackPanel>
                                         <ListBox ItemsSource="{Binding TransitionsView}"
-                     SelectedItem="{Binding SelectedTransition, Mode=TwoWay}"
-                     DisplayMemberPath="DisplayText" Margin="20,10,20,10"/>
+                                                 SelectedItem="{Binding SelectedTransition, Mode=TwoWay}"
+                                                 DisplayMemberPath="DisplayText" Margin="20,10,20,10"/>
                                     </DockPanel>
                                 </GroupBox>
                             </Grid>
@@ -382,7 +434,7 @@
 
                                                 <!-- editable ID -->
                                                 <TextBox Grid.Column="0"
-                                                         x:Name="ID"
+                                                     x:Name="ID"
                                                      Margin="0,0,6,0"
                                                      BorderThickness="0"
                                                      Background="Transparent"
@@ -434,9 +486,9 @@
 
                                 <!-- list -->
                                 <ListBox Grid.Row="1"
-                 ItemsSource="{Binding OutputsDef}"
-                 SelectedItem="{Binding SelectedOutput, Mode=TwoWay}"
-                 ScrollViewer.VerticalScrollBarVisibility="Auto">
+                                         ItemsSource="{Binding OutputsDef}"
+                                         SelectedItem="{Binding SelectedOutput, Mode=TwoWay}"
+                                         ScrollViewer.VerticalScrollBarVisibility="Auto">
                                     <ListBox.ItemContainerStyle>
                                         <Style TargetType="ListBoxItem">
                                             <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
@@ -477,40 +529,40 @@
                                                     </Grid.ColumnDefinitions>
 
                                                     <TextBox x:Name="ID"
-                                     Grid.Column="0"
-                                     Margin="0,0,8,0"
-                                     BorderThickness="0"
-                                     Background="Transparent"
-                                     IsReadOnly="True"
-                                     localCoreUiControl:InlineEditBehavior.Enable="True"
-                                     Text="{Binding ID, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
+                                                             Grid.Column="0"
+                                                             Margin="0,0,8,0"
+                                                             BorderThickness="0"
+                                                             Background="Transparent"
+                                                             IsReadOnly="True"
+                                                             localCoreUiControl:InlineEditBehavior.Enable="True"
+                                                             Text="{Binding ID, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
 
                                                     <TextBox x:Name="Name"
-                                     Grid.Column="1"
-                                     BorderThickness="0"
-                                     Background="Transparent"
-                                     IsReadOnly="True"
-                                     localCoreUiControl:InlineEditBehavior.Enable="True"
-                                     Text="{Binding Name, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
+                                                             Grid.Column="1"
+                                                             BorderThickness="0"
+                                                             Background="Transparent"
+                                                             IsReadOnly="True"
+                                                             localCoreUiControl:InlineEditBehavior.Enable="True"
+                                                             Text="{Binding Name, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
                                                 </Grid>
 
                                                 <!-- bottom: bool flags (wrap) -->
                                                 <WrapPanel Grid.Row="1" Margin="0,4,0,0">
                                                     <CheckBox Content="Definition"
-                                      Margin="0,0,12,0"
-                                      IsChecked="{Binding UpdateDefinition, Mode=TwoWay}"/>
+                                                              Margin="0,0,12,0"
+                                                              IsChecked="{Binding UpdateDefinition, Mode=TwoWay}"/>
                                                     <CheckBox Content="Parameters"
-                                      Margin="0,0,12,0"
-                                      IsChecked="{Binding UpdateParameters, Mode=TwoWay}"/>
+                                                              Margin="0,0,12,0"
+                                                              IsChecked="{Binding UpdateParameters, Mode=TwoWay}"/>
                                                     <CheckBox Content="Calibration"
-                                      Margin="0,0,12,0"
-                                      IsChecked="{Binding UpdateCalibration, Mode=TwoWay}"/>
+                                                              Margin="0,0,12,0"
+                                                              IsChecked="{Binding UpdateCalibration, Mode=TwoWay}"/>
                                                     <CheckBox Content="Measured"
-                                      Margin="0,0,12,0"
-                                      IsChecked="{Binding UpdateMeasuredData, Mode=TwoWay}"/>
+                                                              Margin="0,0,12,0"
+                                                              IsChecked="{Binding UpdateMeasuredData, Mode=TwoWay}"/>
                                                     <CheckBox Content="Processed"
-                                      Margin="0,0,12,0"
-                                      IsChecked="{Binding UpdateProcessedData, Mode=TwoWay}"/>
+                                                              Margin="0,0,12,0"
+                                                              IsChecked="{Binding UpdateProcessedData, Mode=TwoWay}"/>
                                                 </WrapPanel>
                                             </Grid>
                                         </DataTemplate>

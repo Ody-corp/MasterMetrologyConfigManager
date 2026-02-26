@@ -40,6 +40,7 @@ namespace MasterMetrology.Core.UI
         {
             if (_supressStatePanelDirty) return;
             StatePanelDataChange = true;
+            OnPropertyChanged(nameof(StatePanelDataChange));
         }
 
 
@@ -52,7 +53,7 @@ namespace MasterMetrology.Core.UI
             TransitionsView = CollectionViewSource.GetDefaultView(_processController.AllTransitions);
 
             // Commands
-            ApplyCommand = new RelayCommand(() => { Apply(); _processController.MarkDirty(); StatePanelDataChange = false; }, () => SelectedState != null && SelectedVertex != null);
+            ApplyCommand = new RelayCommand(() => { Apply(); _processController.MarkDirty(); StatePanelDataChange = false; OnPropertyChanged(nameof(StatePanelDataChange)); }, () => SelectedState != null && SelectedVertex != null);
             AddChildCommand = new RelayCommand(() => { AddChild(); _processController.MarkDirty(); StatePanelDataChange = true; }, () => SelectedState != null && ChildToAdd != null);
             RemoveChildCommand = new RelayCommand(() => { RemoveChild(); _processController.MarkDirty(); StatePanelDataChange = true; }, () => SelectedState != null && SelectedChild != null);
 
@@ -118,7 +119,8 @@ namespace MasterMetrology.Core.UI
 
         // --------- SELECTION ----------
         public GraphVertex? SelectedVertex { get; private set; }
-
+        public bool IsSelectedVertex => SelectedVertex == null;
+        public bool IsSelectedVertexAndSection => SelectedVertex == null || (SelectedState != null && SelectedState.IsSection);
         private StateViewModel? _selectedState;
         public StateViewModel? SelectedState
         {
@@ -329,7 +331,10 @@ namespace MasterMetrology.Core.UI
 
                 if (decision == PopUpWindows.ConfirmChangeResult.Cancel)
                 {
+                    OnPropertyChanged(nameof(IsSelectedVertex));
+                    OnPropertyChanged(nameof(IsSelectedVertexAndSection));
                     OnPropertyChanged(nameof(SelectedState));
+                    OnPropertyChanged(nameof(StatePanelDataChange));
                     return;
                 }
                 if (decision == PopUpWindows.ConfirmChangeResult.Apply)
@@ -349,6 +354,9 @@ namespace MasterMetrology.Core.UI
             if (v?.State == null)
             {
                 SelectedState = null;
+                OnPropertyChanged(nameof(IsSelectedVertex));
+                OnPropertyChanged(nameof(IsSelectedVertexAndSection));
+                OnPropertyChanged(nameof(StatePanelDataChange));
                 return;
             }
 
@@ -360,6 +368,10 @@ namespace MasterMetrology.Core.UI
             {
                 SelectedState = FlatStates.FirstOrDefault(s => s.FullIndex == v.State.FullIndex);
             }
+
+            OnPropertyChanged(nameof(IsSelectedVertex));
+            OnPropertyChanged(nameof(IsSelectedVertexAndSection));
+            OnPropertyChanged(nameof(StatePanelDataChange));
         }
 
         public void RefreshFromController()
