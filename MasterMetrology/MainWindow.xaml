@@ -7,6 +7,7 @@
         mc:Ignorable="d"
         xmlns:utils="clr-namespace:MasterMetrology.Utils"
         Title="MainWindow" Height="1080" Width="1920" WindowState="Maximized">
+        
     <Window.Resources>
         <Style TargetType="{x:Type ComboBoxItem}"
            BasedOn="{StaticResource {x:Type ComboBoxItem}}">
@@ -182,7 +183,18 @@
                                         <Label Grid.Row="3" Grid.Column="0" Content="Output"/>
                                         <TextBox Grid.Row="3" Grid.Column="1" Margin="2.5"
                                                 Text="{Binding DraftOutput, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                                                 IsEnabled="{Binding SelectedState.IsSection, Converter={StaticResource InverseBoolConverter}}"/>
+                                                 IsReadOnly="{Binding SelectedState.IsSection, Converter={StaticResource InverseBoolConverter}}">
+                                            <TextBox.Style>
+                                                <Style TargetType="TextBox">
+                                                    <Setter Property="Background" Value="White"/>
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding SelectedState.IsSection}" Value="True">
+                                                            <Setter Property="Background" Value="LightGray"/>
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </TextBox.Style>
+                                        </TextBox>
 
                                         <!-- PARENT: combobox instead of simple textbox -->
                                         <Label Grid.Row="4" Grid.Column="0" Content="Parent"/>

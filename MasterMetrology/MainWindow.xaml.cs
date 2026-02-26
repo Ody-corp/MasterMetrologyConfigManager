@@ -1,5 +1,7 @@
 ﻿using MasterMetrology.Core.UI;
 using MasterMetrology.Core.UI.Controllers;
+using MasterMetrology.Utils;
+using System.ComponentModel;
 using System.Diagnostics;
 using System.Windows;
 using System.Windows.Input;
@@ -43,6 +45,14 @@ namespace MasterMetrology
             _processController.WireMonitorChanges();
 
             _panZoom.CenterView();
+        }
+
+        protected override void OnClosing(CancelEventArgs e)
+        {
+            base.OnClosing(e);
+
+            if (!PopUpWindows.ConfirmCloseIfDirty(_processController))
+                e.Cancel = true;
         }
 
         private void DiagramCanvas_PreviewMouseRightButtonDown(object sender, MouseButtonEventArgs e)

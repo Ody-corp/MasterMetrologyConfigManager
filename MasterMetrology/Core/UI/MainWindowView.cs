@@ -24,7 +24,23 @@ namespace MasterMetrology.Core.UI
         private HashSet<StateModelData> _originalChildren = new();
         private StateModelData? _originalParentModel;
 
+        private bool _statePanelDataChange;
+        public bool StatePanelDataChange
+        {
+            get => _statePanelDataChange;
+            set
+            {
+                if (_statePanelDataChange == value) return;
+                _statePanelDataChange = value;
+            }
+        }
 
+        private bool _supressStatePanelDirty;
+        private void MarkStatePanelDirty()
+        {
+            if (_supressStatePanelDirty) return;
+            StatePanelDataChange = true;
+        }
 
 
         public MainWindowView(ProcessController processController, PanAndZoomController panAndZoomController)
@@ -36,9 +52,9 @@ namespace MasterMetrology.Core.UI
             TransitionsView = CollectionViewSource.GetDefaultView(_processController.AllTransitions);
 
             // Commands
-            ApplyCommand = new RelayCommand(() => { Apply(); _processController.MarkDirty(); }, () => SelectedState != null && SelectedVertex != null);
-            AddChildCommand = new RelayCommand(() => { AddChild(); _processController.MarkDirty(); }, () => SelectedState != null && ChildToAdd != null);
-            RemoveChildCommand = new RelayCommand(() => { RemoveChild(); _processController.MarkDirty(); }, () => SelectedState != null && SelectedChild != null);
+            ApplyCommand = new RelayCommand(() => { Apply(); _processController.MarkDirty(); StatePanelDataChange = false; }, () => SelectedState != null && SelectedVertex != null);
+            AddChildCommand = new RelayCommand(() => { AddChild(); _processController.MarkDirty(); StatePanelDataChange = true; }, () => SelectedState != null && ChildToAdd != null);
+            RemoveChildCommand = new RelayCommand(() => { RemoveChild(); _processController.MarkDirty(); StatePanelDataChange = true; }, () => SelectedState != null && SelectedChild != null);
 
             AddTransitionCommand = new RelayCommand(() => { AddTransition(); _processController.MarkDirty(); }, () => SelectedState != null && SelectedTransitionTarget != null && !string.IsNullOrWhiteSpace(NewTransitionInput));
             RemoveTransitionCommand = new RelayCommand(() => { RemoveTransition(); _processController.MarkDirty(); }, () => SelectedTransition != null);
@@ -110,6 +126,9 @@ namespace MasterMetrology.Core.UI
             set
             {
                 if (_selectedState == value) return;
+
+                
+
                 _selectedState = value;
                 _processController.SetSelectedVertex(SelectedVertex);
 
@@ -131,6 +150,7 @@ namespace MasterMetrology.Core.UI
             get => _draftName;
             set
             {
+                MarkStatePanelDirty();
                 _draftName = value;
                 OnPropertyChanged();
             }
@@ -145,6 +165,7 @@ namespace MasterMetrology.Core.UI
                 if (!Regex.IsMatch(value, @"^\d*$"))
                     return;
 
+                MarkStatePanelDirty();
                 _draftIndex = value;
                 OnPropertyChanged();
             }
@@ -159,6 +180,7 @@ namespace MasterMetrology.Core.UI
                 if (!Regex.IsMatch(value, @"^\d*$"))
                     return;
 
+                MarkStatePanelDirty();
                 _draftOutput = value;
                 OnPropertyChanged();
             }
@@ -172,6 +194,8 @@ namespace MasterMetrology.Core.UI
             {
                 if (_draftParent == value) return;
                 _draftParent = value;
+                MarkStatePanelDirty();
+
                 OnPropertyChanged();
 
                 RefreshCandidates();
@@ -179,7 +203,7 @@ namespace MasterMetrology.Core.UI
                 RaiseAllCanExecute();
             }
         }
-
+        
         public ObservableCollection<StateViewModel> DraftChildren { get; } = new();
 
         private StateViewModel? _selectedChild;
@@ -298,6 +322,28 @@ namespace MasterMetrology.Core.UI
         // --------- PUBLIC API CALLED FROM WINDOW ----------
         public void SelectVertex(GraphVertex? v)
         {
+            if (StatePanelDataChange)
+            {
+                Debug.WriteLine($"StatePanelDataChange");
+                var decision = PopUpWindows.ConfirmStateSelectionIfDiff();
+
+                if (decision == PopUpWindows.ConfirmChangeResult.Cancel)
+                {
+                    OnPropertyChanged(nameof(SelectedState));
+                    return;
+                }
+                if (decision == PopUpWindows.ConfirmChangeResult.Apply)
+                {
+                    StatePanelDataChange = false;
+                    Apply();
+                }
+                if (decision == PopUpWindows.ConfirmChangeResult.Discard)
+                {
+                    StatePanelDataChange = false;
+                }
+
+            }
+
             SelectedVertex = v;
 
             if (v?.State == null)
@@ -362,6 +408,7 @@ namespace MasterMetrology.Core.UI
         // --------- INTERNAL HELPERS ----------
         private void LoadDraftFromSelected()
         {
+            _supressStatePanelDirty = true;
             DraftChildren.Clear();
             ChildToAdd = null;
             SelectedChild = null;
@@ -395,6 +442,10 @@ namespace MasterMetrology.Core.UI
                 DraftChildren.Add(ch);
 
             UpdateDraftMarkers();
+
+            StatePanelDataChange = false;
+
+            _supressStatePanelDirty = false;
         }
         private void UpdateDraftMarkers()
         {
@@ -555,6 +606,8 @@ namespace MasterMetrology.Core.UI
         private void Apply()
         {
             if (SelectedState == null || SelectedVertex == null) return;
+
+            _statePanelDataChange = false;
 
             SelectedState.Name = DraftName;
             SelectedState.Output = DraftOutput;
