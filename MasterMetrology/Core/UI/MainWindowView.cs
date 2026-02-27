@@ -54,8 +54,8 @@ namespace MasterMetrology.Core.UI
 
             // Commands
             ApplyCommand = new RelayCommand(() => { Apply(); _processController.MarkDirty(); StatePanelDataChange = false; OnPropertyChanged(nameof(StatePanelDataChange)); }, () => SelectedState != null && SelectedVertex != null);
-            AddChildCommand = new RelayCommand(() => { AddChild(); _processController.MarkDirty(); StatePanelDataChange = true; }, () => SelectedState != null && ChildToAdd != null);
-            RemoveChildCommand = new RelayCommand(() => { RemoveChild(); _processController.MarkDirty(); StatePanelDataChange = true; }, () => SelectedState != null && SelectedChild != null);
+            AddChildCommand = new RelayCommand(() => { AddChild(); _processController.MarkDirty(); StatePanelDataChange = true; OnPropertyChanged(nameof(StatePanelDataChange)); }, () => SelectedState != null && ChildToAdd != null);
+            RemoveChildCommand = new RelayCommand(() => { RemoveChild(); _processController.MarkDirty(); StatePanelDataChange = true; OnPropertyChanged(nameof(StatePanelDataChange)); }, () => SelectedState != null && SelectedChild != null);
 
             AddTransitionCommand = new RelayCommand(() => { AddTransition(); _processController.MarkDirty(); }, () => SelectedState != null && SelectedTransitionTarget != null && !string.IsNullOrWhiteSpace(NewTransitionInput));
             RemoveTransitionCommand = new RelayCommand(() => { RemoveTransition(); _processController.MarkDirty(); }, () => SelectedTransition != null);
@@ -194,8 +194,10 @@ namespace MasterMetrology.Core.UI
             get => _draftParent;
             set
             {
-                if (_draftParent == value) return;
-                _draftParent = value;
+                var newValue = ReferenceEquals(value, _noParentOption) ? null : value;
+                if (_draftParent == newValue) return;
+
+                _draftParent = newValue;
                 MarkStatePanelDirty();
 
                 OnPropertyChanged();
@@ -501,6 +503,8 @@ namespace MasterMetrology.Core.UI
                 .Where(vm => !draftChildModels.Contains(vm.StateModel))
                 .ToList();
 
+            parentList.Insert(0, _noParentOption);
+
             ParentCandidates = new ObservableCollection<StateViewModel>(parentList);
 
             var childList = FlatStates
@@ -766,6 +770,13 @@ namespace MasterMetrology.Core.UI
         {
             return OutputsDef.Any(o => !ReferenceEquals(o, _selectedOutput) && o.ID == _selectedOutput.ID);
         }
+
+        private readonly StateViewModel _noParentOption = new StateViewModel(new StateModelData
+        {
+            Name = "(no parent)",
+            Index = "",
+            FullIndex = ""
+        });
 
         // --------- INotifyPropertyChanged ----------
         public event PropertyChangedEventHandler? PropertyChanged;

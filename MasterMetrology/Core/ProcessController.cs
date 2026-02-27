@@ -395,9 +395,13 @@ namespace MasterMetrology
                     statesModelDatas.Remove(state);
                 }
 
+                
+                if (!IsIndexAvailable(state.Index, null))
+                {
+                    var nextIdx = GetNextIndexForParent(null);
+                    state.Index = nextIdx.ToString();
+                }
                 statesModelDatas.Add(state);
-                var nextIdx = GetNextIndexForParent(null);
-                state.Index = nextIdx.ToString();
                 UpdateIndexesRecursive(state);
             }
 
@@ -415,12 +419,18 @@ namespace MasterMetrology
                     statesModelDatas.Remove(state);
                 }
 
+                
+
+                if (!IsIndexAvailable(state.Index, selectedVertex.State))
+                {
+                    var nextIdx = GetNextIndexForParent(selectedVertex.State);
+                    state.Index = nextIdx.ToString();
+                }
+
                 selectedVertex.State.SubStatesData.Add(state);
                 state.Parent = selectedVertex.State;
 
-                var nextIdx = GetNextIndexForParent(selectedVertex.State);
-                state.Index = nextIdx.ToString();
-                var newFull = $"{selectedVertex.State.FullIndex}.{state.Index}";
+                var newFull = $"{selectedVertex.State.FullIndex}.{state.Index}";        
                 UpdateIndexesRecursive(state);
             }
 
@@ -850,6 +860,20 @@ namespace MasterMetrology
         {
             Debug.WriteLine("Change");
             MarkDirty();
+        }
+
+        private void EnsureUniqueIndexOrKeep(StateModelData state, StateModelData? newParent)
+        {
+            if (string.IsNullOrWhiteSpace(state.Index) || !int.TryParse(state.Index, out _))
+            {
+                state.Index = GetNextIndexForParent(newParent).ToString();
+                return;
+            }
+
+            if (IsIndexAvailable(state.Index, newParent))
+                return;
+
+            state.Index = GetNextIndexForParent(newParent).ToString();
         }
     }
 }

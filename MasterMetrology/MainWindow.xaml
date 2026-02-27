@@ -237,13 +237,15 @@
                                                   ItemsSource="{Binding ParentCandidates}"
                                                   SelectedItem="{Binding DraftParent, Mode=TwoWay}"
                                                   IsEnabled="{Binding IsSelectedVertex, Converter={StaticResource InverseBoolConverter}}">
+
                                             <ComboBox.ItemTemplate>
                                                 <DataTemplate>
-                                                    <TextBlock>
-                                                        <Run Text="{Binding FullIndex}"/>
-                                                        <Run Text=" - "/>
-                                                        <Run Text="{Binding Name}"/>
-                                                    </TextBlock>
+                                                    <TextBlock x:Name="TxtNormal">
+                                                            <Run Text="{Binding FullIndex}"/>
+                                                            <Run Text=" - "/>
+                                                            <Run Text="{Binding Name}"/>
+                                                        </TextBlock>
+
                                                 </DataTemplate>
                                             </ComboBox.ItemTemplate>
                                         </ComboBox>
