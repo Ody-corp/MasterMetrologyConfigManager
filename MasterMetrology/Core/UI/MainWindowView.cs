@@ -261,6 +261,8 @@ namespace MasterMetrology.Core.UI
             }
         }
 
+        private List<string> listOfTransitionsInputsOfSelectedState = new List<string>();
+
         private string _newTransitionInput = "";
         public string NewTransitionInput
         {
@@ -268,6 +270,9 @@ namespace MasterMetrology.Core.UI
             set
             {
                 if (!Regex.IsMatch(value, @"^\d*$"))
+                    return;
+
+                if (listOfTransitionsInputsOfSelectedState.Contains(value))
                     return;
 
                 _newTransitionInput = value;
@@ -374,6 +379,8 @@ namespace MasterMetrology.Core.UI
             OnPropertyChanged(nameof(IsSelectedVertex));
             OnPropertyChanged(nameof(IsSelectedVertexAndSection));
             OnPropertyChanged(nameof(StatePanelDataChange));
+
+            FillListTransInputs();
         }
 
         public void RefreshFromController()
@@ -568,6 +575,14 @@ namespace MasterMetrology.Core.UI
             RemoveInputCommand.RaiseCanExecuteChanged();
             AddOutputCommand.RaiseCanExecuteChanged();
             RemoveOutputCommand.RaiseCanExecuteChanged();
+        }
+
+        private void FillListTransInputs()
+        {
+            foreach(TransitionModelData trans in SelectedState.StateModel.TransitionsData)
+            {
+                listOfTransitionsInputsOfSelectedState.Add(trans.Input);
+            }
         }
 
         // --------- COMMAND IMPLEMENTATIONS ----------
