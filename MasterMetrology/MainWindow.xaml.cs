@@ -1,6 +1,7 @@
 ﻿using MasterMetrology.Core.UI;
 using MasterMetrology.Core.UI.Controllers;
 using MasterMetrology.Utils;
+using Microsoft.Win32;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.Windows;
@@ -51,8 +52,8 @@ namespace MasterMetrology
         {
             base.OnClosing(e);
 
-            if (!PopUpWindows.ConfirmCloseIfDirty(_processController))
-                e.Cancel = true;
+            if (_processController.ProcessDecisionExitWin())
+                e.Cancel = true;   
         }
 
         private void DiagramCanvas_PreviewMouseRightButtonDown(object sender, MouseButtonEventArgs e)

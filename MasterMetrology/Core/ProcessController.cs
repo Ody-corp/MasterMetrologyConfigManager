@@ -9,6 +9,8 @@ using MasterMetrology.Core;
 using MasterMetrology.Core.UI.Rendering;
 using MasterMetrology.Core.UI.Controllers;
 using System.ComponentModel;
+using MasterMetrology.Utils;
+using Microsoft.Win32;
 
 namespace MasterMetrology
 {
@@ -874,6 +876,50 @@ namespace MasterMetrology
                 return;
 
             state.Index = GetNextIndexForParent(newParent).ToString();
+        }
+
+        public bool ProcessDecisionExitWin()
+        {
+            if (IsDirty)
+            {
+                var decision = PopUpWindows.DialogWindow(
+                    "Unsaved Changes",
+                    "You have unsaved changes. Would you Like to save them before exit?",
+                    ["Yes", "Don't save", "Cancel"]
+                    );
+
+                if (decision == PopUpWindows.ConfirmChangeResult.Cancel)
+                {
+                    return true;
+                }
+                else if (decision == PopUpWindows.ConfirmChangeResult.Apply)
+                {
+                    if (CanSave)
+                    {
+                        Save();
+                    }
+                    else
+                    {
+                        var sfd = new SaveFileDialog
+                        {
+                            Title = "Save as",
+                            Filter = "XML files (*.xml)|*.xml",
+                            FileName = "process.xml"
+                        };
+
+                        if (sfd.ShowDialog() == true)
+                        {
+                            SaveAs(sfd.FileName);
+                        }
+                        else
+                        {
+                            return true;
+                        }
+                    }
+                    return false;
+                }
+            }
+            return false;
         }
     }
 }

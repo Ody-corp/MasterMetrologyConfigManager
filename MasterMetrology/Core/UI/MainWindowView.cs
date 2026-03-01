@@ -336,7 +336,11 @@ namespace MasterMetrology.Core.UI
             if (StatePanelDataChange)
             {
                 Debug.WriteLine($"StatePanelDataChange");
-                var decision = PopUpWindows.ConfirmStateSelectionIfDiff();
+                var decision = PopUpWindows.DialogWindow(
+                    "Unsaved changes",
+                    "Save changed data of state?",
+                    ["Save", "Discard", "Cancel"]
+                    );
 
                 if (decision == PopUpWindows.ConfirmChangeResult.Cancel)
                 {
@@ -687,6 +691,11 @@ namespace MasterMetrology.Core.UI
                 _processController.LoadDataXML(filepath);
                 RefreshFromController();
             }
+        }
+
+        private void CreateNewFile()
+        {
+
         }
 
         private void CenterView()
