@@ -26,7 +26,9 @@
         <DockPanel>
             <Menu DockPanel.Dock="Top">
                 <MenuItem Header="File" >
-                    <MenuItem Header="Import" Command="{Binding ImportFileCommand}"/>
+                    <MenuItem Header="New file" Command="{Binding CreateNewFileCommand}"/>
+                    <MenuItem Header="Import file" Command="{Binding ImportFileCommand}"/>
+                    <Separator/>
                     <MenuItem Header="Show States Debug" Click="ShowDebug_Click"/>
                     <MenuItem Header="Test" Click="Test_Test"/>
                     <Separator/>

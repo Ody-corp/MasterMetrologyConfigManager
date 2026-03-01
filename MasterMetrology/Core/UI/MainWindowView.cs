@@ -62,6 +62,7 @@ namespace MasterMetrology.Core.UI
 
             ExitAppCommand = new RelayCommand(ExitApp);
             ImportFileCommand = new RelayCommand(ImportFile);
+            CreateNewFileCommand = new RelayCommand(CreateNewFile, () => InputsDef.Count > 0 || OutputsDef.Count > 0 || FlatStates.Count > 0);
             CenterViewCommand = new RelayCommand(CenterView);
 
             AddStateToRootCommand = new RelayCommand(() => { _processController.CreateNewRootStateAtViewCenter(); _processController.MarkDirty(); });
@@ -116,6 +117,7 @@ namespace MasterMetrology.Core.UI
         public RelayCommand RemoveInputCommand { get; }
         public RelayCommand AddOutputCommand { get; }
         public RelayCommand RemoveOutputCommand { get; }
+        public RelayCommand CreateNewFileCommand { get; }
 
         // --------- SELECTION ----------
         public GraphVertex? SelectedVertex { get; private set; }
@@ -579,6 +581,8 @@ namespace MasterMetrology.Core.UI
 
         private void FillListTransInputs()
         {
+            listOfTransitionsInputsOfSelectedState.Clear();
+
             foreach(TransitionModelData trans in SelectedState.StateModel.TransitionsData)
             {
                 listOfTransitionsInputsOfSelectedState.Add(trans.Input);
