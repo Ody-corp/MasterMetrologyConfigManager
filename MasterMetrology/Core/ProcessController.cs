@@ -11,6 +11,8 @@ using MasterMetrology.Core.UI.Controllers;
 using System.ComponentModel;
 using MasterMetrology.Utils;
 using Microsoft.Win32;
+using System.Collections;
+using MasterMetrology.Core.UI;
 
 namespace MasterMetrology
 {
@@ -68,6 +70,9 @@ namespace MasterMetrology
 
         public void LoadDataXML(string filePath)
         {
+            if (filePath == null)
+                ResetForNewFile();
+
             SaveOldXMLPath(filePath);
             var list = _fileReader.LoadDataFromFile(filePath);
 
@@ -78,13 +83,13 @@ namespace MasterMetrology
             outputsDefModelDatas.Clear();
             foreach (var o in list.OutputDefinition)
                 outputsDefModelDatas.Add(o);
-            
+
             statesModelDatas = list.FullListStateModelData;
 
             BuildViewModelTreeFromModels(statesModelDatas);
 
             PopulateTransitions(statesModelDatas);
-            
+
             //WireMonitorChanges();
 
             visualRender.RenderGraph(statesModelDatas, viewPort, v => VertexSelected?.Invoke(v), diagramCanvas);
@@ -166,7 +171,7 @@ namespace MasterMetrology
         {
             var vm = new StateViewModel(model) { Parent = parentVm };
             modelToViewModel[model] = vm;
-        
+
             if (model.SubStatesData != null)
             {
                 foreach (var ch in model.SubStatesData)
@@ -191,7 +196,7 @@ namespace MasterMetrology
                     StatesViewModel.Add(rootVm);
                 }
             }
-        
+
             if (Application.Current?.Dispatcher != null && !Application.Current.Dispatcher.CheckAccess())
                 Application.Current.Dispatcher.Invoke(build);
             else
@@ -225,7 +230,7 @@ namespace MasterMetrology
             if (ownerVm != null && ownerVm.StateModel.TransitionsData != null)
             {
                 var removed = ownerVm.StateModel.TransitionsData.Remove(transitionToDelete);
-                
+
                 if (removed)
                 {
                     if (Application.Current?.Dispatcher != null && !Application.Current.Dispatcher.CheckAccess())
@@ -397,7 +402,7 @@ namespace MasterMetrology
                     statesModelDatas.Remove(state);
                 }
 
-                
+
                 if (!IsIndexAvailable(state.Index, null))
                 {
                     var nextIdx = GetNextIndexForParent(null);
@@ -421,7 +426,7 @@ namespace MasterMetrology
                     statesModelDatas.Remove(state);
                 }
 
-                
+
 
                 if (!IsIndexAvailable(state.Index, selectedVertex.State))
                 {
@@ -432,7 +437,7 @@ namespace MasterMetrology
                 selectedVertex.State.SubStatesData.Add(state);
                 state.Parent = selectedVertex.State;
 
-                var newFull = $"{selectedVertex.State.FullIndex}.{state.Index}";        
+                var newFull = $"{selectedVertex.State.FullIndex}.{state.Index}";
                 UpdateIndexesRecursive(state);
             }
 
@@ -482,7 +487,7 @@ namespace MasterMetrology
             {
                 state.FullIndex = state.Index;
             }
-            
+
             movedPairs.Add((oldFullIndex, state.FullIndex));
 
             if (state.SubStatesData.Count() > 0)
@@ -491,7 +496,7 @@ namespace MasterMetrology
                 {
                     UpdateIndexesRecursive(subState);
                 }
-            } 
+            }
         }
 
         /// <summary>
@@ -597,10 +602,8 @@ namespace MasterMetrology
             }
 
             // move vertex after render
-            if (parent == null) 
+            if (parent == null)
                 visualRender.RequestPlaceVertex(newState.FullIndex, world);
-
-            //visualRender.AddStateRuntime(newState, world);
 
             // re-render + transitions
             PopulateTransitions(statesModelDatas);
@@ -608,7 +611,6 @@ namespace MasterMetrology
 
             visualRender.RequestSelectVertex(newState.FullIndex);
 
-            // notify UI lists
             DataChanged?.Invoke();
 
             Debug.WriteLine($"Successfuly created.");
@@ -790,10 +792,6 @@ namespace MasterMetrology
             return (max + 1).ToString();
         }
 
-        public void test()
-        {
-            visualRender.test();
-        }
 
         internal void SortInputsDefByIdInPlace()
         {
@@ -826,36 +824,58 @@ namespace MasterMetrology
             }
         }
 
+        private bool _monitorWired;
+
         public void WireMonitorChanges()
         {
-            InputsDef.CollectionChanged += (_, e) =>
-            {
-                if (e.NewItems != null)
-                    foreach (InputModelData it in e.NewItems)
-                        it.PropertyChanged += ItemChanged;
+            if (_monitorWired)
+                return;
+            _monitorWired = true;
 
-                if (e.OldItems != null)
-                    foreach (InputModelData it in e.OldItems)
-                        it.PropertyChanged -= ItemChanged;
-
-                MarkDirty();
-            };
-
-            OutputsDef.CollectionChanged += (_, e) =>
-            {
-                if (e.NewItems != null)
-                    foreach (OutputModelData it in e.NewItems)
-                        it.PropertyChanged += ItemChanged;
-
-                if (e.OldItems != null)
-                    foreach (OutputModelData it in e.OldItems)
-                        it.PropertyChanged -= ItemChanged;
-
-                MarkDirty();
-            };
+            InputsDef.CollectionChanged += InputsDef_CollectionChanged;
+            OutputsDef.CollectionChanged += OutputsDef_CollectionChanged;
 
             foreach (var item in InputsDef) item.PropertyChanged += ItemChanged;
             foreach (var item in OutputsDef) item.PropertyChanged += ItemChanged;
+        }
+
+        private void UnwireMonitorChangesIfWired()
+        {
+            if (!_monitorWired) 
+                return;
+            _monitorWired = false;
+
+            InputsDef.CollectionChanged -= InputsDef_CollectionChanged;
+            OutputsDef.CollectionChanged -= OutputsDef_CollectionChanged;
+
+            foreach (var item in InputsDef) item.PropertyChanged -= ItemChanged;
+            foreach (var item in OutputsDef) item.PropertyChanged -= ItemChanged;
+        }
+
+        private void InputsDef_CollectionChanged(object? _, System.Collections.Specialized.NotifyCollectionChangedEventArgs e)
+        {
+            if (e.NewItems != null)
+                foreach (InputModelData it in e.NewItems)
+                    it.PropertyChanged += ItemChanged;
+
+            if (e.OldItems != null)
+                foreach (InputModelData it in e.OldItems)
+                    it.PropertyChanged -= ItemChanged;
+
+            MarkDirty();
+        }
+
+        private void OutputsDef_CollectionChanged(object? _, System.Collections.Specialized.NotifyCollectionChangedEventArgs e)
+        {
+            if (e.NewItems != null)
+                foreach (OutputModelData it in e.NewItems)
+                    it.PropertyChanged += ItemChanged;
+
+            if (e.OldItems != null)
+                foreach (OutputModelData it in e.OldItems)
+                    it.PropertyChanged -= ItemChanged;
+
+            MarkDirty();
         }
 
         private void ItemChanged(object? sender, PropertyChangedEventArgs e)
@@ -864,29 +884,27 @@ namespace MasterMetrology
             MarkDirty();
         }
 
-        private void EnsureUniqueIndexOrKeep(StateModelData state, StateModelData? newParent)
+        public bool ProcessDecisionExitWin()
         {
-            if (string.IsNullOrWhiteSpace(state.Index) || !int.TryParse(state.Index, out _))
-            {
-                state.Index = GetNextIndexForParent(newParent).ToString();
-                return;
-            }
-
-            if (IsIndexAvailable(state.Index, newParent))
-                return;
-
-            state.Index = GetNextIndexForParent(newParent).ToString();
+            return OpenCustomDialog(
+                "Unsaved Changes", 
+                "You have unsaved changes. Would you Like to save them before exit?",
+                ["Yes", "Don't save", "Cancel"]);
         }
 
-        public bool ProcessDecisionExitWin()
+        public bool ProcessDecisionIfNotSavedDataToNewFile()
+        {
+            return OpenCustomDialog(
+                "Unsaved data",
+                "Your file is not saved. Would you like to save data before continuing to new file?",
+                ["Yes", "Don't save", "Cancel"]);
+        }
+
+        private bool OpenCustomDialog(string title, string message, ArrayList buttons)
         {
             if (IsDirty)
             {
-                var decision = PopUpWindows.DialogWindow(
-                    "Unsaved Changes",
-                    "You have unsaved changes. Would you Like to save them before exit?",
-                    ["Yes", "Don't save", "Cancel"]
-                    );
+                var decision = PopUpWindows.DialogWindow(title, message, buttons);
 
                 if (decision == PopUpWindows.ConfirmChangeResult.Cancel)
                 {
@@ -920,6 +938,34 @@ namespace MasterMetrology
                 }
             }
             return false;
+        }
+
+        public void ResetForNewFile()
+        {
+            UnwireMonitorChangesIfWired();
+            
+            statesModelDatas.Clear();
+            inputsDefModelDatas.Clear(); 
+            outputsDefModelDatas.Clear();
+
+            StatesViewModel.Clear();
+            AllTransitions.Clear();
+            modelToViewModel.Clear();
+
+            _pendingAdds.Clear();
+            _pendingRemoves.Clear();
+            _pendingParentFullIndex = null;
+            movedPairs.Clear();
+
+            _selectedFullIndex = null;
+               
+            visualRender.ResetVisuals(viewPort);
+
+            VertexSelected?.Invoke(null);
+            DataChanged?.Invoke();
+
+            MarkSaved();
+            filePath = null;
         }
     }
 }

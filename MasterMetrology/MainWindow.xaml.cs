@@ -78,10 +78,5 @@ namespace MasterMetrology
         {
             Debug.WriteLine(StateModelDataDumper.DumpStates(_processController.GetFlatStates()));
         }
-
-        private void Test_Test(object sender, RoutedEventArgs e)
-        {
-            _processController.test();
-        }
     }
 }

@@ -30,7 +30,7 @@
                     <MenuItem Header="Import file" Command="{Binding ImportFileCommand}"/>
                     <Separator/>
                     <MenuItem Header="Show States Debug" Click="ShowDebug_Click"/>
-                    <MenuItem Header="Test" Click="Test_Test"/>
+                    <MenuItem Header="Test"/>
                     <Separator/>
                     <MenuItem Header="Save" Command="{Binding SaveCommand}"/>
                     <MenuItem Header="Save as" Command="{Binding SaveAsCommand}"/>

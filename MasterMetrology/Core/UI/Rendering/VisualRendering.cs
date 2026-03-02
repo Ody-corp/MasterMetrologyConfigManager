@@ -127,51 +127,7 @@ namespace MasterMetrology.Core.UI.Rendering
             if (graphLayer.Background == null)
                 graphLayer.Background = Brushes.Transparent;
 
-            // --- BACKGROUND click vs drag detection ---
-            Point? bgDownPos = null;
-            bool bgDragging = false;
-            const double DragThreshold = 6; // px
-
-            diagramCanvas.AddHandler(UIElement.PreviewMouseLeftButtonDownEvent,
-                new MouseButtonEventHandler((s, e) =>
-                {
-                    var src = e.OriginalSource as DependencyObject;
-
-                    if (IsInteractiveClick(src)) return;
-
-                    bgDownPos = e.GetPosition(diagramCanvas);
-                    bgDragging = false;
-                }),
-                true);
-
-            diagramCanvas.AddHandler(UIElement.PreviewMouseMoveEvent,
-                new MouseEventHandler((s, e) =>
-                {
-                    if (bgDownPos == null) return;
-                    if (e.LeftButton != MouseButtonState.Pressed) return;
-
-                    var p = e.GetPosition(diagramCanvas);
-                    var d = p - bgDownPos.Value;
-
-                    if (!bgDragging && (Math.Abs(d.X) > DragThreshold || Math.Abs(d.Y) > DragThreshold))
-                        bgDragging = true;
-                }),
-                true);
-
-            diagramCanvas.AddHandler(UIElement.PreviewMouseLeftButtonUpEvent,
-                new MouseButtonEventHandler((s, e) =>
-                {
-                    var src = e.OriginalSource as DependencyObject;
-
-                    if (IsInteractiveClick(src)) { bgDownPos = null; bgDragging = false; return; }
-
-                    if (bgDownPos != null && !bgDragging)
-                        ClearSelectionAndHighlights(onVertexSelected);
-
-                    bgDownPos = null;
-                    bgDragging = false;
-                }),
-                true);
+            EnsureBackgroundHandlersInstalled(diagramCanvas, onVertexSelected);
 
             graphArea.GenerateGraph(true);
             graphArea.SetVerticesDrag(true, true);
@@ -1346,12 +1302,81 @@ namespace MasterMetrology.Core.UI.Rendering
                 });
             }
         }
-        private bool _bgHandlersInstalled;
 
-        public void test()
+        private bool _bgHandlersInstalled = false;
+        public void EnsureBackgroundHandlersInstalled(Canvas diagramCanvas, Action<GraphVertex?>? onVertexSelected)
         {
-            //(LastGraphArea.VertexList.First().Value as SimpleVertexControl).SetBiggerBorder();
-            //LastGraphArea.AddVertex()
+            if (_bgHandlersInstalled || diagramCanvas == null) 
+                return;
+
+            _bgHandlersInstalled = true;
+
+            Point? bgDownPos = null;
+            bool bgDragging = false;
+            const double DragThreshold = 6; // px
+
+            diagramCanvas.AddHandler(UIElement.PreviewMouseLeftButtonDownEvent,
+                new MouseButtonEventHandler((s, e) =>
+                {
+                    var src = e.OriginalSource as DependencyObject;
+
+                    if (IsInteractiveClick(src)) return;
+
+                    bgDownPos = e.GetPosition(diagramCanvas);
+                    bgDragging = false;
+                }),
+                true);
+
+            diagramCanvas.AddHandler(UIElement.PreviewMouseMoveEvent,
+                new MouseEventHandler((s, e) =>
+                {
+                    if (bgDownPos == null) return;
+                    if (e.LeftButton != MouseButtonState.Pressed) return;
+
+                    var p = e.GetPosition(diagramCanvas);
+                    var d = p - bgDownPos.Value;
+
+                    if (!bgDragging && (Math.Abs(d.X) > DragThreshold || Math.Abs(d.Y) > DragThreshold))
+                        bgDragging = true;
+                }),
+                true);
+
+            diagramCanvas.AddHandler(UIElement.PreviewMouseLeftButtonUpEvent,
+                new MouseButtonEventHandler((s, e) =>
+                {
+                    var src = e.OriginalSource as DependencyObject;
+
+                    if (IsInteractiveClick(src)) { bgDownPos = null; bgDragging = false; return; }
+
+                    if (bgDownPos != null && !bgDragging)
+                        ClearSelectionAndHighlights(onVertexSelected);
+
+                    bgDownPos = null;
+                    bgDragging = false;
+                }),
+                true);
         }
+
+        public void ResetVisuals(Canvas graphLayer)
+        {
+            CleanupLastGraphArea(graphLayer);
+
+            if (graphLayer != null) 
+                graphLayer.Children.Clear();
+
+            _vertexMap.Clear();
+            _vcByFullIndex.Clear();
+            _sizeByFullIndex.Clear();
+            _pendingPlacements.Clear();
+            _edgeLabelMap.Clear();
+            _edgeBase.Clear();
+            _hovered.Clear();
+
+            _selectedVertex = null;
+            _selectedFullIndex = null;
+            _pendingSelectFullIndex = null;
+            _lastRoots = null;    
+        }
+
     }
 }

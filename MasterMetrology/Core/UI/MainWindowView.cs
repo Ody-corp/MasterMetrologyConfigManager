@@ -43,6 +43,7 @@ namespace MasterMetrology.Core.UI
             OnPropertyChanged(nameof(StatePanelDataChange));
         }
 
+        private bool firstTime = true;
 
         public MainWindowView(ProcessController processController, PanAndZoomController panAndZoomController)
         {
@@ -120,7 +121,7 @@ namespace MasterMetrology.Core.UI
         public RelayCommand CreateNewFileCommand { get; }
 
         // --------- SELECTION ----------
-        public GraphVertex? SelectedVertex { get; private set; }
+        public GraphVertex? SelectedVertex { get; set; }
         public bool IsSelectedVertex => SelectedVertex == null;
         public bool IsSelectedVertexAndSection => SelectedVertex == null || (SelectedState != null && SelectedState.IsSection);
         private StateViewModel? _selectedState;
@@ -426,7 +427,7 @@ namespace MasterMetrology.Core.UI
 
             RefreshCandidates();
             RefreshTransitionsFilter();
-            //RaiseAllCanExecute();
+            RaiseAllCanExecute();
 
             OnPropertyChanged(nameof(InputsDef));
             OnPropertyChanged(nameof(OutputsDef));
@@ -581,6 +582,7 @@ namespace MasterMetrology.Core.UI
             RemoveInputCommand.RaiseCanExecuteChanged();
             AddOutputCommand.RaiseCanExecuteChanged();
             RemoveOutputCommand.RaiseCanExecuteChanged();
+            CreateNewFileCommand.RaiseCanExecuteChanged();
         }
 
         private void FillListTransInputs()
@@ -676,6 +678,9 @@ namespace MasterMetrology.Core.UI
 
         private void ImportFile()
         {
+            if (_processController.ProcessDecisionIfNotSavedDataToNewFile())
+                return;   
+
             OpenFileDialog ofd = new OpenFileDialog
             {
                 Title = "Chose file",
@@ -686,6 +691,11 @@ namespace MasterMetrology.Core.UI
 
             if (response == true)
             {
+                
+                _processController.ResetForNewFile();
+                RefreshFromController();
+
+
                 string filepath = ofd.FileName;
 
                 _processController.LoadDataXML(filepath);
@@ -695,7 +705,8 @@ namespace MasterMetrology.Core.UI
 
         private void CreateNewFile()
         {
-
+            if (!_processController.ProcessDecisionIfNotSavedDataToNewFile())
+                _processController.ResetForNewFile();
         }
 
         private void CenterView()
