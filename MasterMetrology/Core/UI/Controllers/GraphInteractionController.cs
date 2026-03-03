@@ -23,9 +23,12 @@ namespace MasterMetrology.Core.UI.Controllers
         private SectionAwareEdgeRouter _router;
 
         // drag tracking
+        private readonly Dictionary<VertexControl, Point> _startPos = new();
         private readonly Dictionary<VertexControl, Point> _lastPos = new();
         private readonly HashSet<VertexControl> _dragging = new();
+        private readonly HashSet<VertexControl> _moved = new();
 
+        private const double DRAG_START_THRESHOLD = 2.0; // px
         public void Attach(StateGraphArea area, List<StateModelData> roots, SectionAwareEdgeRouter router)
         {
             _area = area ?? throw new ArgumentNullException(nameof(area));
@@ -49,7 +52,12 @@ namespace MasterMetrology.Core.UI.Controllers
             if (sender is not VertexControl vc) return;
 
             _dragging.Add(vc);
-            _lastPos[vc] = vc.GetPosition(final: false);
+
+            var pos = vc.GetPosition(final: false);
+            _startPos[vc] = pos;
+            _lastPos[vc] = pos;
+
+            _moved.Remove(vc);
         }
 
         private void OnLostCapture(object sender, MouseEventArgs e)
@@ -66,10 +74,19 @@ namespace MasterMetrology.Core.UI.Controllers
 
         private void FinishDrag(VertexControl vc)
         {
-            if (_dragging.Remove(vc))
-            {
-                _lastPos.Remove(vc);
+            if (!_dragging.Remove(vc)) return;
 
+            bool moved = _moved.Contains(vc);
+
+            _moved.Remove(vc);
+            _lastPos.Remove(vc);
+            _startPos.Remove(vc);
+
+            if (moved)
+            {
+                //_lastPos.Remove(vc);
+                
+                //if (_firstPos.X != _lastPos.Last().Value.X || _firstPos.Y != _lastPos.Last().Value.Y)
                 RequestReroute(immediate: true);
             }
         }
@@ -80,6 +97,7 @@ namespace MasterMetrology.Core.UI.Controllers
             if (!_dragging.Contains(vc)) return;
 
             var cur = vc.GetPosition(final: false);
+
             if (!_lastPos.TryGetValue(vc, out var prev))
             {
                 _lastPos[vc] = cur;
@@ -94,6 +112,14 @@ namespace MasterMetrology.Core.UI.Controllers
 
             _lastPos[vc] = cur;
 
+            if (!_moved.Contains(vc) && _startPos.TryGetValue(vc, out var start))
+            {
+                var mx = cur.X - start.X;
+                var my = cur.Y - start.Y;
+                if (Math.Abs(mx) >= DRAG_START_THRESHOLD || Math.Abs(my) >= DRAG_START_THRESHOLD)
+                    _moved.Add(vc);
+            } 
+
             // AK je to sekcia -> posuň jej subStates spolu
             if (IsSectionVC(vc))
             {
@@ -102,7 +128,8 @@ namespace MasterMetrology.Core.UI.Controllers
             }
 
             // reroute počas drag (throttle)
-            RequestReroute(immediate: false);
+            if (_moved.Contains(vc))
+                RequestReroute(immediate: false);
         }
 
         private static bool IsSectionVC(VertexControl vc)

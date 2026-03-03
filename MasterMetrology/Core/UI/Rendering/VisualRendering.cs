@@ -1,5 +1,4 @@
 ﻿using GraphX.Controls;
-using GraphX.PCL.Common.Models;
 using GraphX.PCL.Common.Enums;
 using MasterMetrology.Core.GraphX;
 using MasterMetrology.Core.GraphX.Controls;
@@ -11,10 +10,6 @@ using System.Windows.Controls;
 using System.Windows.Data;
 using System.Windows.Media;
 using System.Windows.Threading;
-using GraphX.PCL.Common.Interfaces;
-using GraphX.PCL.Logic.Models;
-using GraphX.PCL.Logic.Algorithms.LayoutAlgorithms;
-using GraphX.PCL.Logic.Algorithms.OverlapRemoval;
 using MasterMetrology.Utils;
 using System.Windows.Input;
 using GraphX;
@@ -895,7 +890,8 @@ namespace MasterMetrology.Core.UI.Rendering
             ec.Foreground = stroke;
             ec.StrokeThickness = thickness;
             ec.Opacity = opacity;
-            ec.UpdateEdge();
+            //ec.UpdateEdge();
+            ec.InvalidateVisual();
 
             // LABELS (použi EdgeLabelControls, nie len _edgeLabelMap)
             if (ec.GetLabelControls() != null)
@@ -942,10 +938,10 @@ namespace MasterMetrology.Core.UI.Rendering
             foreach (var e in LastGraph.Edges.OfType<GraphEdge>())
             {
                 if (!LastGraphArea.EdgesList.TryGetValue(e, out var ecObj) || ecObj is not EdgeControl ec) continue;
-                _edgeLabelMap.TryGetValue(e, out var lbl);
+                    _edgeLabelMap.TryGetValue(e, out var lbl);
 
                 if (!_edgeBase.TryGetValue(e, out var b))
-                {
+                    {
                     CacheBaseStyleIfMissing(e, ec, lbl);
                     b = _edgeBase[e];
                 }
@@ -1010,7 +1006,7 @@ namespace MasterMetrology.Core.UI.Rendering
                     lop = 1.0;
                 }
 
-                ApplyEdgeStyle(e, stroke, thick, op, lfg, lbg, lbr, lop);
+                ApplyEdgeStyle(e, stroke, thick, op, lfg, lbg, lbr, lop);                
             }
         }
         private void InstallEdgeAndVertexHighlighting(StateGraphArea graphArea, Action<GraphVertex?>? onVertexSelected)

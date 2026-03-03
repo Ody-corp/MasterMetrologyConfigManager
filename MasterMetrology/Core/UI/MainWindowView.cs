@@ -132,18 +132,13 @@ namespace MasterMetrology.Core.UI
             {
                 if (_selectedState == value) return;
 
-                
-
                 _selectedState = value;
                 _processController.SetSelectedVertex(SelectedVertex);
 
                 OnPropertyChanged();
-
                 LoadDraftFromSelected();
-
                 RefreshCandidates();
                 RefreshTransitionsFilter();
-
                 RaiseAllCanExecute();
             }
         }
@@ -334,60 +329,60 @@ namespace MasterMetrology.Core.UI
         // --------- PUBLIC API CALLED FROM WINDOW ----------
         public void SelectVertex(GraphVertex? v)
         {
-            if (StatePanelDataChange)
-            {
-                Debug.WriteLine($"StatePanelDataChange");
-                var decision = PopUpWindows.DialogWindow(
-                    "Unsaved changes",
-                    "Save changed data of state?",
-                    ["Save", "Discard", "Cancel"]
-                    );
-
-                if (decision == PopUpWindows.ConfirmChangeResult.Cancel)
+                if (StatePanelDataChange)
                 {
+                    Debug.WriteLine($"StatePanelDataChange");
+                    var decision = PopUpWindows.DialogWindow(
+                        "Unsaved changes",
+                        "Save changed data of state?",
+                        ["Save", "Discard", "Cancel"]
+                        );
+
+                    if (decision == PopUpWindows.ConfirmChangeResult.Cancel)
+                    {
+                        OnPropertyChanged(nameof(IsSelectedVertex));
+                        OnPropertyChanged(nameof(IsSelectedVertexAndSection));
+                        OnPropertyChanged(nameof(SelectedState));
+                        OnPropertyChanged(nameof(StatePanelDataChange));
+                        return;
+                    }
+                    if (decision == PopUpWindows.ConfirmChangeResult.Apply)
+                    {
+                        StatePanelDataChange = false;
+                        Apply();
+                    }
+                    if (decision == PopUpWindows.ConfirmChangeResult.Discard)
+                    {
+                        StatePanelDataChange = false;
+                    }
+
+                }
+
+                SelectedVertex = v;
+
+                if (v?.State == null)
+                {
+                    SelectedState = null;
                     OnPropertyChanged(nameof(IsSelectedVertex));
                     OnPropertyChanged(nameof(IsSelectedVertexAndSection));
-                    OnPropertyChanged(nameof(SelectedState));
                     OnPropertyChanged(nameof(StatePanelDataChange));
                     return;
                 }
-                if (decision == PopUpWindows.ConfirmChangeResult.Apply)
+
+                if (_processController.modelToViewModel.TryGetValue(v.State, out var svm))
                 {
-                    StatePanelDataChange = false;
-                    Apply();
+                    SelectedState = svm;
                 }
-                if (decision == PopUpWindows.ConfirmChangeResult.Discard)
+                else
                 {
-                    StatePanelDataChange = false;
+                    SelectedState = FlatStates.FirstOrDefault(s => s.FullIndex == v.State.FullIndex);
                 }
 
-            }
-
-            SelectedVertex = v;
-
-            if (v?.State == null)
-            {
-                SelectedState = null;
                 OnPropertyChanged(nameof(IsSelectedVertex));
                 OnPropertyChanged(nameof(IsSelectedVertexAndSection));
                 OnPropertyChanged(nameof(StatePanelDataChange));
-                return;
-            }
 
-            if (_processController.modelToViewModel.TryGetValue(v.State, out var svm))
-            {
-                SelectedState = svm;
-            }
-            else
-            {
-                SelectedState = FlatStates.FirstOrDefault(s => s.FullIndex == v.State.FullIndex);
-            }
-
-            OnPropertyChanged(nameof(IsSelectedVertex));
-            OnPropertyChanged(nameof(IsSelectedVertexAndSection));
-            OnPropertyChanged(nameof(StatePanelDataChange));
-
-            FillListTransInputs();
+                FillListTransInputs();
         }
 
         public void RefreshFromController()
@@ -434,6 +429,7 @@ namespace MasterMetrology.Core.UI
         }
 
         // --------- INTERNAL HELPERS ----------
+        private readonly HashSet<StateViewModel> _draftFlagged = new HashSet<StateViewModel>();
         private void LoadDraftFromSelected()
         {
             _supressStatePanelDirty = true;
@@ -441,11 +437,7 @@ namespace MasterMetrology.Core.UI
             ChildToAdd = null;
             SelectedChild = null;
 
-            foreach (var vm in FlatStates)
-            {
-                vm.IsDraftAdded = false;
-                vm.IsDraftRemoved = false;
-            }
+            ClearDraftFlags();
 
             if (SelectedState == null)
             {
@@ -475,6 +467,17 @@ namespace MasterMetrology.Core.UI
 
             _supressStatePanelDirty = false;
         }
+
+        private void ClearDraftFlags()
+        {
+            foreach (var vm in _draftFlagged)
+            {
+                vm.IsDraftAdded = false;
+                vm.IsDraftRemoved = false;
+            }
+            _draftFlagged.Clear();
+        }
+
         private void UpdateDraftMarkers()
         {
             if (SelectedState == null) return;
