@@ -7,8 +7,12 @@
         mc:Ignorable="d"
         xmlns:utils="clr-namespace:MasterMetrology.Utils"
         xmlns:local="clr-namespace:MasterMetrology"
-        Title="MainWindow" Height="1080" Width="1920" WindowState="Maximized">
-        
+        Title="MainWindow" Height="1080" Width="1920" WindowState="Maximized"
+        FocusManager.IsFocusScope="True"
+        Focusable="True"
+        MouseDown="Window_PreviewMouseDown"
+        >
+
     <Window.Resources>
         <Style TargetType="{x:Type ComboBoxItem}"
            BasedOn="{StaticResource {x:Type ComboBoxItem}}">

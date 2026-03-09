@@ -179,5 +179,12 @@ namespace MasterMetrology.Core.UI.Controllers
             return new Point(wx, wy);
         }
 
+        public void PanBy(double dx, double dy)
+        {
+            _panTransform.X -= dx;
+            _panTransform.Y -= dy;
+            ClampPan();
+        }
+        public double GetZoom() => _zoomTransform.ScaleX;
     }
 }
