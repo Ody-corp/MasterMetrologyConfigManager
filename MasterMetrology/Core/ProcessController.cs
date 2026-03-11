@@ -74,17 +74,34 @@ namespace MasterMetrology
                 ResetForNewFile();
 
             SaveOldXMLPath(filePath);
-            var list = _fileReader.LoadDataFromFile(filePath);
 
-            inputsDefModelDatas.Clear();
-            foreach (var i in list.InputsDefinition)
-                inputsDefModelDatas.Add(i);
+            try
+            {
+                var list = _fileReader.LoadDataFromFile(filePath);
 
-            outputsDefModelDatas.Clear();
-            foreach (var o in list.OutputDefinition)
-                outputsDefModelDatas.Add(o);
+                inputsDefModelDatas.Clear();
+                foreach (var i in list.InputsDefinition)
+                    inputsDefModelDatas.Add(i);
 
-            statesModelDatas = list.FullListStateModelData;
+                outputsDefModelDatas.Clear();
+                foreach (var o in list.OutputDefinition)
+                    outputsDefModelDatas.Add(o);
+
+                statesModelDatas = list.FullListStateModelData;
+            }
+            catch (Exception ex)
+            {
+                var sfd = MessageBox.Show(
+                    "Not supported format.",
+                    "Error",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Error);
+
+                if (Config.DEBUG_MODE)
+                    Debug.WriteLine($"[LOAD DATA] Couldn't not read file. -> {ex.Message}");
+
+                return;
+            }
 
             BuildViewModelTreeFromModels(statesModelDatas);
 
