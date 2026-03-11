@@ -90,8 +90,6 @@ namespace MasterMetrology
 
             PopulateTransitions(statesModelDatas);
 
-            //WireMonitorChanges();
-
             visualRender.RenderGraph(statesModelDatas, viewPort, v => VertexSelected?.Invoke(v), diagramCanvas);
         }
 
@@ -127,7 +125,9 @@ namespace MasterMetrology
 
         private void PopulateTransitions(List<StateModelData> roots)
         {
-            Debug.WriteLine($"POLUTE TRANSITIONS");
+            if (Config.DEBUG_MODE)
+                Debug.WriteLine($"POLUTE TRANSITIONS");
+            
             void doPopulate()
             {
                 AllTransitions.Clear();
@@ -143,7 +143,9 @@ namespace MasterMetrology
                             var nextVm = GetVmOfModel(FindStateByFullIndex(t.NextStateId));
 
                             AllTransitions.Add(new TransitionViewModel(t, fromVm, nextVm));
-                            Debug.WriteLine($"Transition - {s.Name} {s.FullIndex} -> {t.NextState.Name} {t.NextState.FullIndex}");
+
+                            if (Config.DEBUG_MODE)
+                                Debug.WriteLine($"Transition - {s.Name} {s.FullIndex} -> {t.NextState.Name} {t.NextState.FullIndex}");
                         }
                     }
 
@@ -345,7 +347,9 @@ namespace MasterMetrology
         public void ApplyPendingChildChanges(GraphVertex selectedVertex, StateModelData parent, string newIndex)
         {
             movedPairs = new List<(string oldFull, string newFull)>();
-            Debug.WriteLine($"pendingAdds-{_pendingAdds.Count} pendingRemoves-{_pendingRemoves.Count}");
+
+            if (Config.DEBUG_MODE)
+                Debug.WriteLine($"pendingAdds-{_pendingAdds.Count} pendingRemoves-{_pendingRemoves.Count}");
 
             if (selectedVertex.State.Parent != parent)
             {
@@ -458,7 +462,8 @@ namespace MasterMetrology
             }
             catch (Exception ex)
             {
-                Debug.WriteLine("OnPendingChildrenApplied handler failed: " + ex.Message);
+                if (Config.DEBUG_MODE)
+                    Debug.WriteLine("OnPendingChildrenApplied handler failed: " + ex.Message);
             }
 
             MarkSaved();
@@ -572,7 +577,9 @@ namespace MasterMetrology
 
         private StateModelData CreateNewStateInternal(StateModelData? parent, Point world)
         {
-            Debug.WriteLine($"Creating new State. World pos: X:{world.X}, Y:{world.Y}");
+            if (Config.DEBUG_MODE)
+                Debug.WriteLine($"Creating new State. World pos: X:{world.X}, Y:{world.Y}");
+            
             var nextIdx = GetNextIndexForParent(parent);
             var idxStr = nextIdx.ToString();
 
@@ -584,10 +591,6 @@ namespace MasterMetrology
                 Parent = parent,
                 SubStatesData = new ObservableCollection<StateModelData>(),
                 TransitionsData = new ObservableCollection<TransitionModelData>(),
-
-                //potrebujem to?
-                LayoutX = world.X,
-                LayoutY = world.Y,
             };
 
             newState.FullIndex = (parent == null) ? newState.Index : $"{parent.FullIndex}.{newState.Index}";
@@ -613,7 +616,8 @@ namespace MasterMetrology
 
             DataChanged?.Invoke();
 
-            Debug.WriteLine($"Successfuly created.");
+            if (Config.DEBUG_MODE)
+                Debug.WriteLine($"Successfuly created.");
 
             return newState;
         }
@@ -880,7 +884,9 @@ namespace MasterMetrology
 
         private void ItemChanged(object? sender, PropertyChangedEventArgs e)
         {
-            Debug.WriteLine("Change");
+            if (Config.DEBUG_MODE)
+                Debug.WriteLine("Change");
+            
             MarkDirty();
         }
 

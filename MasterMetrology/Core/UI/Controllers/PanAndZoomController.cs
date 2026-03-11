@@ -146,7 +146,7 @@ namespace MasterMetrology.Core.UI.Controllers
             var zoomX = _zoomTransform.ScaleX;
             var zoomY = _zoomTransform.ScaleY;
 
-            var offset = _canvasSize * 0.5; // namiesto hardcoded 25000
+            var offset = Config.DEFAULT_VALUE_CANVAS_CENTER;
 
             _panTransform.X = centerX - offset * zoomX;
             _panTransform.Y = centerY - offset * zoomY;
@@ -169,13 +169,15 @@ namespace MasterMetrology.Core.UI.Controllers
             var panX = _panTransform.X;
             var panY = _panTransform.Y;
 
-            var offset = _canvasSize * 0.5;
+            var offset = Config.DEFAULT_VALUE_CANVAS_CENTER;
 
             // world = (screen - pan) / zoom
             var wx = (sx - panX) / zoomX - offset;
             var wy = (sy - panY) / zoomY - offset;
 
-            Debug.WriteLine($"center screen=({sx},{sy}) pan=({panX},{panY}) zoom=({zoomX},{zoomY}) => world=({wx},{wy})");
+            if (Config.DEBUG_MODE)
+                Debug.WriteLine($"center screen=({sx},{sy}) pan=({panX},{panY}) zoom=({zoomX},{zoomY}) => world=({wx},{wy})");
+            
             return new Point(wx, wy);
         }
 

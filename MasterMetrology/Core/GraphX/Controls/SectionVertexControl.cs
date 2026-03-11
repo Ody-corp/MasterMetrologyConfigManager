@@ -36,7 +36,6 @@ namespace MasterMetrology.Core.GraphX.Controls
                 Height = SectionHeight,
                 Background = null,
                 IsHitTestVisible = true,
-                //ContextMenu = Application.Current.FindResource("rightClickContextMenu") as ContextMenu,
                 ContextMenu = cm
             };
 
@@ -48,7 +47,6 @@ namespace MasterMetrology.Core.GraphX.Controls
                 CornerRadius = new CornerRadius(8),
                 BorderThickness = new Thickness(3),
                 BorderBrush = Brushes.SteelBlue,
-                //Background = new SolidColorBrush(Color.FromArgb(40, 30, 60, 100)),
                 IsHitTestVisible = false
             };
 
@@ -59,9 +57,6 @@ namespace MasterMetrology.Core.GraphX.Controls
                 Height = 44,
                 Fill = new SolidColorBrush(Color.FromArgb(160, 30, 60, 120)),
                 IsHitTestVisible = true,
-                
-                //ContextMenu = (Application.Current.FindResource("rightClickContextMenu") as ContextMenu),
-
             };
 
 
@@ -71,7 +66,6 @@ namespace MasterMetrology.Core.GraphX.Controls
                 Foreground = Brushes.White,
                 FontWeight = FontWeights.SemiBold,
                 FontSize = 12,
-                //TextWrapping = TextWrapping.Wrap,
                 TextAlignment = TextAlignment.Center,
                 IsHitTestVisible = false
             };
@@ -160,7 +154,7 @@ namespace MasterMetrology.Core.GraphX.Controls
             cm.DataContext = Application.Current.MainWindow.DataContext;
 
             cm.PlacementTarget = this;
-            cm.Placement = System.Windows.Controls.Primitives.PlacementMode.MousePoint; // otvor pri kurzore
+            cm.Placement = System.Windows.Controls.Primitives.PlacementMode.MousePoint;
             cm.IsOpen = true;
 
             e.Handled = true;

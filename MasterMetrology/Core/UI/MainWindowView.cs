@@ -326,12 +326,28 @@ namespace MasterMetrology.Core.UI
             }
         }
 
+        // --------- DEBUG MODE ----------
+
+        public bool IsDeveloperMode
+        {
+            get => Config.DEBUG_MODE;
+            set
+            {
+                if (Config.DEBUG_MODE == value) return;
+                Config.DEBUG_MODE = value;
+                OnPropertyChanged();
+                RaiseAllCanExecute();
+            }
+        }
+
         // --------- PUBLIC API CALLED FROM WINDOW ----------
         public void SelectVertex(GraphVertex? v)
         {
                 if (StatePanelDataChange)
                 {
-                    Debug.WriteLine($"StatePanelDataChange");
+                    if (Config.DEBUG_MODE)
+                        Debug.WriteLine($"StatePanelDataChange");
+                    
                     var decision = PopUpWindows.DialogWindow(
                         "Unsaved changes",
                         "Save changed data of state?",
@@ -489,14 +505,18 @@ namespace MasterMetrology.Core.UI
 
             foreach (var m in added)
             {
-                Debug.WriteLine($"ADDED - {m.Name} {m.FullIndex}");
+                if (Config.DEBUG_MODE)
+                    Debug.WriteLine($"ADDED - {m.Name} {m.FullIndex}");
+                
                 if (_processController.modelToViewModel.TryGetValue(m, out var vm))
                     vm.IsDraftAdded = true;
             }
 
             foreach (var m in removed)
             {
-                Debug.WriteLine($"REMOVED - {m.Name} {m.FullIndex}");
+                if (Config.DEBUG_MODE)
+                    Debug.WriteLine($"REMOVED - {m.Name} {m.FullIndex}");
+                
                 if (_processController.modelToViewModel.TryGetValue(m, out var vm))
                     vm.IsDraftRemoved = true;
             }
@@ -526,7 +546,6 @@ namespace MasterMetrology.Core.UI
 
             var childList = FlatStates
                 .Where(vm => vm != SelectedState)
-                //.Where(vm => !IsDescendant(SelectedState.StateModel, vm.StateModel))
                 .Where(vm => !IsDescendant(vm.StateModel, SelectedState.StateModel))
                 .Where(vm => draftParentModel == null || vm.StateModel != draftParentModel)
                 .Where(vm => !draftChildModels.Contains(vm.StateModel))
@@ -632,7 +651,6 @@ namespace MasterMetrology.Core.UI
             var input = NewTransitionInput.Trim();
             if (string.IsNullOrWhiteSpace(input)) return;
 
-            // transitions chceme hneď -> voláme controller
             _processController.AddTransition(SelectedState, input, SelectedTransitionTarget);
 
             NewTransitionInput = "";
@@ -655,7 +673,6 @@ namespace MasterMetrology.Core.UI
 
             SelectedState.Name = DraftName;
             SelectedState.Output = DraftOutput;
-            //SelectedState.Index = DraftIndex;
 
             _processController.ClearPendingChildChanges();
 
@@ -721,7 +738,8 @@ namespace MasterMetrology.Core.UI
         {
             if (_processController.Save())
             {
-                Debug.WriteLine($"Successfuly saved file");
+                if (Config.DEBUG_MODE)
+                    Debug.WriteLine($"Successfuly saved file");
             }
             RaiseAllCanExecute();
         }

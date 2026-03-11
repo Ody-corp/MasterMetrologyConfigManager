@@ -78,11 +78,6 @@ namespace MasterMetrology.Core.GraphX.Controls
         // ---- IMPORTANT: call Measure/Arrange on the stored UIElement (_rootCanvas), not on Visual
         protected override Size MeasureOverride(Size constraint)
         {
-            /*            _rootCanvas.Measure(constraint);
-                        // return desired size of rootCanvas
-                        var ds = _rootCanvas.DesiredSize;
-                        return new Size(ds.Width, ds.Height);*/
-
             const double DEFAULT_MAX_LABEL_WIDTH = 300.0;
             const double H_PADDING = 12.0;
             const double V_PADDING = 8.0;

@@ -67,7 +67,7 @@ namespace MasterMetrology.Core
                 dto.Transitions = s.TransitionsData.Select(t => new TransitionXmlDto
                 {
                     Input = t.Input,
-                    NextState = t.NextState.FullIndex // dôležité: ID, nie objekt
+                    NextState = t.NextState.FullIndex
                 }).ToList();
             }
 

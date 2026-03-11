@@ -5,7 +5,9 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using System.Windows;
+using System.Windows.Controls;
 using System.Windows.Input;
+using System.Windows.Threading;
 
 namespace MasterMetrology.Utils
 {
@@ -19,6 +21,18 @@ namespace MasterMetrology.Utils
             _vm = vm;
 
             _window.PreviewKeyDown += OnKeyDown;
+
+            // vráti fokus na window po zavretí MenuItem na topPanel
+            _window.AddHandler(MenuItem.SubmenuClosedEvent,
+                new RoutedEventHandler((s, e) =>
+                {
+                    _window.Dispatcher.BeginInvoke(new Action(() =>
+                    {
+                        Keyboard.ClearFocus();
+                        _window.Focus(); 
+                    }), DispatcherPriority.Input);
+                }),
+                true);
         }
         private void OnKeyDown(object sender, KeyEventArgs e)
         {

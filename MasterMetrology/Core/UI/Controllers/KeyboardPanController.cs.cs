@@ -27,11 +27,9 @@ namespace MasterMetrology.Core.UI.Controllers
             };
             _timer.Tick += OnTick;
 
-            // dôležité: radšej Preview... aby to fungovalo aj keď focus má textbox/combobox
             _window.KeyDown += OnKeyDown;
             _window.KeyUp += OnKeyUp;
 
-            // ak stratíš focus, pustíme klávesy (aby "nezostalo držané")
             _window.Deactivated += (_, __) => ResetKeys();
         }
 
@@ -46,7 +44,6 @@ namespace MasterMetrology.Core.UI.Controllers
                 case Key.Up: _up = true; e.Handled = true; break;
                 case Key.Down: _down = true; e.Handled = true; break;
 
-                // voliteľné: rýchle centrovanie
                 case Key.Home:
                     _panZoom.CenterView();
                     e.Handled = true;
@@ -88,8 +85,6 @@ namespace MasterMetrology.Core.UI.Controllers
             // dt ~ 0.016s
             double dt = _timer.Interval.TotalSeconds;
 
-            // aby sa to správalo prirodzene:
-            // - pri väčšom zoome je "kamera citlivejšia", takže delíme zoomom
             double zoom = Math.Max(0.01, _panZoom.GetZoom());
             double speed = _baseSpeedPxPerSec / zoom;
 

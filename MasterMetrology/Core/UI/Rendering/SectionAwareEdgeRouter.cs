@@ -61,18 +61,28 @@ namespace MasterMetrology.Core.UI.Rendering
             if (roots == null) throw new ArgumentNullException(nameof(roots));
             if (area == null) throw new ArgumentNullException(nameof(area));
 
-            var sw = Stopwatch.StartNew();
-            Log($"[Route] RebuildCaches START roots={roots.Count} verts={area.VertexList?.Count ?? 0}");
+            if (Config.DEBUG_MODE)
+            {
+                var sw = Stopwatch.StartNew();
+                Log($"[Route] RebuildCaches START roots={roots.Count} verts={area.VertexList?.Count ?? 0}");
 
-            var sw1 = Stopwatch.StartNew();
-            BuildContainerChains(roots);
-            Log($"[Route] BuildContainerChains ms={Ms(sw1)} states={_containersByState.Count}");
+                var sw1 = Stopwatch.StartNew();
+                BuildContainerChains(roots);
+                Log($"[Route] BuildContainerChains ms={Ms(sw1)} states={_containersByState.Count}");
 
-            var sw2 = Stopwatch.StartNew();
-            BuildObstacleCaches(area);
-            Log($"[Route] BuildObstacleCaches ms={Ms(sw2)} sections={_sectionRectByFull.Count} leafs={_leafRectByFull.Count}");
+                var sw2 = Stopwatch.StartNew();
+            
+                BuildObstacleCaches(area);
 
-            Log($"[Route] RebuildCaches END totalMs={Ms(sw)}");
+                Log($"[Route] BuildObstacleCaches ms={Ms(sw2)} sections={_sectionRectByFull.Count} leafs={_leafRectByFull.Count}");
+
+                Log($"[Route] RebuildCaches END totalMs={Ms(sw)}");
+            }
+            else
+            {
+                BuildContainerChains(roots);
+                BuildObstacleCaches(area);
+            }
         }
 
         public void RouteAllEdges(StateGraphArea area)
@@ -83,12 +93,20 @@ namespace MasterMetrology.Core.UI.Rendering
             _routeRunId++;
             var runId = _routeRunId;
 
-            var swAll = Stopwatch.StartNew();
-            Log($"[Route] RUN#{runId} START edges={area.EdgesList.Count}");
+            Stopwatch? swAll = null, swWorld = null; 
 
-            var swWorld = Stopwatch.StartNew();
+            if (Config.DEBUG_MODE)
+            {
+                swAll = Stopwatch.StartNew();
+                Log($"[Route] RUN#{runId} START edges={area.EdgesList.Count}");
+
+                swWorld = Stopwatch.StartNew();
+            }
+            
             var world = ComputeWorldBounds(area, WorldPadding);
-            Log($"[Route] RUN#{runId} world={R(world)} cell={CellSize} worldPad={WorldPadding} ms={Ms(swWorld)}");
+
+            if (Config.DEBUG_MODE) 
+                Log($"[Route] RUN#{runId} world={R(world)} cell={CellSize} worldPad={WorldPadding} ms={Ms(swWorld)}");
 
             // heatmap
             var usedCells = new Dictionary<(int x, int y), int>();
@@ -96,12 +114,14 @@ namespace MasterMetrology.Core.UI.Rendering
 
             var swOrder = Stopwatch.StartNew();
             var edgesOrdered = area.EdgesList
-                .Select(kv => (edge: kv.Key as GraphEdge, ec: kv.Value as EdgeControl))
+                .Select(kv => (edge: kv.Key, ec: kv.Value))
                 .Where(x => x.edge != null && x.ec != null)
-                .OrderBy(x => (x.edge!.Source as GraphVertex)?.State?.FullIndex, StringComparer.Ordinal)
-                .ThenBy(x => (x.edge!.Target as GraphVertex)?.State?.FullIndex, StringComparer.Ordinal)
+                .OrderBy(x => x.edge!.Source.State?.FullIndex, StringComparer.Ordinal)
+                .ThenBy(x => x.edge!.Target.State?.FullIndex, StringComparer.Ordinal)
                 .ToList();
-            Log($"[Route] RUN#{runId} order ms={Ms(swOrder)} count={edgesOrdered.Count}");
+            
+            if (Config.DEBUG_MODE)
+                Log($"[Route] RUN#{runId} order ms={Ms(swOrder)} count={edgesOrdered.Count}");
 
             int idx = 0;
             int slowEdges = 0;
@@ -118,21 +138,31 @@ namespace MasterMetrology.Core.UI.Rendering
                 var trgFull = trgV.State?.FullIndex;
                 if (string.IsNullOrWhiteSpace(srcFull) || string.IsNullOrWhiteSpace(trgFull)) continue;
 
-                var swEdge = Stopwatch.StartNew();
-                Log($"[Route] RUN#{runId} EDGE#{idx}/{edgesOrdered.Count} START {srcFull} -> {trgFull}");
+                Stopwatch? swEdge = null, swAllowed = null;
+                if (Config.DEBUG_MODE)
+                {
+                    swEdge = Stopwatch.StartNew();
+                    Log($"[Route] RUN#{runId} EDGE#{idx}/{edgesOrdered.Count} START {srcFull} -> {trgFull}");
+
+                    swAllowed = Stopwatch.StartNew();
+                }
 
                 // allowed sections
-                var swAllowed = Stopwatch.StartNew();
                 var allowedSections = new HashSet<string>(StringComparer.Ordinal);
                 if (_containersByState.TryGetValue(srcFull, out var a))
                     foreach (var s in a) allowedSections.Add(s);
                 if (_containersByState.TryGetValue(trgFull, out var b))
                     foreach (var s in b) allowedSections.Add(s);
 
-                Log($"[Route] allowedSections={allowedSections.Count} ms={Ms(swAllowed)}");
+                Stopwatch? swObs = null;
+                if (Config.DEBUG_MODE)
+                {
+                    Log($"[Route] allowedSections={allowedSections.Count} ms={Ms(swAllowed)}");
 
-                // obstacles
-                var swObs = Stopwatch.StartNew();
+                    // obstacles
+                    swObs = Stopwatch.StartNew();
+                }
+                    
                 var obstacles = new List<WpfRect>(1024);
 
                 foreach (var lr in _leafRectByFull)
@@ -165,10 +195,15 @@ namespace MasterMetrology.Core.UI.Rendering
                 obstacles.Add(sBlock);
                 obstacles.Add(tBlock);
 
-                Log($"[Route] obstacles={obstacles.Count} srcRect={R(srcRect)} trgRect={R(trgRect)} ms={Ms(swObs)}");
+                Stopwatch? swPorts = null;
+                if (Config.DEBUG_MODE)
+                {
+                    Log($"[Route] obstacles={obstacles.Count} srcRect={R(srcRect)} trgRect={R(trgRect)} ms={Ms(swObs)}");
 
-                // ports + leads
-                var swPorts = Stopwatch.StartNew();
+                    // ports + leads
+                    swPorts = Stopwatch.StartNew();
+                }
+                
 
                 var start = PickPort(srcRect, trgRect);
                 var goal = PickPort(trgRect, srcRect);
@@ -179,90 +214,138 @@ namespace MasterMetrology.Core.UI.Rendering
                 var startLead = PushOutFromRect(srcRect, start, trgRect, LEAD);
                 var goalLead = PushOutFromRect(trgRect, goal, srcRect, LEAD);
 
-                Log($"[Route] ports ms={Ms(swPorts)} start={P(start)} goal={P(goal)} startLead={P(startLead)} goalLead={P(goalLead)}");
+                Stopwatch? swA = null;
+                if (Config.DEBUG_MODE)
+                {
+                    Log($"[Route] ports ms={Ms(swPorts)} start={P(start)} goal={P(goal)} startLead={P(startLead)} goalLead={P(goalLead)}");
 
-                // A*
-                var swA = Stopwatch.StartNew();
+                    // A*
+                    swA = Stopwatch.StartNew();
+                }
+                
                 var pts = RouteAStarWithCongestion(
                     startLead, goalLead, obstacles, world, CellSize,
                     usedCells, usedEdges, UsedCellPenalty, UsedEdgePenalty,
                     runId, idx, srcFull, trgFull);
-                var aMs = Ms(swA);
-                Log($"[Route] A* ms={aMs} pts={pts?.Count ?? 0}");
+
+                long? aMs = null;
+                if (Config.DEBUG_MODE)
+                {
+                    aMs = Ms(swA);
+                    Log($"[Route] A* ms={aMs} pts={pts?.Count ?? 0}");
+                }
 
                 if (pts == null || pts.Count < 2)
                 {
-                    var swFb = Stopwatch.StartNew();
+                    Stopwatch? swFb = null;
+                    if (Config.DEBUG_MODE)
+                        swFb = Stopwatch.StartNew();
+
                     pts = FallbackL(startLead, goalLead, obstacles);
-                    Log($"[Route] fallback ms={Ms(swFb)} pts={pts.Count}");
+
+                    if (Config.DEBUG_MODE)
+                        Log($"[Route] fallback ms={Ms(swFb)} pts={pts.Count}");
                 }
 
                 var rawPts = pts;
 
-                // trim endpoints (momentálne máš while vypnuté — aspoň logni, či vôbec sú body v recte)
-                var swTrim = Stopwatch.StartNew();
-                TrimEndpointsInsideRects(pts, srcRect, trgRect);
-                Log($"[Route] trim ms={Ms(swTrim)} pts={pts.Count}");
+                // trim endpoints
+                Stopwatch? swTrim = null; 
+                if (Config.DEBUG_MODE)
+                    swTrim = Stopwatch.StartNew();
+
+                //TrimEndpointsInsideRects(pts, srcRect, trgRect);
+
+                if (Config.DEBUG_MODE)
+                    Log($"[Route] trim ms={Ms(swTrim)} pts={pts.Count}");
 
                 // simplify
-                var swS = Stopwatch.StartNew();
+                Stopwatch? swS = null;
+                if (Config.DEBUG_MODE)
+                    swS = Stopwatch.StartNew();
+
                 pts = RemoveNearDuplicates(pts, 0.5);
                 //pts = SimplifyCollinear(pts);
-                Log($"[Route] simplify ms={Ms(swS)} pts={pts.Count}");
 
-                // dogleg
-                var swDog = Stopwatch.StartNew();
+                Stopwatch? swDog = null;
+                if (Config.DEBUG_MODE)
+                {
+                    Log($"[Route] simplify ms={Ms(swS)} pts={pts.Count}");
+
+                    // dogleg
+                    swDog = Stopwatch.StartNew();
+                }
+                    
                 var len = PolylineLength(pts);
                 if (len < 120)
                 {
                     pts = ForceDoglegIfTooShort(pts, obstacles, CellSize * 2.0);
                     pts = SimplifyCollinear(RemoveNearDuplicates(pts, 0.5));
                 }
-                Log($"[Route] dogleg ms={Ms(swDog)} len={len:0} pts={pts.Count}");
 
-                // stamp usage (toto často vie byť “tichý žrút”)
-                var swStamp = Stopwatch.StartNew();
+                if (Config.DEBUG_MODE)
+                    Log($"[Route] dogleg ms={Ms(swDog)} len={len:0} pts={pts.Count}");
+
+                // stamp usage
+                Stopwatch? swStamp = null;
+                if (Config.DEBUG_MODE)
+                    swStamp = Stopwatch.StartNew();
+
                 StampUsage(pts, world, CellSize, usedCells, usedEdges);
                 StampUsageDense(rawPts, world, CellSize, usedCells, usedEdges);
-                Log($"[Route] stamp ms={Ms(swStamp)} usedCells={usedCells.Count} usedEdges={usedEdges.Count}");
+
+                if (Config.DEBUG_MODE)
+                    Log($"[Route] stamp ms={Ms(swStamp)} usedCells={usedCells.Count} usedEdges={usedEdges.Count}");
 
                 // apply ports (tu sa často vytvoria nové segmenty čo kolidujú)
-                var swAp = Stopwatch.StartNew();
+                Stopwatch? swAp = null; 
+                
+                if (Config.DEBUG_MODE) 
+                    swAp = Stopwatch.StartNew();
+
                 ApplyDirectedPorts(pts, srcRect, trgRect, PORT_OUT, LEAD_OUT);
-                Log($"[Route] ApplyDirectedPorts ms={Ms(swAp)} pts={pts.Count}");
+
+                if (Config.DEBUG_MODE)
+                    Log($"[Route] ApplyDirectedPorts ms={Ms(swAp)} pts={pts.Count}");
 
                 // update edge (UI) – môže byť drahé
-                var swUpd = Stopwatch.StartNew();
+                Stopwatch? swUpd = null; 
+                if (Config.DEBUG_MODE)
+                    swUpd = Stopwatch.StartNew();
+
                 edgeObj.RoutingPoints = pts.Select(p => new GxPoint(p.X, p.Y)).ToArray();
                 ec.UpdateEdge();
-                Log($"[Route] UpdateEdge ms={Ms(swUpd)}");
 
-                var eMs = Ms(swEdge);
-                if (eMs >= SlowEdgeMsThreshold)
+                if (Config.DEBUG_MODE)
                 {
-                    slowEdges++;
-                    Log($"[Route] RUN#{runId} EDGE#{idx} SLOW totalMs={eMs} A*={aMs} pts={pts.Count} obstacles={obstacles.Count}");
+                    Log($"[Route] UpdateEdge ms={Ms(swUpd)}");
+
+                    var eMs = Ms(swEdge);
+                    if (eMs >= SlowEdgeMsThreshold)
+                    {
+                        slowEdges++;
+                        Log($"[Route] RUN#{runId} EDGE#{idx} SLOW totalMs={eMs} A*={aMs} pts={pts.Count} obstacles={obstacles.Count}");
+                    }
+                    Log($"[Route] RUN#{runId} EDGE#{idx} END totalMs={eMs}");
                 }
-                Log($"[Route] RUN#{runId} EDGE#{idx} END totalMs={eMs}");
             }
 
-            var totalMs = Ms(swAll);
-            Log($"[Route] RUN#{runId} END totalMs={totalMs} slowEdges={slowEdges}/{edgesOrdered.Count}");
+            if (Config.DEBUG_MODE)
+            {
+                var totalMs = Ms(swAll);
+                Log($"[Route] RUN#{runId} END totalMs={totalMs} slowEdges={slowEdges}/{edgesOrdered.Count}");
 
-            if (totalMs >= SlowTotalMsThreshold)
-                Log($"[Route] RUN#{runId} SLOW totalMs={totalMs} (threshold={SlowTotalMsThreshold})");
+                if (totalMs >= SlowTotalMsThreshold)
+                    Log($"[Route] RUN#{runId} SLOW totalMs={totalMs} (threshold={SlowTotalMsThreshold})");
+            }
         }
 
         // ---------------- containers ----------------
 
-        private static void TrimEndpointsInsideRects(List<WpfPoint> pts, WpfRect srcRect, WpfRect trgRect)
+        /*private static void TrimEndpointsInsideRects(List<WpfPoint> pts, WpfRect srcRect, WpfRect trgRect)
         {
             if (pts == null || pts.Count == 0) return;
-
-            // NOTE: Máš trim logiku zakomentovanú.
-            // Odporúčanie: zatiaľ len diagnostika – aby si videl, či prvý/posledný bod padá do rectu.
-            // (Keď budeš chcieť, odkomentujeme while a dáme guard aby nevznikol pts.Count<2).
-        }
+        }*/
 
         private static void StampUsageDense(
             List<WpfPoint> pts,
@@ -456,8 +539,6 @@ namespace MasterMetrology.Core.UI.Rendering
             int H = (int)Math.Ceiling(world.Height / cell);
             if (W <= 2 || H <= 2) return null;
 
-            // !!! POZOR: u teba je tu ešte Round() – nechávam, ale logujem to.
-            // Ak chceš, prepneme na Floor + center-of-cell všade konzistentne.
             int ToGX(double x) => (int)Math.Round((x - world.Left) / cell);
             int ToGY(double y) => (int)Math.Round((y - world.Top) / cell);
             WpfPoint FromG(int gx, int gy) => new(world.Left + (gx + 0.5) * cell, world.Top + (gy + 0.5) * cell);
@@ -504,7 +585,8 @@ namespace MasterMetrology.Core.UI.Rendering
 
                 if (expanded > AStarMaxExpansions)
                 {
-                    Log($"[A*] RUN#{runId} EDGE#{edgeIdx} ABORT maxExp={AStarMaxExpansions} src={srcFull} trg={trgFull} W={W} H={H} obs={obstacles.Count} ms={Ms(sw)}");
+                    if (Config.DEBUG_MODE)
+                        Log($"[A*] RUN#{runId} EDGE#{edgeIdx} ABORT maxExp={AStarMaxExpansions} src={srcFull} trg={trgFull} W={W} H={H} obs={obstacles.Count} ms={Ms(sw)}");
                     return null;
                 }
 
@@ -512,7 +594,7 @@ namespace MasterMetrology.Core.UI.Rendering
                 {
                     var path = ReconstructPoints(cur, cameFrom, FromG);
                     var ms = Ms(sw);
-                    if (expanded >= AStarExpandLogThreshold || ms >= 20)
+                    if ((expanded >= AStarExpandLogThreshold || ms >= 20) && Config.DEBUG_MODE)
                     {
                         Log($"[A*] RUN#{runId} EDGE#{edgeIdx} OK exp={expanded} open={open.Count} blocked={blockedChecks} seg={segChecks} neigh={neighborAttempts} ms={ms} pts={path.Count} src={srcFull} trg={trgFull}");
                     }
@@ -560,7 +642,9 @@ namespace MasterMetrology.Core.UI.Rendering
                 }
             }
 
-            Log($"[A*] RUN#{runId} EDGE#{edgeIdx} FAIL exp={expanded} open=0 blocked={blockedChecks} seg={segChecks} neigh={neighborAttempts} ms={Ms(sw)} src={srcFull} trg={trgFull}");
+            if (Config.DEBUG_MODE)
+                Log($"[A*] RUN#{runId} EDGE#{edgeIdx} FAIL exp={expanded} open=0 blocked={blockedChecks} seg={segChecks} neigh={neighborAttempts} ms={Ms(sw)} src={srcFull} trg={trgFull}");
+            
             return null;
         }
 
@@ -945,7 +1029,7 @@ namespace MasterMetrology.Core.UI.Rendering
             }
         }
 
-        // --- tvoje SegmentIntersectsRect / SegmentsIntersect nechávam nezmenené ---
+        // --- SegmentIntersectsRect / SegmentsIntersect ---
         static bool SegmentIntersectsRect(WpfPoint a, WpfPoint b, WpfRect r)
         {
             if (r.Contains(a) || r.Contains(b)) return true;

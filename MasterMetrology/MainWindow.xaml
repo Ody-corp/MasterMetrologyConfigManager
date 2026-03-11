@@ -33,9 +33,6 @@
                     <MenuItem Header="New file" Command="{Binding CreateNewFileCommand}"/>
                     <MenuItem Header="Import file" Command="{Binding ImportFileCommand}"/>
                     <Separator/>
-                    <MenuItem Header="Show States Debug" Click="ShowDebug_Click"/>
-                    <MenuItem Header="Test"/>
-                    <Separator/>
                     <MenuItem Header="Save" Command="{Binding SaveCommand}"/>
                     <MenuItem Header="Save as" Command="{Binding SaveAsCommand}"/>
                     <Separator/>
@@ -64,6 +61,15 @@
                         <MenuItem Header="250%"/>
                         <MenuItem Header="300%"/>
                     </MenuItem>
+                </MenuItem>
+                <MenuItem Header="Settings">
+                    <MenuItem Header="Developer mode"
+                              IsCheckable="True"
+                              IsChecked="{Binding IsDeveloperMode}"/>
+                </MenuItem>
+                <MenuItem Header="Developer"
+                          Visibility="{Binding IsDeveloperMode, Converter={StaticResource BoolToVis}}">
+                    <MenuItem Header="Show States Debug" Click="ShowDebug_Click" />
                 </MenuItem>
             </Menu>
 

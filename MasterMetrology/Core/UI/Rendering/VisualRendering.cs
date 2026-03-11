@@ -169,7 +169,8 @@ namespace MasterMetrology.Core.UI.Rendering
                     }
                     catch (Exception ex)
                     {
-                        Debug.WriteLine("RenderGraph: error attaching labels: " + ex.Message);
+                        if (Config.DEBUG_MODE)
+                            Debug.WriteLine("RenderGraph: error attaching labels: " + ex.Message);
                     }
 
 
@@ -204,7 +205,8 @@ namespace MasterMetrology.Core.UI.Rendering
                 }
                 catch (Exception ex)
                 {
-                    Debug.WriteLine($"Custom layout pipeline failed: {ex.Message}");
+                    if (Config.DEBUG_MODE)
+                        Debug.WriteLine($"Custom layout pipeline failed: {ex.Message}");
                 }
 
             }
@@ -250,7 +252,8 @@ namespace MasterMetrology.Core.UI.Rendering
                 }
                 catch (Exception ex)
                 {
-                    Debug.WriteLine("Cleanup remove old GraphArea failed: " + ex.Message);
+                    if (Config.DEBUG_MODE)
+                        Debug.WriteLine("Cleanup remove old GraphArea failed: " + ex.Message);
                 }
 
                 LastGraphArea = null;
@@ -265,7 +268,8 @@ namespace MasterMetrology.Core.UI.Rendering
             }
             catch (Exception ex)
             {
-                Debug.WriteLine("CleanupLastGraphArea failed: " + ex.Message);
+                if (Config.DEBUG_MODE)
+                    Debug.WriteLine("CleanupLastGraphArea failed: " + ex.Message);
             }
         }
 
@@ -308,13 +312,15 @@ namespace MasterMetrology.Core.UI.Rendering
                 {
                     if (!map.TryGetValue(state.FullIndex, out var from))
                     {
-                        Debug.WriteLine($"Missing FROM: {state.FullIndex}");
+                        if (Config.DEBUG_MODE)
+                            Debug.WriteLine($"Missing FROM: {state.FullIndex}");
                         continue;
                     }
 
                     if (!map.TryGetValue(g.Key, out var to))
                     {
-                        Debug.WriteLine($"Missing TO: {g.Key} (from {state.FullIndex})");
+                        if (Config.DEBUG_MODE)
+                            Debug.WriteLine($"Missing TO: {g.Key} (from {state.FullIndex})");
                         continue;
                     }
 
@@ -325,7 +331,6 @@ namespace MasterMetrology.Core.UI.Rendering
             }
 
             if (state.SubStatesData != null)
-
             {
                 foreach (var sub in state.SubStatesData)
                     AddTransitionsRecursive(sub, graph, map);
@@ -370,7 +375,8 @@ namespace MasterMetrology.Core.UI.Rendering
             }
             catch (Exception ex)
             {
-                Debug.WriteLine("AttachBindableLabelToEdge failed: " + ex.Message);
+                if (Config.DEBUG_MODE)
+                    Debug.WriteLine("AttachBindableLabelToEdge failed: " + ex.Message);
             }
         }
 
@@ -401,15 +407,44 @@ namespace MasterMetrology.Core.UI.Rendering
             {
                 if (_edgeLabelMap.TryGetValue(modelEdge, out var label) && label != null)
                 {
-                    try { label.ShowLabel = false; } catch (Exception ex) { Debug.WriteLine("DetachLabelForEdge: ShowLabel=false failed: " + ex.Message); }
-                    try { label.Detach(); } catch (Exception ex) { Debug.WriteLine("DetachLabelForEdge: Detach() failed: " + ex.Message); }
-                    try { if (LastGraphArea != null && LastGraphArea.Children.Contains(label)) LastGraphArea.Children.Remove(label); } catch (Exception ex) { Debug.WriteLine("DetachLabelForEdge: remove from RootArea failed: " + ex.Message); }
+                    try 
+                    { 
+                        label.ShowLabel = false; 
+                    } 
+                    catch (Exception ex) 
+                    { 
+                        if (Config.DEBUG_MODE) 
+                            Debug.WriteLine("DetachLabelForEdge: ShowLabel=false failed: " + ex.Message); 
+                    }
+
+                    try 
+                    { 
+                        label.Detach(); 
+                    } 
+                    catch (Exception ex) 
+                    { 
+                        if (Config.DEBUG_MODE)
+                            Debug.WriteLine("DetachLabelForEdge: Detach() failed: " + ex.Message); 
+                    }
+
+                    try 
+                    { 
+                        if (LastGraphArea != null && LastGraphArea.Children.Contains(label)) 
+                            LastGraphArea.Children.Remove(label); 
+                    } 
+                    catch (Exception ex) 
+                    { 
+                        if (Config.DEBUG_MODE)
+                            Debug.WriteLine("DetachLabelForEdge: remove from RootArea failed: " + ex.Message); 
+                    }
+
                     _edgeLabelMap.Remove(modelEdge);
                 }
             }
             catch (Exception ex)
             {
-                Debug.WriteLine("DetachLabelForEdge failed: " + ex.Message);
+                if (Config.DEBUG_MODE)
+                    Debug.WriteLine("DetachLabelForEdge failed: " + ex.Message);
             }
         }
 
@@ -420,12 +455,16 @@ namespace MasterMetrology.Core.UI.Rendering
             var modelEdge = LastGraph.Edges.OfType<GraphEdge>().FirstOrDefault(e => e.Transitions.Contains(transition));
             if (modelEdge == null)
             {
-                Debug.WriteLine("RemoveTransition: model edge not found.");
+                if (Config.DEBUG_MODE)
+                    Debug.WriteLine("RemoveTransition: model edge not found.");
                 return;
             }
 
             var removed = modelEdge.RemoveTransition(transition);
-            Debug.WriteLine($"RemoveTransition: removed from model, new label='{modelEdge.Text}', removedFlag={removed}");
+
+            if (Config.DEBUG_MODE)
+                Debug.WriteLine($"RemoveTransition: removed from model, new label='{modelEdge.Text}', removedFlag={removed}");
+            
             if (!removed) return;
 
             // if no transitions left -> remove edge from graph and detach label first
@@ -438,7 +477,8 @@ namespace MasterMetrology.Core.UI.Rendering
                 }
                 catch (Exception ex)
                 {
-                    Debug.WriteLine("RemoveTransition: remove edge failed: " + ex.Message);
+                    if (Config.DEBUG_MODE)
+                        Debug.WriteLine("RemoveTransition: remove edge failed: " + ex.Message);
                 }
             }
 
@@ -466,7 +506,8 @@ namespace MasterMetrology.Core.UI.Rendering
             }
             catch (Exception ex)
             {
-                Debug.WriteLine("RemoveTransition: GenerateAllEdges failed: " + ex.Message);
+                if (Config.DEBUG_MODE)
+                    Debug.WriteLine("RemoveTransition: GenerateAllEdges failed: " + ex.Message);
             }
 
 
@@ -480,12 +521,14 @@ namespace MasterMetrology.Core.UI.Rendering
             if (!_vertexMap.TryGetValue(transition.FromState.FullIndex, out var from) ||
                 !_vertexMap.TryGetValue(transition.NextState.FullIndex, out var to))
             {
-                Debug.WriteLine($"AddTransition: vertex not found in map (from={transition.FromState.FullIndex}, to={transition.NextState.FullIndex})");
+                if (Config.DEBUG_MODE)
+                    Debug.WriteLine($"AddTransition: vertex not found in map (from={transition.FromState.FullIndex}, to={transition.NextState.FullIndex})");
                 return;
             }
             if (from == null || to == null)
             {
-                Debug.WriteLine($"AddTransition: source/target vertex not found (from={transition.FromState.FullIndex}, to={transition.NextState.FullIndex})");
+                if (Config.DEBUG_MODE)
+                    Debug.WriteLine($"AddTransition: source/target vertex not found (from={transition.FromState.FullIndex}, to={transition.NextState.FullIndex})");
                 return;
             }
 
@@ -493,7 +536,8 @@ namespace MasterMetrology.Core.UI.Rendering
             if (existingEdge != null)
             {
                 existingEdge.AddTransition(transition);
-                Debug.WriteLine($"AddTransition: added into existing edge, new label='{existingEdge.Text}'");
+                if (Config.DEBUG_MODE)
+                    Debug.WriteLine($"AddTransition: added into existing edge, new label='{existingEdge.Text}'");
             }
             else
             {
@@ -542,7 +586,8 @@ namespace MasterMetrology.Core.UI.Rendering
             }
             catch (Exception ex)
             {
-                Debug.WriteLine("AddTransition: GenerateAllEdges or attach labels failed: " + ex.Message);
+                if (Config.DEBUG_MODE)
+                    Debug.WriteLine("AddTransition: GenerateAllEdges or attach labels failed: " + ex.Message);
             }
 
             LastGraphArea.Dispatcher.BeginInvoke(new Action(() =>
@@ -554,138 +599,6 @@ namespace MasterMetrology.Core.UI.Rendering
 
         }
 
-        private void LayoutRootsMultiColumn(List<StateModelData> roots, StateGraphArea area, double startX, double startY, double gapX, double gapY, double maxColumnHeight)
-        {
-            double x = startX;
-            double y = startY;
-
-            double columnMaxWidth = 0;
-
-            foreach (var model in roots)
-            {
-                if (!TryGetVertexControlByFullIndex(area, model.FullIndex, out var vc)) continue;
-
-                var size = GetControlSize(vc);
-                double w = size.Width;
-                double h = size.Height;
-
-                // wrap do ďalšieho stĺpca
-                if (y + h > startY + maxColumnHeight)
-                {
-                    x += columnMaxWidth + gapX;
-                    y = startY;
-                    columnMaxWidth = 0;
-                }
-
-                vc.SetPosition(x, y);
-
-                y += h + gapY;
-                if (w > columnMaxWidth) columnMaxWidth = w;
-            }
-        }
-        private void ApplySectionLayoutRecursive(StateModelData model, StateGraphArea area, double headerH, double padX, double padY, double childGapX, double childGapY)
-        {
-            if (model == null) return;
-
-            if (model.SubStatesData != null && model.SubStatesData.Count > 0)
-            {
-                LayoutSectionContents(model, area, headerH, padX, padY, childGapX, childGapY);
-            }
-
-            // recursive for substates (states in state)
-            if (model.SubStatesData != null)
-            {
-                foreach (var sub in model.SubStatesData)
-                    ApplySectionLayoutRecursive(sub, area, headerH, padX, padY, childGapX, childGapY);
-            }
-        }
-        private void LayoutSectionContents(StateModelData sectionModel, StateGraphArea area, double headerH, double padX, double padY, double gapX, double gapY)
-        {
-            if (!TryGetVertexControlByFullIndex(area, sectionModel.FullIndex, out var vcSection)) return;
-
-            if (vcSection is not SectionVertexControl sectionControl) return;
-
-            // section pos
-            var secPos = vcSection.GetPosition();
-            double secX = secPos.X;
-            double secY = secPos.Y;
-
-            // order by ID
-            var children = sectionModel.SubStatesData
-                .OrderBy(m => m.FullIndex, FullIndexComparer.Instance)
-                .ToList();
-
-            // inner layer vertex
-            double innerStartX = secX + padX;
-            double innerStartY = secY + headerH + padY;
-
-            double innerMaxHeight = Math.Max(400, sectionControl.SectionHeight - headerH - padY * 2);
-
-            double x = innerStartX;
-            double y = innerStartY;
-            double colMaxWidth = 0;
-
-            double usedMaxRight = innerStartX;
-            double usedMaxBottom = innerStartY;
-
-            foreach (var childModel in children)
-            {
-                if (!TryGetVertexControlByFullIndex(area, childModel.FullIndex, out var vcChild)) continue;
-
-                var size = GetControlSize(vcChild);
-                double w = size.Width;
-                double h = size.Height;
-
-                // wrap
-                if (y + h > innerStartY + innerMaxHeight)
-                {
-                    x += colMaxWidth + gapX;
-                    y = innerStartY;
-                    colMaxWidth = 0;
-                }
-
-                vcChild.SetPosition(x, y);
-
-                y += h + gapY;
-                if (w > colMaxWidth) colMaxWidth = w;
-
-                usedMaxRight = Math.Max(usedMaxRight, x + w);
-                usedMaxBottom = Math.Max(usedMaxBottom, y);
-            }
-
-            // resize sekcie aby obsiahla subStates + padding
-            double requiredWidth = usedMaxRight - secX + padX;
-            double requiredHeight = usedMaxBottom - secY + padY;
-
-            requiredWidth = Math.Max(requiredWidth, 260);
-            requiredHeight = Math.Max(requiredHeight, 180);
-
-            sectionControl.SetSize(requiredWidth, requiredHeight);
-        }
-        private bool TryGetVertexControlByFullIndex(StateGraphArea area, string fullIndex, out VertexControl vc)
-        {
-            vc = null;
-            if (area?.VertexList == null || string.IsNullOrWhiteSpace(fullIndex)) return false;
-
-            foreach (var kv in area.VertexList)
-            {
-                if (kv.Key is GraphVertex gv && gv.State?.FullIndex == fullIndex)
-                {
-                    vc = kv.Value;
-                    return true;
-                }
-            }
-            return false;
-        }
-        private Size GetControlSize(VertexControl vc)
-        {
-            if (vc == null) return new Size(80, 40);
-
-            double w = vc.ActualWidth > 0 ? vc.ActualWidth : vc.Width > 0 ? vc.Width : 80;
-            double h = vc.ActualHeight > 0 ? vc.ActualHeight : vc.Height > 0 ? vc.Height : 40;
-
-            return new Size(w, h);
-        }
         private void BuildVertexControlMap(StateGraphArea area)
         {
             _vcByFullIndex.Clear();
@@ -1153,7 +1066,8 @@ namespace MasterMetrology.Core.UI.Rendering
                     var world = kv.Value;
                     var local = new Point(world.X - gaLeft, world.Y - gaTop);
 
-                    Debug.WriteLine($"Place '{kv.Key}': GraphArea({gaLeft},{gaTop}) World({world.X},{world.Y}) -> Local({local.X},{local.Y})");
+                    if (Config.DEBUG_MODE)
+                        Debug.WriteLine($"Place '{kv.Key}': GraphArea({gaLeft},{gaTop}) World({world.X},{world.Y}) -> Local({local.X},{local.Y})");
 
                     vc.SetPosition(local.X, local.Y);
 

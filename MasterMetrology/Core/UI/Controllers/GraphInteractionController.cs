@@ -189,7 +189,8 @@ namespace MasterMetrology.Core.UI.Controllers
             }
             catch (Exception ex)
             {
-                Debug.WriteLine("DoReroute failed: " + ex.Message);
+                if (Config.DEBUG_MODE)
+                    Debug.WriteLine("DoReroute failed: " + ex.Message);
             }
         }
     }

@@ -5,11 +5,9 @@ namespace MasterMetrology.Utils
 {
     internal static class PerfTimer
     {
-        public const bool Enabled = true;
-
         public static long MeasureMs(Action action)
         {
-            if (!Enabled) { action(); return 0; }
+            if (!Config.DEBUG_MODE) { action(); return 0; }
             var sw = Stopwatch.StartNew();
             action();
             sw.Stop();
@@ -18,7 +16,7 @@ namespace MasterMetrology.Utils
 
         public static T MeasureMs<T>(Func<T> func, out long ms)
         {
-            if (!Enabled) { ms = 0; return func(); }
+            if (!Config.DEBUG_MODE) { ms = 0; return func(); }
             var sw = Stopwatch.StartNew();
             var res = func();
             sw.Stop();
@@ -28,7 +26,7 @@ namespace MasterMetrology.Utils
 
         public static void Log(string label, long ms)
         {
-            if (!Enabled) return;
+            if (!Config.DEBUG_MODE) return;
             Debug.WriteLine($"[PERF] {label}: {ms} ms");
         }
     }

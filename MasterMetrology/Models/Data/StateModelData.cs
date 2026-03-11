@@ -11,9 +11,5 @@ namespace MasterMetrology.Models.Data
         public StateModelData Parent { get; set; } = null;
         public ObservableCollection<StateModelData> SubStatesData { get; set; } = new();
         public ObservableCollection<TransitionModelData> TransitionsData { get; set; } = new();
-
-        //Layout
-        public double LayoutX { get; set; }
-        public double LayoutY { get; set; }
     }
 }
