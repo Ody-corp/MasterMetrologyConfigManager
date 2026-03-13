@@ -356,12 +356,12 @@
                                             <Label>Input</Label>
                                             <TextBox MinWidth="40" MaxWidth="50" Margin="0,3,8,3" 
                                                      Text="{Binding NewTransitionInput, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                                                     IsReadOnly="{Binding IsSelectedVertex}">
+                                                     IsReadOnly="{Binding IsSelectedVertexAndSection}">
                                                 <TextBox.Style>
                                                     <Style TargetType="TextBox">
                                                         <Setter Property="Background" Value="LightGray"/>
                                                         <Style.Triggers>
-                                                            <DataTrigger Binding="{Binding IsSelectedVertex}" Value="False">
+                                                            <DataTrigger Binding="{Binding IsSelectedVertexAndSection}" Value="False">
                                                                 <Setter Property="Background" Value="White"/>
                                                             </DataTrigger>
                                                         </Style.Triggers>
@@ -373,7 +373,7 @@
                                             <ComboBox x:Name="CmbTransitionTarget" MinWidth="300" Margin="0,3,8,3"
                                                       ItemsSource="{Binding FlatStates}"
                                                       SelectedItem="{Binding SelectedTransitionTarget, Mode=TwoWay}"
-                                                      IsEnabled="{Binding IsSelectedVertex, Converter={StaticResource InverseBoolConverter}}">
+                                                      IsEnabled="{Binding IsSelectedVertexAndSection, Converter={StaticResource InverseBoolConverter}}">
                                                 <ComboBox.ItemTemplate>
                                                     <DataTemplate>
                                                         <TextBlock>
