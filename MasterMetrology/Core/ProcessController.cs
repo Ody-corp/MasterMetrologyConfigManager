@@ -473,6 +473,8 @@ namespace MasterMetrology
 
             try
             {
+                DeleteTransitionsForAllSectionStates();
+
                 PopulateTransitions(statesModelDatas);
 
                 visualRender.RenderGraph(statesModelDatas, viewPort, v => VertexSelected?.Invoke(v), diagramCanvas);
@@ -619,6 +621,7 @@ namespace MasterMetrology
             else
             {
                 parent.SubStatesData.Add(newState);
+                DeleteTransitionsForAllSectionStates();
             }
 
             // move vertex after render
@@ -990,5 +993,49 @@ namespace MasterMetrology
             MarkSaved();
             filePath = null;
         }
+
+        private void DeleteTransitionsForAllSectionStates()
+        {
+            var allStates = GetFlatStates();
+
+            var sectionStates = allStates
+        .Where(s => s.SubStatesData != null && s.SubStatesData.Count > 0)
+        .ToList();
+
+            if (sectionStates.Count == 0)
+                return;
+
+            var sectionSet = new HashSet<StateModelData>(sectionStates);
+            var sectionIds = new HashSet<string>(
+                sectionStates
+                    .Where(s => !string.IsNullOrWhiteSpace(s.FullIndex))
+                    .Select(s => s.FullIndex)
+            );
+
+            foreach (var state in allStates)
+            {
+                if (state.TransitionsData == null || state.TransitionsData.Count == 0)
+                    continue;
+
+                var toRemove = state.TransitionsData
+                    .Where(t =>
+                        t != null &&
+                        (
+                            // outgoing zo section
+                            sectionSet.Contains(state)
+                            ||
+                            // incoming do section podľa referencie
+                            (t.NextState != null && sectionSet.Contains(t.NextState))
+                            ||
+                            // incoming do section podľa ID
+                            (!string.IsNullOrWhiteSpace(t.NextStateId) && sectionIds.Contains(t.NextStateId))
+                        ))
+                    .ToList();
+
+                foreach (var tr in toRemove)
+                    state.TransitionsData.Remove(tr);
+            }
+        }
+
     }
 }
