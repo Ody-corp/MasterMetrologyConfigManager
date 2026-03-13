@@ -103,6 +103,9 @@ namespace MasterMetrology
                 return;
             }
 
+            SortInputsDefByIdInPlace();
+            SortOutputsDefByIdInPlace();
+
             BuildViewModelTreeFromModels(statesModelDatas);
 
             PopulateTransitions(statesModelDatas);
