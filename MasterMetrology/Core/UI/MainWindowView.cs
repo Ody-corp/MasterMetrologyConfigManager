@@ -240,7 +240,18 @@ namespace MasterMetrology.Core.UI
         public StateViewModel? SelectedChild
         {
             get => _selectedChild;
-            set { _selectedChild = value; OnPropertyChanged(); RaiseAllCanExecute(); }
+            set 
+            { 
+                _selectedChild = value;
+
+                if (value != null)
+                    SetLastSelection(LastSelectionKind.Child);
+                else if (_lastSelectionKind == LastSelectionKind.Child)
+                    _lastSelectionKind = LastSelectionKind.None;
+
+                OnPropertyChanged(); 
+                RaiseAllCanExecute(); 
+            }
         }
 
         private StateViewModel? _childToAdd;
@@ -282,6 +293,12 @@ namespace MasterMetrology.Core.UI
             set
             {
                 _selectedTransition = value;
+
+                if (value != null)
+                    SetLastSelection(LastSelectionKind.Transition);
+                else if (_lastSelectionKind == LastSelectionKind.Transition)
+                    _lastSelectionKind = LastSelectionKind.None;
+
                 OnPropertyChanged();
                 RaiseAllCanExecute();
             }
@@ -364,6 +381,11 @@ namespace MasterMetrology.Core.UI
                 _selectedInput = value;
                 oldID_Input_temp = _selectedInput?.ID;
 
+                if (value != null)
+                    SetLastSelection(LastSelectionKind.InputDefinition);
+                else if (_lastSelectionKind == LastSelectionKind.InputDefinition)
+                    _lastSelectionKind = LastSelectionKind.None;
+
                 OnPropertyChanged();
                 RaiseAllCanExecute();
 
@@ -381,6 +403,11 @@ namespace MasterMetrology.Core.UI
             {
                 _selectedOutput = value;
                 oldID_Output_temp = _selectedOutput?.ID;
+
+                if (value != null)
+                    SetLastSelection(LastSelectionKind.OutputDefinition);
+                else if (_lastSelectionKind == LastSelectionKind.OutputDefinition)
+                    _lastSelectionKind = LastSelectionKind.None;
 
                 OnPropertyChanged();
                 RaiseAllCanExecute();
@@ -460,6 +487,8 @@ namespace MasterMetrology.Core.UI
                 {
                     SelectedState = FlatStates.FirstOrDefault(s => s.FullIndex == v.State.FullIndex);
                 }
+
+                SetLastSelection(LastSelectionKind.State);
 
                 OnPropertyChanged(nameof(IsSelectedVertex));
                 OnPropertyChanged(nameof(IsSelectedVertexAndSection));
@@ -1026,6 +1055,91 @@ namespace MasterMetrology.Core.UI
             return text;
         }
 
+        // --------- Logic behind Delete key ----------
+
+        private enum LastSelectionKind
+        {
+            None,
+            State,
+            Transition,
+            InputDefinition,
+            OutputDefinition,
+            Child
+        }
+
+        private LastSelectionKind _lastSelectionKind = LastSelectionKind.None;
+
+        private void SetLastSelection(LastSelectionKind kind)
+        {
+            _lastSelectionKind = kind;
+        }
+
+        public bool CanDeleteLastSelected()
+        {
+            return _lastSelectionKind switch
+            {
+                LastSelectionKind.State => DeleteSingleSelectedStateCommand.CanExecute(null),
+                LastSelectionKind.Transition => RemoveTransitionCommand.CanExecute(null),
+                LastSelectionKind.InputDefinition => RemoveInputCommand.CanExecute(null),
+                LastSelectionKind.OutputDefinition => RemoveOutputCommand.CanExecute(null),
+                LastSelectionKind.Child => RemoveChildCommand.CanExecute(null),
+                _ => false
+            };
+        }
+
+        public void DeleteLastSelected()
+        {
+            string message;
+            Action executeDelete;
+
+            switch (_lastSelectionKind)
+            {
+                case LastSelectionKind.State:
+                    if (!DeleteSingleSelectedStateCommand.CanExecute(null)) return;
+                    message = $"Do you want to delete selected state \"{SelectedState?.Name}\" ({SelectedState?.FullIndex})?";
+                    executeDelete = () => DeleteSingleSelectedStateCommand.Execute(null);
+                    break;
+
+                case LastSelectionKind.Transition:
+                    if (!RemoveTransitionCommand.CanExecute(null)) return;
+                    message = $"Do you want to delete selected transition with input \"{SelectedTransition?.TransitionData?.Input}\"?";
+                    executeDelete = () => RemoveTransitionCommand.Execute(null);
+                    break;
+
+                case LastSelectionKind.InputDefinition:
+                    if (!RemoveInputCommand.CanExecute(null)) return;
+                    message = $"Do you want to delete input definition \"{SelectedInput?.DisplayText}\"?";
+                    executeDelete = () => RemoveInputCommand.Execute(null);
+                    break;
+
+                case LastSelectionKind.OutputDefinition:
+                    if (!RemoveOutputCommand.CanExecute(null)) return;
+                    message = $"Do you want to delete output definition \"{SelectedOutput?.DisplayText}\"?";
+                    executeDelete = () => RemoveOutputCommand.Execute(null);
+                    break;
+
+                case LastSelectionKind.Child:
+                    if (!RemoveChildCommand.CanExecute(null)) return;
+                    message = $"Do you want to remove child \"{SelectedChild?.Name}\" ({SelectedChild?.FullIndex}) from selected state?";
+                    executeDelete = () => RemoveChildCommand.Execute(null);
+                    break;
+
+                default:
+                    return;
+            }
+
+            var result = MessageBox.Show(
+                message,
+                "Confirm delete",
+                MessageBoxButton.YesNo,
+                MessageBoxImage.Question);
+
+            if (result != MessageBoxResult.Yes)
+                return;
+
+            executeDelete();
+            _lastSelectionKind = LastSelectionKind.None;
+        }
 
 
         // --------- INotifyPropertyChanged ----------

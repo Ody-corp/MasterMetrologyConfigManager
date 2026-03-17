@@ -6,6 +6,7 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Controls.Primitives;
 using System.Windows.Input;
 using System.Windows.Threading;
 
@@ -83,6 +84,29 @@ namespace MasterMetrology.Utils
                 e.Handled = true;
                 return;
             }
+            // DEL => Delete Selected State/InputDef/OutputDef/SubState/Transition
+            if (e.Key == Key.Delete)
+            {
+
+                if (IsTypingIntoTextControl())
+                    return;
+
+                if (_vm.CanDeleteLastSelected())
+                {
+                    _vm.DeleteLastSelected();
+                    e.Handled = true;
+                }
+
+                return;
+            }
+        }
+
+        // -------- Helpers --------
+
+        private static bool IsTypingIntoTextControl()
+        {
+            return Keyboard.FocusedElement is TextBoxBase
+                || Keyboard.FocusedElement is PasswordBox;
         }
     }
 }
