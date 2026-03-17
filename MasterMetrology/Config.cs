@@ -27,5 +27,10 @@ namespace MasterMetrology
 
         internal static double TEMP_VALUE_X_CORD = 0;
         internal static double TEMP_VALUE_Y_CORD = 0;
+
+        // PanAndZoomController
+        internal static double MinZoom = 0.1;
+        internal static double MaxZoom = 3.0;
+        internal static double DragThreshold = 6; // px
     }
 }

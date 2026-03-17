@@ -23,10 +23,6 @@ namespace MasterMetrology.Core.UI.Controllers
         private Point _lastMousePos;
         private bool _isPanning;
 
-        private const double MinZoom = 0.4;
-        private const double MaxZoom = 3.0;
-        private const double DragThreshold = 6; // px
-
         public PanAndZoomController(FrameworkElement viewport, ScaleTransform zoom, TranslateTransform pan, double canvasSize)
         {
             _viewport = viewport;
@@ -77,7 +73,7 @@ namespace MasterMetrology.Core.UI.Controllers
             if (!_isPanning)
             {
                 var d = pos - _downPos.Value;
-                if (Math.Abs(d.X) <= DragThreshold && Math.Abs(d.Y) <= DragThreshold)
+                if (Math.Abs(d.X) <= Config.DragThreshold && Math.Abs(d.Y) <= Config.DragThreshold)
                     return;
 
                 // od teraz je to pan
@@ -102,8 +98,8 @@ namespace MasterMetrology.Core.UI.Controllers
             double newScaleX = _zoomTransform.ScaleX * zoomFactor;
             double newScaleY = _zoomTransform.ScaleY * zoomFactor;
 
-            newScaleX = Math.Max(MinZoom, Math.Min(MaxZoom, newScaleX));
-            newScaleY = Math.Max(MinZoom, Math.Min(MaxZoom, newScaleY));
+            newScaleX = Math.Max(Config.MinZoom, Math.Min(Config.MaxZoom, newScaleX));
+            newScaleY = Math.Max(Config.MinZoom, Math.Min(Config.MaxZoom, newScaleY));
 
             _panTransform.X = (_panTransform.X - center.X) * (newScaleX / _zoomTransform.ScaleX) + center.X;
             _panTransform.Y = (_panTransform.Y - center.Y) * (newScaleY / _zoomTransform.ScaleY) + center.Y;
