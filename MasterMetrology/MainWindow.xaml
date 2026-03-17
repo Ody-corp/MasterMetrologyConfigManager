@@ -51,15 +51,17 @@
                 <MenuItem Header="View">
                     <MenuItem Header="_Center" Command="{Binding CenterViewCommand}"/>
                     <MenuItem Header="Zoom">
-                        <MenuItem Header="40%"/>
-                        <MenuItem Header="60%"/>
-                        <MenuItem Header="80%"/>
-                        <MenuItem Header="100%"/>
-                        <MenuItem Header="120%"/>
-                        <MenuItem Header="150%"/>
-                        <MenuItem Header="200%"/>
-                        <MenuItem Header="250%"/>
-                        <MenuItem Header="300%"/>
+                        <MenuItem Header="10%" CommandParameter="0.1" Command="{Binding SetZoomCommand}"/>
+                        <MenuItem Header="20%" CommandParameter="0.2" Command="{Binding SetZoomCommand}"/>
+                        <MenuItem Header="40%" CommandParameter="0.4" Command="{Binding SetZoomCommand}"/>
+                        <MenuItem Header="60%" CommandParameter="0.6" Command="{Binding SetZoomCommand}"/>
+                        <MenuItem Header="80%" CommandParameter="0.8" Command="{Binding SetZoomCommand}"/>
+                        <MenuItem Header="100%" CommandParameter="1.0" Command="{Binding SetZoomCommand}"/>
+                        <MenuItem Header="120%" CommandParameter="1.2" Command="{Binding SetZoomCommand}"/>
+                        <MenuItem Header="150%" CommandParameter="1.5" Command="{Binding SetZoomCommand}"/>
+                        <MenuItem Header="200%" CommandParameter="2.0" Command="{Binding SetZoomCommand}"/>
+                        <MenuItem Header="250%" CommandParameter="2.5" Command="{Binding SetZoomCommand}"/>
+                        <MenuItem Header="300%" CommandParameter="3.0" Command="{Binding SetZoomCommand}"/>
                     </MenuItem>
                 </MenuItem>
                 <MenuItem Header="Settings">

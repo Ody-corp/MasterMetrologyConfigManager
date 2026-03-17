@@ -6,6 +6,7 @@ using Microsoft.Win32;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Diagnostics;
+using System.Globalization;
 using System.Runtime.CompilerServices;
 using System.Text.RegularExpressions;
 using System.Windows;
@@ -62,6 +63,7 @@ namespace MasterMetrology.Core.UI
             ImportFileCommand = new RelayCommand(ImportFile);
             CreateNewFileCommand = new RelayCommand(CreateNewFile, () => InputsDef.Count > 0 || OutputsDef.Count > 0 || FlatStates.Count > 0);
             CenterViewCommand = new RelayCommand(CenterView);
+            SetZoomCommand = new RelayCommand(SetZoom);
 
             AddStateToRootCommand = new RelayCommand(() => { _processController.CreateNewRootStateAtViewCenter(); _processController.MarkDirty(); });
             AddStateToRootAtPointCommand = new RelayCommand(p => { if (p is Point pt) _processController.CreateNewRootStateAt(pt); _processController.MarkDirty(); }, p => p is Point);
@@ -101,6 +103,7 @@ namespace MasterMetrology.Core.UI
         public RelayCommand ExitAppCommand { get; }
         public RelayCommand ImportFileCommand { get; }
         public RelayCommand CenterViewCommand { get; }
+        public RelayCommand SetZoomCommand { get; }
         public RelayCommand AddStateToRootCommand { get; }
         public RelayCommand AddStateToRootAtPointCommand { get; }
         public RelayCommand AddStateAsSubStateCommand { get; }
@@ -1053,6 +1056,14 @@ namespace MasterMetrology.Core.UI
                 return text.Substring(0, dashIndex).Trim();
 
             return text;
+        }
+
+        private void SetZoom(object? parameter)
+        {
+            if (double.TryParse(parameter.ToString(), NumberStyles.Float, CultureInfo.InvariantCulture, out double zoom))
+            {
+                _panAndZoomController.SetZoom(zoom);
+            }
         }
 
         // --------- Logic behind Delete key ----------

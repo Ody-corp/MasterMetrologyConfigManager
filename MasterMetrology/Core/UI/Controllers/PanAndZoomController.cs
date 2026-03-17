@@ -184,5 +184,31 @@ namespace MasterMetrology.Core.UI.Controllers
             ClampPan();
         }
         public double GetZoom() => _zoomTransform.ScaleX;
+
+        public void SetZoom(double targetZoom)
+        {
+            targetZoom = Math.Max(Config.MinZoom, Math.Min(Config.MaxZoom, targetZoom));
+
+            double oldZoomX = _zoomTransform.ScaleX;
+            double oldZoomY = _zoomTransform.ScaleY;
+
+            if (Math.Abs(oldZoomX - targetZoom) < 0.0001 &&
+                Math.Abs(oldZoomY - targetZoom) < 0.0001)
+                return;
+
+            Point center = new Point(_viewport.ActualWidth / 2.0, _viewport.ActualHeight / 2.0);
+
+            double ratioX = targetZoom / oldZoomX;
+            double ratioY = targetZoom / oldZoomY;
+
+            _panTransform.X = (_panTransform.X - center.X) * ratioX + center.X;
+            _panTransform.Y = (_panTransform.Y - center.Y) * ratioY + center.Y;
+
+            _zoomTransform.ScaleX = targetZoom;
+            _zoomTransform.ScaleY = targetZoom;
+
+            ClampPan();
+        }
+
     }
 }
