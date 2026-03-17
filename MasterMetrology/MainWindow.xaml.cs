@@ -4,7 +4,9 @@ using MasterMetrology.Utils;
 using Microsoft.Win32;
 using System.ComponentModel;
 using System.Diagnostics;
+using System.Text.RegularExpressions;
 using System.Windows;
+using System.Windows.Controls;
 using System.Windows.Input;
 
 namespace MasterMetrology
@@ -89,6 +91,43 @@ namespace MasterMetrology
         {
             Keyboard.ClearFocus();
             FocusManager.SetFocusedElement(this, this);
+        }
+
+        private static readonly Regex _nonDigitRegex = new Regex("[^0-9]+");
+
+        private void TransitionInputComboBox_PreviewTextInput(object sender, TextCompositionEventArgs e)
+        {
+            e.Handled = _nonDigitRegex.IsMatch(e.Text);
+        }
+
+        private void TransitionInputComboBox_PreviewKeyDown(object sender, KeyEventArgs e)
+        {
+            if (e.Key == Key.Space)
+                e.Handled = true;
+        }
+
+        private void TransitionInputComboBox_Loaded(object sender, RoutedEventArgs e)
+        {
+            if (sender is ComboBox comboBox &&
+                comboBox.Template.FindName("PART_EditableTextBox", comboBox) is TextBox textBox)
+            {
+                DataObject.RemovePastingHandler(textBox, OnPasteOnlyDigits);
+                DataObject.AddPastingHandler(textBox, OnPasteOnlyDigits);
+            }
+        }
+
+        private void OnPasteOnlyDigits(object sender, DataObjectPastingEventArgs e)
+        {
+            if (!e.DataObject.GetDataPresent(DataFormats.Text))
+            {
+                e.CancelCommand();
+                return;
+            }
+
+            var text = e.DataObject.GetData(DataFormats.Text) as string ?? "";
+
+            if (_nonDigitRegex.IsMatch(text))
+                e.CancelCommand();
         }
 
         private void ShowDebug_Click(object sender, RoutedEventArgs e)

@@ -7,6 +7,7 @@ namespace MasterMetrology.Models.Data
     {
         private string name;
         private string id;
+        public string DisplayText => $"{ID} - {Name}";
         private bool updateDefinition;
         private bool updateParameters;
         private bool updateCalibration;
@@ -24,6 +25,7 @@ namespace MasterMetrology.Models.Data
                 {
                     id = value;
                     OnPropertyChanged(nameof(ID));
+                    OnPropertyChanged(nameof(DisplayText));
                 }
             }
         }
@@ -36,6 +38,7 @@ namespace MasterMetrology.Models.Data
                 {
                     name = value;
                     OnPropertyChanged(nameof(Name));
+                    OnPropertyChanged(nameof(DisplayText));
                 }
             }    
         }

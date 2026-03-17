@@ -1288,5 +1288,29 @@ namespace MasterMetrology.Core.UI.Rendering
             _lastRoots = null;    
         }
 
+        public void RestoreSelection(string? fullIndex)
+        {
+            if (string.IsNullOrWhiteSpace(fullIndex))
+            {
+                _selectedVertex = null;
+                _selectedFullIndex = null;
+                RefreshEdgeVisuals();
+                return;
+            }
+
+            if (_vertexMap.TryGetValue(fullIndex, out var gv))
+            {
+                _selectedVertex = gv;
+                _selectedFullIndex = fullIndex;
+            }
+            else
+            {
+                _selectedVertex = null;
+                _selectedFullIndex = null;
+            }
+
+            RefreshEdgeVisuals();
+        }
+
     }
 }

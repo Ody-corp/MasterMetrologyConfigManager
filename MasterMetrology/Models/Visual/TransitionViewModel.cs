@@ -74,16 +74,6 @@ namespace MasterMetrology.Models.Visual
             }
         }
 
-        public ObservableCollection<Point> PathPoints
-        {
-            get => TransitionData.PathPoints;
-            set
-            {
-                TransitionData.PathPoints = value;
-                OnPropertyChanged(nameof(PathPoints));
-            }
-        }
-
         string Short(string s) => string.IsNullOrEmpty(s) ? "(?)" : s;
 
         public override string ToString() => DisplayText;

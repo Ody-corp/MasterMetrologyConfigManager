@@ -1040,5 +1040,10 @@ namespace MasterMetrology
             }
         }
 
+        public void RestoreVisualSelection(string? fullIndex)
+        {
+            visualRender.RestoreSelection(fullIndex);
+        }
+
     }
 }

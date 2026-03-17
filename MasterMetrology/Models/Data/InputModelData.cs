@@ -7,6 +7,7 @@ namespace MasterMetrology.Models.Data
     {
         private string id;
         private string name;
+        public string DisplayText => $"{ID} - {Name}";
 
         public string ID
         {

@@ -228,11 +228,21 @@
                                         </TextBox>
 
                                         <Label Grid.Row="3" Grid.Column="0" Content="Output"/>
-                                        <TextBox Grid.Row="3" Grid.Column="1" Margin="2.5"
-                                                 Text="{Binding DraftOutput, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                                                 IsReadOnly="{Binding IsSelectedVertexAndSection}">
-                                            <TextBox.Style>
-                                                <Style TargetType="TextBox">
+                                        <ComboBox Grid.Row="3" Grid.Column="1" Margin="2.5"
+                                                  IsEditable="{Binding IsSelectedVertexAndSection, Converter={StaticResource InverseBoolConverter}}"
+                                                  IsTextSearchEnabled="True"
+                                                  ItemsSource="{Binding OutputsDef}"
+                                                  DisplayMemberPath="DisplayText"
+                                                  SelectedItem="{Binding SelectedOutputDefinition, Mode=TwoWay}"
+                                                  Text="{Binding DraftOutput, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                                  IsReadOnly="{Binding IsSelectedVertexAndSection}"
+                                                  IsEnabled="{Binding IsSelectedVertexAndSection, Converter={StaticResource InverseBoolConverter}}"
+                                                  PreviewTextInput="TransitionInputComboBox_PreviewTextInput"
+                                                  PreviewKeyDown="TransitionInputComboBox_PreviewKeyDown"
+                                                  Loaded="TransitionInputComboBox_Loaded">
+
+                                            <ComboBox.Style>
+                                                <Style TargetType="ComboBox">
                                                     <Setter Property="Background" Value="LightGray"/>
                                                     <Style.Triggers>
                                                         <DataTrigger Binding="{Binding IsSelectedVertexAndSection}" Value="False">
@@ -240,8 +250,8 @@
                                                         </DataTrigger>
                                                     </Style.Triggers>
                                                 </Style>
-                                            </TextBox.Style>
-                                        </TextBox>
+                                            </ComboBox.Style>
+                                        </ComboBox>
 
                                         <!-- PARENT: combobox instead of simple textbox -->
                                         <Label Grid.Row="4" Grid.Column="0" Content="Parent"/>
@@ -354,11 +364,21 @@
                                     <DockPanel>
                                         <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="25,4,0,8">
                                             <Label>Input</Label>
-                                            <TextBox MinWidth="40" MaxWidth="50" Margin="0,3,8,3" 
-                                                     Text="{Binding NewTransitionInput, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                                                     IsReadOnly="{Binding IsSelectedVertexAndSection}">
-                                                <TextBox.Style>
-                                                    <Style TargetType="TextBox">
+                                            <ComboBox MinWidth="40" MaxWidth="50" Margin="0,3,8,3" 
+                                                      IsEditable="True"
+                                                      IsTextSearchEnabled="False"
+                                                      TextSearch.TextPath="ID"
+                                                      ItemsSource="{Binding AvailableInputDefinitions}"
+                                                      DisplayMemberPath="DisplayText"
+                                                      IsEnabled="{Binding IsSelectedVertexAndSection, Converter={StaticResource InverseBoolConverter}}"
+                                                      Text="{Binding NewTransitionInput, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                                      SelectedItem="{Binding SelectedInputDefinition, Mode=TwoWay}"
+                                                      IsReadOnly="{Binding IsSelectedVertexAndSection}"
+                                                      PreviewTextInput="TransitionInputComboBox_PreviewTextInput"
+                                                      PreviewKeyDown="TransitionInputComboBox_PreviewKeyDown"
+                                                      Loaded="TransitionInputComboBox_Loaded">
+                                                <ComboBox.Style>
+                                                    <Style TargetType="ComboBox">
                                                         <Setter Property="Background" Value="LightGray"/>
                                                         <Style.Triggers>
                                                             <DataTrigger Binding="{Binding IsSelectedVertexAndSection}" Value="False">
@@ -366,8 +386,8 @@
                                                             </DataTrigger>
                                                         </Style.Triggers>
                                                     </Style>
-                                                </TextBox.Style>
-                                            </TextBox>
+                                                </ComboBox.Style>
+                                            </ComboBox>
 
                                             <Label>Target</Label>
                                             <ComboBox x:Name="CmbTransitionTarget" MinWidth="300" Margin="0,3,8,3"

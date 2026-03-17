@@ -1,5 +1,4 @@
-﻿using GraphX.Controls;
-using MasterMetrology.Core.UI.Controllers;
+﻿using MasterMetrology.Core.UI.Controllers;
 using MasterMetrology.Models.Data;
 using MasterMetrology.Models.Visual;
 using MasterMetrology.Utils;
@@ -11,8 +10,6 @@ using System.Runtime.CompilerServices;
 using System.Text.RegularExpressions;
 using System.Windows;
 using System.Windows.Data;
-using System.Windows.Input;
-using System.Windows.Media;
 
 namespace MasterMetrology.Core.UI
 {
@@ -54,11 +51,11 @@ namespace MasterMetrology.Core.UI
             TransitionsView = CollectionViewSource.GetDefaultView(_processController.AllTransitions);
 
             // Commands
-            ApplyCommand = new RelayCommand(() => { Apply(); _processController.MarkDirty(); StatePanelDataChange = false; OnPropertyChanged(nameof(StatePanelDataChange)); }, () => SelectedState != null && SelectedVertex != null);
+            ApplyCommand = new RelayCommand(Apply, () => SelectedState != null && SelectedVertex != null);
             AddChildCommand = new RelayCommand(() => { AddChild(); _processController.MarkDirty(); StatePanelDataChange = true; OnPropertyChanged(nameof(StatePanelDataChange)); }, () => SelectedState != null && ChildToAdd != null);
             RemoveChildCommand = new RelayCommand(() => { RemoveChild(); _processController.MarkDirty(); StatePanelDataChange = true; OnPropertyChanged(nameof(StatePanelDataChange)); }, () => SelectedState != null && SelectedChild != null);
 
-            AddTransitionCommand = new RelayCommand(() => { AddTransition(); _processController.MarkDirty(); }, () => SelectedState != null && SelectedTransitionTarget != null && !string.IsNullOrWhiteSpace(NewTransitionInput) );
+            AddTransitionCommand = new RelayCommand(() => { AddTransition(); _processController.MarkDirty(); }, () => SelectedState != null && SelectedTransitionTarget != null && !string.IsNullOrWhiteSpace(ExtractInputId(NewTransitionInput)) );
             RemoveTransitionCommand = new RelayCommand(() => { RemoveTransition(); _processController.MarkDirty(); }, () => SelectedTransition != null);
 
             ExitAppCommand = new RelayCommand(ExitApp);
@@ -139,6 +136,7 @@ namespace MasterMetrology.Core.UI
                 LoadDraftFromSelected();
                 RefreshCandidates();
                 RefreshTransitionsFilter();
+                RefreshAvailableInputDefinitions();
                 RaiseAllCanExecute();
             }
         }
@@ -177,11 +175,41 @@ namespace MasterMetrology.Core.UI
             get => _draftOutput;
             set
             {
-                if (!Regex.IsMatch(value, @"^\d*$"))
+                if (_draftOutput == value) 
+                    return;
+
+                var outputId = ExtractOutputId(value);
+
+                if (!Regex.IsMatch(outputId, @"^\d*$"))
                     return;
 
                 MarkStatePanelDirty();
                 _draftOutput = value;
+
+                var matchedOutput = OutputsDef.FirstOrDefault(o => o.ID == outputId);
+
+                if (!ReferenceEquals(_selectedOutputDefinition, matchedOutput))
+                {
+                    _selectedOutputDefinition = matchedOutput;
+                    OnPropertyChanged(nameof(SelectedOutputDefinition));
+                }
+
+                OnPropertyChanged();
+            }
+        }
+
+        private OutputModelData? _selectedOutputDefinition;
+        public OutputModelData? SelectedOutputDefinition
+        {
+            get => _selectedOutputDefinition;
+            set
+            {
+                _selectedOutputDefinition = value;
+
+                if (value != null)
+                    DraftOutput = value.DisplayText;
+
+                MarkStatePanelDirty();
                 OnPropertyChanged();
             }
         }
@@ -267,11 +295,18 @@ namespace MasterMetrology.Core.UI
             get => _newTransitionInput;
             set
             {
-                if (!Regex.IsMatch(value, @"^\d*$"))
+                if (value == _newTransitionInput) 
                     return;
 
-                if (listOfTransitionsInputsOfSelectedState.Contains(value))
-                    return;
+                if (!Regex.IsMatch(value, @"^\d*$")) return;
+
+                if (listOfTransitionsInputsOfSelectedState.Contains(value)) return;
+
+                if (_selectedInputDefinition != null && _selectedInputDefinition.ID != value)
+                {
+                    _selectedInputDefinition = null;
+                    OnPropertyChanged(nameof(SelectedInputDefinition));
+                }
 
                 _newTransitionInput = value;
                 OnPropertyChanged();
@@ -290,6 +325,32 @@ namespace MasterMetrology.Core.UI
                 RaiseAllCanExecute();
             }
         }
+
+        private ObservableCollection<InputModelData> _availableInputDefinitions = new();
+        public ObservableCollection<InputModelData> AvailableInputDefinitions
+        {
+            get => _availableInputDefinitions;
+            private set
+            {
+                _availableInputDefinitions = value;
+                OnPropertyChanged();
+            }
+        }
+        private InputModelData? _selectedInputDefinition;
+        public InputModelData? SelectedInputDefinition
+        {
+            get => _selectedInputDefinition;
+            set
+            {
+                _selectedInputDefinition = value;
+
+                if (value != null)
+                    NewTransitionInput = value.ID;
+
+                OnPropertyChanged();
+            }
+        }
+
         // --------- INPUTS DEFINITIONS ----------
         public ObservableCollection<InputModelData> InputsDef => _processController.InputsDef;
 
@@ -343,36 +404,42 @@ namespace MasterMetrology.Core.UI
         // --------- PUBLIC API CALLED FROM WINDOW ----------
         public void SelectVertex(GraphVertex? v)
         {
-                if (StatePanelDataChange)
+            var previousSelectedVertex = SelectedVertex;
+            var previousSelectedFullIndex = previousSelectedVertex?.State?.FullIndex;
+
+
+            if (StatePanelDataChange)
                 {
-                    if (Config.DEBUG_MODE)
-                        Debug.WriteLine($"StatePanelDataChange");
+                if (Config.DEBUG_MODE)
+                    Debug.WriteLine($"StatePanelDataChange");
                     
-                    var decision = PopUpWindows.DialogWindow(
-                        "Unsaved changes",
-                        "Save changed data of state?",
-                        ["Save", "Discard", "Cancel"]
-                        );
+                var decision = PopUpWindows.DialogWindow(
+                    "Unsaved changes",
+                    "Save changed data of state?",
+                    ["Save", "Discard", "Cancel"]
+                    );
 
-                    if (decision == PopUpWindows.ConfirmChangeResult.Cancel)
-                    {
-                        OnPropertyChanged(nameof(IsSelectedVertex));
-                        OnPropertyChanged(nameof(IsSelectedVertexAndSection));
-                        OnPropertyChanged(nameof(SelectedState));
-                        OnPropertyChanged(nameof(StatePanelDataChange));
-                        return;
-                    }
-                    if (decision == PopUpWindows.ConfirmChangeResult.Apply)
-                    {
-                        StatePanelDataChange = false;
-                        Apply();
-                    }
-                    if (decision == PopUpWindows.ConfirmChangeResult.Discard)
-                    {
-                        StatePanelDataChange = false;
-                    }
+                if (decision == PopUpWindows.ConfirmChangeResult.Cancel)
+                {
+                    _processController.RestoreVisualSelection(previousSelectedFullIndex);
 
+                    OnPropertyChanged(nameof(IsSelectedVertex));
+                    OnPropertyChanged(nameof(IsSelectedVertexAndSection));
+                    OnPropertyChanged(nameof(SelectedState));
+                    OnPropertyChanged(nameof(StatePanelDataChange));
+                    return;
                 }
+                if (decision == PopUpWindows.ConfirmChangeResult.Apply)
+                {
+                    StatePanelDataChange = false;
+                    Apply();
+                }
+                if (decision == PopUpWindows.ConfirmChangeResult.Discard)
+                {
+                    StatePanelDataChange = false;
+                }
+
+            }
 
                 SelectedVertex = v;
 
@@ -438,6 +505,7 @@ namespace MasterMetrology.Core.UI
 
             RefreshCandidates();
             RefreshTransitionsFilter();
+            RefreshAvailableInputDefinitions();
             RaiseAllCanExecute();
 
             OnPropertyChanged(nameof(InputsDef));
@@ -460,6 +528,9 @@ namespace MasterMetrology.Core.UI
                 DraftName = "";
                 DraftIndex = "";
                 DraftOutput = "";
+                SelectedOutputDefinition = null;
+                NewTransitionInput = "";
+                SelectedInputDefinition = null;
                 DraftParent = null;
                 _originalChildren = new HashSet<StateModelData>();
                 _originalParentModel = null;
@@ -471,7 +542,11 @@ namespace MasterMetrology.Core.UI
 
             DraftName = SelectedState.Name ?? "";
             DraftIndex = SelectedState.Index ?? "";
-            DraftOutput = (SelectedState.Output == "-1") ? "" : (SelectedState.Output ?? "");
+            var selectedOutputId = (SelectedState.Output == "-1") ? "" : (SelectedState.Output ?? "");
+            SelectedOutputDefinition = OutputsDef.FirstOrDefault(o => o.ID == selectedOutputId);
+            DraftOutput = SelectedOutputDefinition?.DisplayText ?? selectedOutputId;
+            NewTransitionInput = "";
+            SelectedInputDefinition = null;
             DraftParent = SelectedState.Parent;
 
             foreach (var ch in SelectedState.SubStates)
@@ -617,6 +692,41 @@ namespace MasterMetrology.Core.UI
             }
         }
 
+        private void RefreshAvailableInputDefinitions()
+        {
+            if (SelectedState == null)
+            {
+                AvailableInputDefinitions = new ObservableCollection<InputModelData>(InputsDef);
+                return;
+            }
+
+            var usedInputIds = SelectedState.StateModel.TransitionsData
+                .Select(t => t.Input)
+                .Where(x => !string.IsNullOrWhiteSpace(x))
+                .ToHashSet();
+
+            var available = InputsDef
+                .Where(i => !usedInputIds.Contains(i.ID))
+                .OrderBy(i => int.TryParse(i.ID, out var n) ? n : int.MaxValue)
+                .ThenBy(i => i.ID)
+                .ToList();
+
+            AvailableInputDefinitions = new ObservableCollection<InputModelData>(available);
+        }
+        private string ExtractInputId(string? value)
+        {
+            var text = value?.Trim() ?? "";
+
+            if (string.IsNullOrWhiteSpace(text))
+                return "";
+
+            var dashIndex = text.IndexOf(" - ");
+            if (dashIndex >= 0)
+                return text.Substring(0, dashIndex).Trim();
+
+            return text;
+        }
+
         // --------- COMMAND IMPLEMENTATIONS ----------
         private void AddChild()
         {
@@ -651,10 +761,25 @@ namespace MasterMetrology.Core.UI
             var input = NewTransitionInput.Trim();
             if (string.IsNullOrWhiteSpace(input)) return;
 
+            var inputId = ExtractInputId(NewTransitionInput);
+
+            if (!InputDefinitionExists(inputId))
+            {
+                MessageBox.Show(
+                    $"Input {inputId} does not have a definition.",
+                    "Warning",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Warning);
+                return;
+            }
+
             _processController.AddTransition(SelectedState, input, SelectedTransitionTarget);
 
             NewTransitionInput = "";
+            SelectedInputDefinition = null;
+
             RefreshTransitionsFilter();
+            RefreshAvailableInputDefinitions();
         }
 
         private void RemoveTransition()
@@ -663,16 +788,43 @@ namespace MasterMetrology.Core.UI
             _processController.DeleteTransition(SelectedTransition);
             SelectedTransition = null;
             RefreshTransitionsFilter();
+            RefreshAvailableInputDefinitions();
         }
 
         private void Apply()
         {
             if (SelectedState == null || SelectedVertex == null) return;
 
+            var outputText = DraftOutput?.Trim();
+            var outputId = ExtractOutputId(outputText);
+
+            if (!SelectedState.IsSection)
+            {
+                if (string.IsNullOrWhiteSpace(outputId))
+                {
+                    MessageBox.Show(
+                        "Output must be selected or entered.",
+                        "Warning",
+                        MessageBoxButton.OK,
+                        MessageBoxImage.Warning);
+                    return;
+                }
+
+                if (!OutputDefinitionExists(outputId))
+                {
+                    MessageBox.Show(
+                        $"Output {outputId} does not have a definition.",
+                        "Warning",
+                        MessageBoxButton.OK,
+                        MessageBoxImage.Warning);
+                    return;
+                }
+            }
+
             _statePanelDataChange = false;
 
             SelectedState.Name = DraftName;
-            SelectedState.Output = DraftOutput;
+            SelectedState.Output = outputId;
 
             _processController.ClearPendingChildChanges();
 
@@ -689,6 +841,10 @@ namespace MasterMetrology.Core.UI
             _processController.ApplyPendingChildChanges(SelectedVertex, parentModel, DraftIndex);
 
             RefreshFromController();
+
+            _processController.MarkDirty(); 
+            StatePanelDataChange = false; 
+            OnPropertyChanged(nameof(StatePanelDataChange));
         }
 
         private void ExitApp()
@@ -769,6 +925,7 @@ namespace MasterMetrology.Core.UI
                 Name = "NEW_INPUT"
             });
 
+            RefreshAvailableInputDefinitions();
             RaiseAllCanExecute();
         }
 
@@ -777,6 +934,7 @@ namespace MasterMetrology.Core.UI
             InputsDef.Remove(SelectedInput!);
             SelectedInput = null;
 
+            RefreshAvailableInputDefinitions();
             RaiseAllCanExecute();
         }
 
@@ -837,6 +995,38 @@ namespace MasterMetrology.Core.UI
             Index = "",
             FullIndex = ""
         });
+
+        private bool InputDefinitionExists(string? id)
+        {
+            if (string.IsNullOrWhiteSpace(id))
+                return false;
+
+            return InputsDef.Any(x => x.ID == id.Trim());
+        }
+
+        private bool OutputDefinitionExists(string? id)
+        {
+            if (string.IsNullOrWhiteSpace(id))
+                return false;
+
+            return OutputsDef.Any(x => x.ID == id.Trim());
+        }
+
+        private string ExtractOutputId(string? value)
+        {
+            var text = value?.Trim() ?? "";
+
+            if (string.IsNullOrWhiteSpace(text))
+                return "";
+
+            var dashIndex = text.IndexOf(" - ");
+            if (dashIndex >= 0)
+                return text.Substring(0, dashIndex).Trim();
+
+            return text;
+        }
+
+
 
         // --------- INotifyPropertyChanged ----------
         public event PropertyChangedEventHandler? PropertyChanged;
