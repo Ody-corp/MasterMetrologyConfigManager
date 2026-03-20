@@ -35,11 +35,11 @@
         <DockPanel>
             <Menu DockPanel.Dock="Top">
                 <MenuItem Header="File" >
-                    <MenuItem Header="New file" Command="{Binding CreateNewFileCommand}"/>
-                    <MenuItem Header="Import file" Command="{Binding ImportFileCommand}"/>
+                    <MenuItem Header="New file" Command="{Binding CreateNewFileCommand}" InputGestureText="Ctrl+N"/>
+                    <MenuItem Header="Import file" Command="{Binding ImportFileCommand}" InputGestureText="Ctrl+O"/>
                     <Separator/>
-                    <MenuItem Header="Save" Command="{Binding SaveCommand}"/>
-                    <MenuItem Header="Save as" Command="{Binding SaveAsCommand}"/>
+                    <MenuItem Header="Save" Command="{Binding SaveCommand}" InputGestureText="Ctrl+S"/>
+                    <MenuItem Header="Save as" Command="{Binding SaveAsCommand}" InputGestureText="Ctrl+Shift+S"/>
                     <Separator/>
                     <MenuItem Header="Exit" Command="{Binding ExitAppCommand}"/>
                 </MenuItem>
@@ -57,7 +57,7 @@
                     </MenuItem>
                 </MenuItem>
                 <MenuItem Header="View">
-                    <MenuItem Header="_Center" Command="{Binding CenterViewCommand}"/>
+                    <MenuItem Header="_Center" Command="{Binding CenterViewCommand}" InputGestureText="Home"/>
                     <MenuItem Header="Zoom">
                         <MenuItem Header="10%" CommandParameter="0.1" Command="{Binding SetZoomCommand}"/>
                         <MenuItem Header="20%" CommandParameter="0.2" Command="{Binding SetZoomCommand}"/>
@@ -426,7 +426,7 @@
                                                           Grid.Column="3"
                                                           Margin="0,3,0,3"
                                                           HorizontalAlignment="Stretch"
-                                                          ItemsSource="{Binding FlatStates}"
+                                                          ItemsSource="{Binding TransitionTargetCandidates}"
                                                           SelectedItem="{Binding SelectedTransitionTarget, Mode=TwoWay}"
                                                           IsEnabled="{Binding IsSelectedVertexAndSection, Converter={StaticResource InverseBoolConverter}}">
                                                     <ComboBox.ItemTemplate>

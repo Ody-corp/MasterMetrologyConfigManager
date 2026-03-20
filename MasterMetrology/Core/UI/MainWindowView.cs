@@ -152,6 +152,7 @@ namespace MasterMetrology.Core.UI
                 RefreshCandidates();
                 RefreshTransitionsFilter();
                 RefreshAvailableInputDefinitions();
+                RefreshTransitionTargetCandidates();
                 RaiseAllCanExecute();
             }
         }
@@ -405,6 +406,18 @@ namespace MasterMetrology.Core.UI
 
             }
         }
+        private ObservableCollection<StateViewModel> _transitionTargetCandidates = new();
+        public ObservableCollection<StateViewModel> TransitionTargetCandidates
+        {
+            get => _transitionTargetCandidates;
+            private set
+            {
+                _transitionTargetCandidates = value;
+                OnPropertyChanged();
+                RaiseAllCanExecute();
+            }
+        }
+
         // --------- OUTPUT DEFINITIONS ----------
         public ObservableCollection<OutputModelData> OutputsDef => _processController.OutputsDef;
 
@@ -551,6 +564,7 @@ namespace MasterMetrology.Core.UI
             RefreshCandidates();
             RefreshTransitionsFilter();
             RefreshAvailableInputDefinitions();
+            RefreshTransitionTargetCandidates();
             RaiseAllCanExecute();
 
             OnPropertyChanged(nameof(InputsDef));
@@ -772,6 +786,19 @@ namespace MasterMetrology.Core.UI
 
             return SelectedState.StateModel.TransitionsData
                 .Any(t => ExtractInputId(t.Input) == inputId);
+        }
+
+        private void RefreshTransitionTargetCandidates()
+        {
+            if (SelectedState == null)
+            {
+                TransitionTargetCandidates = new ObservableCollection<StateViewModel>(
+                    FlatStates.Where(s => !s.IsSection));
+                return;
+            }
+
+            TransitionTargetCandidates = new ObservableCollection<StateViewModel>(
+                FlatStates.Where(s => !s.IsSection));
         }
 
 
