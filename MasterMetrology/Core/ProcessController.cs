@@ -13,17 +13,23 @@ using MasterMetrology.Utils;
 using Microsoft.Win32;
 using System.Collections;
 using MasterMetrology.Core.UI;
+using MasterMetrology.Core.History;
 
 namespace MasterMetrology
 {
-    internal class ProcessController(Canvas viewPort, Canvas diagramCanvas, FrameworkElement diagramBorder, PanAndZoomController panAndZoom)
+    internal class ProcessController
     {
-        private Canvas viewPort = viewPort;
-        private Canvas diagramCanvas = diagramCanvas;
-        private FrameworkElement diagramBorder = diagramBorder;
-        private PanAndZoomController panAndZoom = panAndZoom;
+        
+
+        private Canvas viewPort;
+        private Canvas diagramCanvas;
+        private FrameworkElement diagramBorder;
+        private PanAndZoomController panAndZoom;
+        private ProcessHistoryService historyService = new ProcessHistoryService(maxUndoRedoSteps: 100);
 
         public event Action? DataChanged;
+        public event Action? UndoRedoStateChanged;
+        public event Action? GraphChanged;
 
         private FileReader _fileReader = new FileReader();
         private VisualRendering visualRender = new VisualRendering();
@@ -48,6 +54,20 @@ namespace MasterMetrology
 
         private string? _selectedFullIndex;
 
+        public ProcessController(Canvas viewPort, Canvas diagramCanvas, FrameworkElement diagramBorder, PanAndZoomController panAndZoom)
+        {
+            this.viewPort = viewPort;
+            this.diagramCanvas = diagramCanvas;
+            this.diagramBorder = diagramBorder;
+            this.panAndZoom = panAndZoom;
+            historyService.HistoryStateChanged += RaiseUndoRedoStateChanged;
+
+            InitializeHistory(clearStacks: true, isDirty: false);
+        }
+
+        public bool CanUndo => historyService.CanUndo;
+        public bool CanRedo => historyService.CanRedo;
+
         public bool CanSave => !string.IsNullOrWhiteSpace(filePath) && _isDirty;
         public bool CanSaveAs => (statesModelDatas.Count > 0 || inputsDefModelDatas.Count > 0 || outputsDefModelDatas.Count > 0) && _isDirty;
         private string filePath;
@@ -65,8 +85,95 @@ namespace MasterMetrology
             }
         }
 
-        public void MarkDirty() => IsDirty = true;
+        public void MarkDirty()
+        {
+            if (historyService.IsTrackingSuspended)
+                return;
+
+            historyService.RegisterMutation(CaptureSnapshot);
+            IsDirty = true;
+        }
         public void MarkSaved() => IsDirty = false;
+
+        public bool Undo() => historyService.Undo(CaptureSnapshot, RestoreFromSnapshot);
+        public bool Redo() => historyService.Redo(CaptureSnapshot, RestoreFromSnapshot);
+
+        private void InitializeHistory(bool clearStacks, bool isDirty) => historyService.Initialize(CaptureSnapshot, clearStacks, isDirty);
+
+        private void RaiseUndoRedoStateChanged()
+        {
+            UndoRedoStateChanged?.Invoke();
+        }
+
+        private void NotifyGraphChanged() => GraphChanged?.Invoke();
+
+        private ProcessSnapshot CaptureSnapshot(bool isDirty)
+            => historyService.CaptureSnapshot(inputsDefModelDatas, outputsDefModelDatas, statesModelDatas, _selectedFullIndex, isDirty);
+
+        private void RestoreFromSnapshot(ProcessSnapshot snapshot)
+        {
+            using (historyService.SuspendTracking())
+            {
+                var currentStateSignature = historyService.CurrentSnapshot?.StateSignature;
+                if (string.IsNullOrWhiteSpace(currentStateSignature))
+                {
+                    currentStateSignature = historyService.BuildStateSignatureFromStates(statesModelDatas);
+                }
+
+                var statesChanged = currentStateSignature != snapshot.StateSignature;
+
+                inputsDefModelDatas.Clear();
+                foreach (var input in snapshot.Inputs)
+                {
+                    inputsDefModelDatas.Add(new InputModelData
+                    {
+                        ID = input.Id,
+                        Name = input.Name
+                    });
+                }
+
+                outputsDefModelDatas.Clear();
+                foreach (var output in snapshot.Outputs)
+                {
+                    outputsDefModelDatas.Add(new OutputModelData
+                    {
+                        ID = output.Id,
+                        Name = output.Name,
+                        UpdateDefinition = output.UpdateDefinition,
+                        UpdateParameters = output.UpdateParameters,
+                        UpdateCalibration = output.UpdateCalibration,
+                        UpdateMeasuredData = output.UpdateMeasuredData,
+                        UpdateProcessedData = output.UpdateProcessedData
+                    });
+                }
+
+                if (statesChanged)
+                {
+                    statesModelDatas = historyService.RebuildStatesFromSnapshots(snapshot.Roots);
+                    _selectedFullIndex = snapshot.SelectedFullIndex;
+
+                    BuildViewModelTreeFromModels(statesModelDatas);
+                    PopulateTransitions(statesModelDatas);
+                    visualRender.RenderGraph(statesModelDatas, viewPort, v => VertexSelected?.Invoke(v), diagramCanvas);
+                    NotifyGraphChanged();
+
+                    if (!string.IsNullOrWhiteSpace(_selectedFullIndex) &&
+                        FindStateByFullIndex(_selectedFullIndex) != null)
+                    {
+                        visualRender.RequestSelectVertex(_selectedFullIndex);
+                    }
+                    else
+                    {
+                        _selectedFullIndex = null;
+                        visualRender.ClearSelectionState();
+                        VertexSelected?.Invoke(null);
+                    }
+                }
+
+                IsDirty = snapshot.IsDirty;
+                DataChanged?.Invoke();
+            }
+        }
 
         public void LoadDataXML(string filePath)
         {
@@ -111,6 +218,11 @@ namespace MasterMetrology
             PopulateTransitions(statesModelDatas);
 
             visualRender.RenderGraph(statesModelDatas, viewPort, v => VertexSelected?.Invoke(v), diagramCanvas);
+            NotifyGraphChanged();
+            _selectedFullIndex = null;
+            MarkSaved();
+            InitializeHistory(clearStacks: true, isDirty: false);
+            DataChanged?.Invoke();
         }
 
         private void SaveOldXMLPath(string filePath)
@@ -138,6 +250,7 @@ namespace MasterMetrology
 
             ProcessXmlWriter.Save(path, dto);
             MarkSaved();
+            InitializeHistory(clearStacks: false, isDirty: false);
 
             return true;
         }
@@ -211,7 +324,6 @@ namespace MasterMetrology
             void build()
             {
                 StatesViewModel.Clear();
-                //modelToViewModel.Clear();
                 foreach (var r in roots)
                 {
                     var rootVm = CreateVmRecursive(r, null);
@@ -481,6 +593,7 @@ namespace MasterMetrology
                 PopulateTransitions(statesModelDatas);
 
                 visualRender.RenderGraph(statesModelDatas, viewPort, v => VertexSelected?.Invoke(v), diagramCanvas);
+                NotifyGraphChanged();
             }
             catch (Exception ex)
             {
@@ -634,6 +747,7 @@ namespace MasterMetrology
             // re-render + transitions
             PopulateTransitions(statesModelDatas);
             visualRender.RenderGraph(statesModelDatas, viewPort, v => VertexSelected?.Invoke(v), diagramCanvas);
+            NotifyGraphChanged();
 
             visualRender.RequestSelectVertex(newState.FullIndex);
 
@@ -684,6 +798,7 @@ namespace MasterMetrology
 
             PopulateTransitions(statesModelDatas);
             visualRender.RenderGraph(statesModelDatas, viewPort, v => VertexSelected?.Invoke(v), diagramCanvas);
+            NotifyGraphChanged();
 
             DataChanged?.Invoke();
             if (clearSelection)
@@ -763,6 +878,7 @@ namespace MasterMetrology
 
             PopulateTransitions(statesModelDatas);
             visualRender.RenderGraph(statesModelDatas, viewPort, v => VertexSelected?.Invoke(v), diagramCanvas);
+            NotifyGraphChanged();
 
             DataChanged?.Invoke();
             if (clearSelection)
@@ -864,6 +980,9 @@ namespace MasterMetrology
 
             foreach (var item in InputsDef) item.PropertyChanged += ItemChanged;
             foreach (var item in OutputsDef) item.PropertyChanged += ItemChanged;
+
+            if (historyService.CurrentSnapshot == null) 
+                InitializeHistory(clearStacks: true, isDirty: IsDirty);
         }
 
         private void UnwireMonitorChangesIfWired()
@@ -989,12 +1108,15 @@ namespace MasterMetrology
             _selectedFullIndex = null;
                
             visualRender.ResetVisuals(viewPort);
+            NotifyGraphChanged();
 
             VertexSelected?.Invoke(null);
             DataChanged?.Invoke();
 
             MarkSaved();
             filePath = null;
+            InitializeHistory(clearStacks: true, isDirty: false);
+            WireMonitorChanges();
         }
 
         private void DeleteTransitionsForAllSectionStates()
@@ -1002,8 +1124,8 @@ namespace MasterMetrology
             var allStates = GetFlatStates();
 
             var sectionStates = allStates
-        .Where(s => s.SubStatesData != null && s.SubStatesData.Count > 0)
-        .ToList();
+                    .Where(s => s.SubStatesData != null && s.SubStatesData.Count > 0)
+                    .ToList();
 
             if (sectionStates.Count == 0)
                 return;

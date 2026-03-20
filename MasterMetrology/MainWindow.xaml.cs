@@ -46,7 +46,7 @@ namespace MasterMetrology
 
             _keyBindController = new KeyBindController(this, _mainView);
 
-            _processController.DataChanged += () =>
+            _processController.GraphChanged += () =>
             {
                 Dispatcher.Invoke(() => _mainView.RefreshFromController());
             };

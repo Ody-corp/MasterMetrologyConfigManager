@@ -34,6 +34,18 @@ namespace MasterMetrology.Utils
                     }), DispatcherPriority.Input);
                 }),
                 true);
+
+            // vráti fokus po zavretí ContextMenu
+            _window.AddHandler(ContextMenu.ClosedEvent,
+                new RoutedEventHandler((s, e) =>
+                {
+                    _window.Dispatcher.BeginInvoke(new Action(() =>
+                    {
+                        Keyboard.ClearFocus();
+                        _window.Focus();
+                    }), DispatcherPriority.Input);
+                }),
+                true);
         }
         private void OnKeyDown(object sender, KeyEventArgs e)
         {
@@ -84,6 +96,34 @@ namespace MasterMetrology.Utils
                 e.Handled = true;
                 return;
             }
+            // CTRL+Z => Undo
+            if (mods == ModifierKeys.Control && e.Key == Key.Z)
+            {
+                if (ShouldRouteUndoToFocusedTextControl())
+                    return;
+
+                if (_vm.UndoCommand.CanExecute(null))
+                {
+                    _vm.UndoCommand.Execute(null);
+                }
+                e.Handled = true;
+                return;
+            }
+
+            // CTRL+Y or CTRL+SHIFT+Z => Redo
+            if ((mods == ModifierKeys.Control && e.Key == Key.Y) ||
+                (mods.HasFlag(ModifierKeys.Control) && mods.HasFlag(ModifierKeys.Shift) && e.Key == Key.Z))
+            {
+                if (ShouldRouteRedoToFocusedTextControl())
+                    return;
+
+                if (_vm.RedoCommand.CanExecute(null))
+                {
+                    _vm.RedoCommand.Execute(null);
+                }
+                e.Handled = true;
+                return;
+            }
             // DEL => Delete Selected State/InputDef/OutputDef/SubState/Transition
             if (e.Key == Key.Delete)
             {
@@ -103,10 +143,46 @@ namespace MasterMetrology.Utils
 
         // -------- Helpers --------
 
+        private static bool ShouldRouteUndoToFocusedTextControl()
+        {
+            if (Keyboard.FocusedElement is TextBoxBase tb)
+                return tb.IsEnabled && !tb.IsReadOnly && tb.CanUndo;
+
+            // PasswordBox does not expose undo stack; keep default text behavior.
+            if (Keyboard.FocusedElement is PasswordBox pb)
+                return pb.IsEnabled;
+
+            return false;
+        }
+
+        private static bool ShouldRouteRedoToFocusedTextControl()
+        {
+            if (Keyboard.FocusedElement is TextBoxBase tb)
+            {
+                if (!tb.IsEnabled || tb.IsReadOnly)
+                    return false;
+
+                return ApplicationCommands.Redo.CanExecute(null, tb);
+            }
+
+            if (Keyboard.FocusedElement is PasswordBox pb)
+                return pb.IsEnabled;
+
+            return false;
+        }
+
         private static bool IsTypingIntoTextControl()
         {
-            return Keyboard.FocusedElement is TextBoxBase
-                || Keyboard.FocusedElement is PasswordBox;
+            if (Keyboard.FocusedElement is TextBox tb)
+                return tb.IsEnabled && !tb.IsReadOnly;
+
+            if (Keyboard.FocusedElement is RichTextBox rtb)
+                return rtb.IsEnabled && !rtb.IsReadOnly;
+
+            if (Keyboard.FocusedElement is PasswordBox pb)
+                return pb.IsEnabled;
+
+            return false;
         }
     }
 }

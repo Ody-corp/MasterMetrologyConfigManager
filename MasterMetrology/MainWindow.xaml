@@ -44,6 +44,9 @@
                     <MenuItem Header="Exit" Command="{Binding ExitAppCommand}"/>
                 </MenuItem>
                 <MenuItem Header="Edit">
+                    <MenuItem Header="Undo" Command="{Binding UndoCommand}" InputGestureText="Ctrl+Z"/>
+                    <MenuItem Header="Redo" Command="{Binding RedoCommand}" InputGestureText="Ctrl+Y"/>
+                    <Separator/>
                     <MenuItem Header="New state">
                         <MenuItem Header="To root" Command="{Binding AddStateToRootCommand}"/>
                         <MenuItem Header="As SubState" Command="{Binding AddStateAsSubStateCommand}"/>

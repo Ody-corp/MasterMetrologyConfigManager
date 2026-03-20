@@ -42,7 +42,7 @@ namespace MasterMetrology.Core.UI
         }
 
         private bool firstTime = true;
-
+        private DateTime _suppressStatePromptUntilUtc = DateTime.MinValue;
         public MainWindowView(ProcessController processController, PanAndZoomController panAndZoomController)
         {
             _processController = processController;
@@ -78,6 +78,8 @@ namespace MasterMetrology.Core.UI
 
             SaveCommand = new RelayCommand(Save, () => _processController.CanSave);
             SaveAsCommand = new RelayCommand(SaveAs, () => _processController.CanSaveAs);
+            UndoCommand = new RelayCommand(Undo, () => _processController.CanUndo);
+            RedoCommand = new RelayCommand(Redo, () => _processController.CanRedo);
 
             AddInputCommand = new RelayCommand(() => { AddInput(); _processController.MarkDirty(); });
             RemoveInputCommand = new RelayCommand(() => { RemoveInput(); _processController.MarkDirty(); }, () => SelectedInput != null);
@@ -89,6 +91,14 @@ namespace MasterMetrology.Core.UI
             {
                 SaveCommand.RaiseCanExecuteChanged();
                 SaveAsCommand.RaiseCanExecuteChanged();
+                UndoCommand.RaiseCanExecuteChanged();
+                RedoCommand.RaiseCanExecuteChanged();
+            };
+
+            _processController.UndoRedoStateChanged += () =>
+            {
+                UndoCommand.RaiseCanExecuteChanged();
+                RedoCommand.RaiseCanExecuteChanged();
             };
 
             RefreshFromController();
@@ -114,6 +124,8 @@ namespace MasterMetrology.Core.UI
         public RelayCommand DeleteSingleStateCommand { get; }
         public RelayCommand SaveCommand { get; }
         public RelayCommand SaveAsCommand { get; }
+        public RelayCommand UndoCommand { get; }
+        public RelayCommand RedoCommand { get; }
         public RelayCommand AddInputCommand { get; }
         public RelayCommand RemoveInputCommand { get; }
         public RelayCommand AddOutputCommand { get; }
@@ -437,8 +449,12 @@ namespace MasterMetrology.Core.UI
             var previousSelectedVertex = SelectedVertex;
             var previousSelectedFullIndex = previousSelectedVertex?.State?.FullIndex;
 
-
-            if (StatePanelDataChange)
+            var suppressPrompt = DateTime.UtcNow <= _suppressStatePromptUntilUtc;
+            if (suppressPrompt)
+            {
+                StatePanelDataChange = false;
+            }
+            else if (StatePanelDataChange)
                 {
                 if (Config.DEBUG_MODE)
                     Debug.WriteLine($"StatePanelDataChange");
@@ -566,6 +582,7 @@ namespace MasterMetrology.Core.UI
                 DraftParent = null;
                 _originalChildren = new HashSet<StateModelData>();
                 _originalParentModel = null;
+                _supressStatePanelDirty = false;
                 return;
             }
 
@@ -707,6 +724,8 @@ namespace MasterMetrology.Core.UI
             DeleteSingleStateCommand.RaiseCanExecuteChanged();
             SaveCommand.RaiseCanExecuteChanged();
             SaveAsCommand.RaiseCanExecuteChanged();
+            UndoCommand.RaiseCanExecuteChanged();
+            RedoCommand.RaiseCanExecuteChanged();
             AddInputCommand.RaiseCanExecuteChanged();
             RemoveInputCommand.RaiseCanExecuteChanged();
             AddOutputCommand.RaiseCanExecuteChanged();
@@ -920,6 +939,34 @@ namespace MasterMetrology.Core.UI
         private void CenterView()
         {
             _panAndZoomController.CenterView();
+        }
+
+        private void Undo()
+        {
+            _suppressStatePromptUntilUtc = DateTime.UtcNow.AddSeconds(1);
+            StatePanelDataChange = false;
+            OnPropertyChanged(nameof(StatePanelDataChange));
+
+            if (!_processController.Undo())
+                return;
+
+            StatePanelDataChange = false;
+            OnPropertyChanged(nameof(StatePanelDataChange));
+            RaiseAllCanExecute();
+        }
+
+        private void Redo()
+        {
+            _suppressStatePromptUntilUtc = DateTime.UtcNow.AddSeconds(1);
+            StatePanelDataChange = false;
+            OnPropertyChanged(nameof(StatePanelDataChange));
+
+            if (!_processController.Redo())
+                return;
+
+            StatePanelDataChange = false;
+            OnPropertyChanged(nameof(StatePanelDataChange));
+            RaiseAllCanExecute();
         }
 
         private void Save()
