@@ -8,6 +8,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
 using System.Windows.Input;
+using System.Windows.Media;
 using System.Windows.Threading;
 
 namespace MasterMetrology.Utils
@@ -21,7 +22,11 @@ namespace MasterMetrology.Utils
             _window = window;
             _vm = vm;
 
-            _window.PreviewKeyDown += OnKeyDown;
+            _window.AddHandler(UIElement.PreviewKeyDownEvent, new KeyEventHandler(OnKeyDown), true);
+
+            _window.PreviewMouseLeftButtonDown += OnAnyMouseButtonDown;
+            _window.PreviewMouseRightButtonDown += OnAnyMouseButtonDown;
+
 
             // vráti fokus na window po zavretí MenuItem na topPanel
             _window.AddHandler(MenuItem.SubmenuClosedEvent,
@@ -184,5 +189,52 @@ namespace MasterMetrology.Utils
 
             return false;
         }
+
+        private void OnAnyMouseButtonDown(object sender, MouseButtonEventArgs e)
+        {
+            if (e.OriginalSource is not DependencyObject source)
+                return;
+
+            if (!ShouldRefocusWindow(source))
+                return;
+
+            _window.Dispatcher.BeginInvoke(new Action(() =>
+            {
+                Keyboard.ClearFocus();
+                _window.Focus();
+                Keyboard.Focus(_window);
+            }), DispatcherPriority.Input);
+        }
+
+        private static bool ShouldRefocusWindow(DependencyObject? source)
+        {
+            while (source != null)
+            {
+                // sem nezasahovať, aby sa dalo normálne písať / vyberať
+                if (source is TextBoxBase ||
+                    source is PasswordBox ||
+                    source is ComboBox ||
+                    source is MenuItem ||
+                    source is ContextMenu ||
+                    source is ListBoxItem ||
+                    source is ListViewItem)
+                {
+                    return false;
+                }
+
+                // klik na canvas, border, grid, panel atď. => vráť fokus na window
+                if (source is Canvas ||
+                    source is Panel ||
+                    source is Border)
+                {
+                    return true;
+                }
+
+                source = VisualTreeHelper.GetParent(source);
+            }
+
+            return true;
+        }
+
     }
 }
