@@ -56,7 +56,7 @@ namespace MasterMetrology.Core.UI
             AddChildCommand = new RelayCommand(() => { AddChild(); _processController.MarkDirty(); StatePanelDataChange = true; OnPropertyChanged(nameof(StatePanelDataChange)); }, () => SelectedState != null && ChildToAdd != null);
             RemoveChildCommand = new RelayCommand(() => { RemoveChild(); _processController.MarkDirty(); StatePanelDataChange = true; OnPropertyChanged(nameof(StatePanelDataChange)); }, () => SelectedState != null && SelectedChild != null);
 
-            AddTransitionCommand = new RelayCommand(() => { AddTransition(); _processController.MarkDirty(); }, () => SelectedState != null && SelectedTransitionTarget != null && !string.IsNullOrWhiteSpace(ExtractInputId(NewTransitionInput)) );
+            AddTransitionCommand = new RelayCommand(() => { AddTransition(); _processController.MarkDirty(); }, () => SelectedState != null && SelectedTransitionTarget != null && !string.IsNullOrWhiteSpace(ExtractInputId(NewTransitionInput)) && InputDefinitionExists(ExtractInputId(NewTransitionInput)) && !TransitionInputAlreadyUsed(ExtractInputId(NewTransitionInput)));
             RemoveTransitionCommand = new RelayCommand(() => { RemoveTransition(); _processController.MarkDirty(); }, () => SelectedTransition != null);
 
             ExitAppCommand = new RelayCommand(ExitApp);
@@ -319,28 +319,27 @@ namespace MasterMetrology.Core.UI
             }
         }
 
-        private List<string> listOfTransitionsInputsOfSelectedState = new List<string>();
-
         private string _newTransitionInput = "";
         public string NewTransitionInput
         {
             get => _newTransitionInput;
             set
             {
-                if (value == _newTransitionInput) 
+                var inputId = ExtractInputId(value);
+
+                if (inputId == _newTransitionInput) 
                     return;
 
-                if (!Regex.IsMatch(value, @"^\d*$")) return;
+                if (!Regex.IsMatch(inputId, @"^\d*$")) 
+                    return;
 
-                if (listOfTransitionsInputsOfSelectedState.Contains(value)) return;
-
-                if (_selectedInputDefinition != null && _selectedInputDefinition.ID != value)
+                if (_selectedInputDefinition != null && _selectedInputDefinition.ID != inputId)
                 {
                     _selectedInputDefinition = null;
                     OnPropertyChanged(nameof(SelectedInputDefinition));
                 }
 
-                _newTransitionInput = value;
+                _newTransitionInput = inputId;
                 OnPropertyChanged();
                 RaiseAllCanExecute();
             }
@@ -512,8 +511,6 @@ namespace MasterMetrology.Core.UI
                 OnPropertyChanged(nameof(IsSelectedVertex));
                 OnPropertyChanged(nameof(IsSelectedVertexAndSection));
                 OnPropertyChanged(nameof(StatePanelDataChange));
-
-                FillListTransInputs();
         }
 
         public void RefreshFromController()
@@ -733,16 +730,6 @@ namespace MasterMetrology.Core.UI
             CreateNewFileCommand.RaiseCanExecuteChanged();
         }
 
-        private void FillListTransInputs()
-        {
-            listOfTransitionsInputsOfSelectedState.Clear();
-
-            foreach(TransitionModelData trans in SelectedState.StateModel.TransitionsData)
-            {
-                listOfTransitionsInputsOfSelectedState.Add(trans.Input);
-            }
-        }
-
         private void RefreshAvailableInputDefinitions()
         {
             if (SelectedState == null)
@@ -777,6 +764,16 @@ namespace MasterMetrology.Core.UI
 
             return text;
         }
+
+        private bool TransitionInputAlreadyUsed(string inputId)
+        {
+            if (SelectedState?.StateModel?.TransitionsData == null)
+                return false;
+
+            return SelectedState.StateModel.TransitionsData
+                .Any(t => ExtractInputId(t.Input) == inputId);
+        }
+
 
         // --------- COMMAND IMPLEMENTATIONS ----------
         private void AddChild()
@@ -823,14 +820,24 @@ namespace MasterMetrology.Core.UI
                     MessageBoxImage.Warning);
                 return;
             }
+            if (TransitionInputAlreadyUsed(inputId))
+            {
+                MessageBox.Show(
+                    $"Transition with input {inputId} already exists for this state.",
+                    "Warning",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Warning);
+                return;
+            }
 
-            _processController.AddTransition(SelectedState, input, SelectedTransitionTarget);
+            _processController.AddTransition(SelectedState, inputId, SelectedTransitionTarget);
 
             NewTransitionInput = "";
             SelectedInputDefinition = null;
 
             RefreshTransitionsFilter();
             RefreshAvailableInputDefinitions();
+            RaiseAllCanExecute();
         }
 
         private void RemoveTransition()
