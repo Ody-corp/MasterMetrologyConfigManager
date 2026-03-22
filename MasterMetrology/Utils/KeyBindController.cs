@@ -8,7 +8,6 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
 using System.Windows.Input;
-using System.Windows.Media;
 using System.Windows.Threading;
 
 namespace MasterMetrology.Utils
@@ -24,31 +23,15 @@ namespace MasterMetrology.Utils
 
             _window.AddHandler(UIElement.PreviewKeyDownEvent, new KeyEventHandler(OnKeyDown), true);
 
-            _window.PreviewMouseLeftButtonDown += OnAnyMouseButtonDown;
-            _window.PreviewMouseRightButtonDown += OnAnyMouseButtonDown;
-
-
-            // vráti fokus na window po zavretí MenuItem na topPanel
-            _window.AddHandler(MenuItem.SubmenuClosedEvent,
-                new RoutedEventHandler((s, e) =>
-                {
-                    _window.Dispatcher.BeginInvoke(new Action(() =>
-                    {
-                        Keyboard.ClearFocus();
-                        _window.Focus(); 
-                    }), DispatcherPriority.Input);
-                }),
-                true);
-
             // vráti fokus po zavretí ContextMenu
             _window.AddHandler(ContextMenu.ClosedEvent,
                 new RoutedEventHandler((s, e) =>
                 {
                     _window.Dispatcher.BeginInvoke(new Action(() =>
                     {
-                        Keyboard.ClearFocus();
-                        _window.Focus();
-                    }), DispatcherPriority.Input);
+                        if (Keyboard.FocusedElement == null)
+                            _window.Focus();
+                    }), DispatcherPriority.ContextIdle);
                 }),
                 true);
         }
@@ -57,7 +40,7 @@ namespace MasterMetrology.Utils
             var mods = Keyboard.Modifiers;
 
             // CTRL+S => Save
-            if (mods == ModifierKeys.Control 
+            if (mods == ModifierKeys.Control
                 && e.Key == Key.S)
             {
                 if (_vm.SaveCommand.CanExecute(null))
@@ -68,8 +51,8 @@ namespace MasterMetrology.Utils
                 return;
             }
             // CTRL+SHIFT+S => SaveAs
-            if (mods.HasFlag(ModifierKeys.Control) 
-                && mods.HasFlag(ModifierKeys.Shift) 
+            if (mods.HasFlag(ModifierKeys.Control)
+                && mods.HasFlag(ModifierKeys.Shift)
                 && e.Key == Key.S)
             {
                 if (_vm.SaveAsCommand.CanExecute(null))
@@ -91,7 +74,7 @@ namespace MasterMetrology.Utils
                 return;
             }
             // CTRL+O => Import file
-            if (mods == ModifierKeys.Control 
+            if (mods == ModifierKeys.Control
                 && e.Key == Key.O)
             {
                 if (_vm.ImportFileCommand.CanExecute(null))
@@ -188,52 +171,6 @@ namespace MasterMetrology.Utils
                 return pb.IsEnabled;
 
             return false;
-        }
-
-        private void OnAnyMouseButtonDown(object sender, MouseButtonEventArgs e)
-        {
-            if (e.OriginalSource is not DependencyObject source)
-                return;
-
-            if (!ShouldRefocusWindow(source))
-                return;
-
-            _window.Dispatcher.BeginInvoke(new Action(() =>
-            {
-                Keyboard.ClearFocus();
-                _window.Focus();
-                Keyboard.Focus(_window);
-            }), DispatcherPriority.Input);
-        }
-
-        private static bool ShouldRefocusWindow(DependencyObject? source)
-        {
-            while (source != null)
-            {
-                // sem nezasahovať, aby sa dalo normálne písať / vyberať
-                if (source is TextBoxBase ||
-                    source is PasswordBox ||
-                    source is ComboBox ||
-                    source is MenuItem ||
-                    source is ContextMenu ||
-                    source is ListBoxItem ||
-                    source is ListViewItem)
-                {
-                    return false;
-                }
-
-                // klik na canvas, border, grid, panel atď. => vráť fokus na window
-                if (source is Canvas ||
-                    source is Panel ||
-                    source is Border)
-                {
-                    return true;
-                }
-
-                source = VisualTreeHelper.GetParent(source);
-            }
-
-            return true;
         }
 
     }

@@ -15,7 +15,6 @@
         SnapsToDevicePixels="True"
         FocusManager.IsFocusScope="True"
         Focusable="True"
-        MouseDown="Window_PreviewMouseDown"
         >
 
     <Window.Resources>

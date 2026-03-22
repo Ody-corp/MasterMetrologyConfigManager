@@ -87,12 +87,6 @@ namespace MasterMetrology
                 DiagramCanvas.ContextMenu.Tag = world;
         }
 
-        private void Window_PreviewMouseDown(object sender, MouseButtonEventArgs e)
-        {
-            Keyboard.ClearFocus();
-            FocusManager.SetFocusedElement(this, this);
-        }
-
         private static readonly Regex _nonDigitRegex = new Regex("[^0-9]+");
 
         private void TransitionInputComboBox_PreviewTextInput(object sender, TextCompositionEventArgs e)
