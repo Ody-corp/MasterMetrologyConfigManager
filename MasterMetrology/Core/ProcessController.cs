@@ -13,13 +13,14 @@ using MasterMetrology.Utils;
 using Microsoft.Win32;
 using System.Collections;
 using MasterMetrology.Core.UI;
+using System.Text;
 using MasterMetrology.Core.History;
 
 namespace MasterMetrology
 {
     internal class ProcessController
     {
-        
+
 
         private Canvas viewPort;
         private Canvas diagramCanvas;
@@ -229,15 +230,22 @@ namespace MasterMetrology
         {
             this.filePath = filePath;
         }
-        public bool Save()
+        public bool Save(bool validateDefinitions = true)
         {
+            if (validateDefinitions && !ConfirmProceedWithMissingDefinitionsCheck("save"))
+                return false;
+
             if (!CanSave) return false;
             return SaveToFile(filePath);
         }
 
-        public bool SaveAs(string newPath)
+        public bool SaveAs(string newPath, bool validateDefinitions = true)
         {
             if (string.IsNullOrWhiteSpace(newPath)) return false;
+
+            if (validateDefinitions && !ConfirmProceedWithMissingDefinitionsCheck("save"))
+                return false;
+
             filePath = newPath;
             return SaveToFile(filePath);
         }
@@ -260,7 +268,7 @@ namespace MasterMetrology
         {
             if (Config.DEBUG_MODE)
                 Debug.WriteLine($"POLUTE TRANSITIONS");
-            
+
             void doPopulate()
             {
                 AllTransitions.Clear();
@@ -714,7 +722,7 @@ namespace MasterMetrology
         {
             if (Config.DEBUG_MODE)
                 Debug.WriteLine($"Creating new State. World pos: X:{world.X}, Y:{world.Y}");
-            
+
             var nextIdx = GetNextIndexForParent(parent);
             var idxStr = nextIdx.ToString();
 
@@ -981,13 +989,13 @@ namespace MasterMetrology
             foreach (var item in InputsDef) item.PropertyChanged += ItemChanged;
             foreach (var item in OutputsDef) item.PropertyChanged += ItemChanged;
 
-            if (historyService.CurrentSnapshot == null) 
+            if (historyService.CurrentSnapshot == null)
                 InitializeHistory(clearStacks: true, isDirty: IsDirty);
         }
 
         private void UnwireMonitorChangesIfWired()
         {
-            if (!_monitorWired) 
+            if (!_monitorWired)
                 return;
             _monitorWired = false;
 
@@ -1028,20 +1036,26 @@ namespace MasterMetrology
         {
             if (Config.DEBUG_MODE)
                 Debug.WriteLine("Change");
-            
+
             MarkDirty();
         }
 
         public bool ProcessDecisionExitWin()
         {
+            if (!ConfirmProceedWithMissingDefinitionsCheck("exit"))
+                return true;
+
             return OpenCustomDialog(
-                "Unsaved Changes", 
+                "Unsaved Changes",
                 "You have unsaved changes. Would you Like to save them before exit?",
                 ["Yes", "Don't save", "Cancel"]);
         }
 
         public bool ProcessDecisionIfNotSavedDataToNewFile()
         {
+            if (!ConfirmProceedWithMissingDefinitionsCheck("continue to new file"))
+                return true;
+
             return OpenCustomDialog(
                 "Unsaved data",
                 "Your file is not saved. Would you like to save data before continuing to new file?",
@@ -1062,7 +1076,8 @@ namespace MasterMetrology
                 {
                     if (CanSave)
                     {
-                        Save();
+                        if (!Save(validateDefinitions: false))
+                            return true;
                     }
                     else
                     {
@@ -1075,7 +1090,8 @@ namespace MasterMetrology
 
                         if (sfd.ShowDialog() == true)
                         {
-                            SaveAs(sfd.FileName);
+                            if (!SaveAs(sfd.FileName, validateDefinitions: false))
+                                return true;
                         }
                         else
                         {
@@ -1088,12 +1104,98 @@ namespace MasterMetrology
             return false;
         }
 
+        private bool ConfirmProceedWithMissingDefinitionsCheck(string actionName)
+        {
+            var knownInputIds = new HashSet<string>(
+                inputsDefModelDatas
+                    .Select(i => NormalizeDefinitionId(i.ID))
+                    .Where(id => !string.IsNullOrWhiteSpace(id)));
+
+            var knownOutputIds = new HashSet<string>(
+                outputsDefModelDatas
+                    .Select(o => NormalizeDefinitionId(o.ID))
+                    .Where(id => !string.IsNullOrWhiteSpace(id)));
+
+            var missingInputIds = new HashSet<string>();
+            var missingOutputIds = new HashSet<string>();
+
+            foreach (var state in GetFlatStates())
+            {
+                var outputId = NormalizeDefinitionId(state.Output);
+                if (!string.IsNullOrWhiteSpace(outputId) && !knownOutputIds.Contains(outputId) && !IsNoOutputSentinel(outputId))
+                    missingOutputIds.Add(outputId);
+
+                if (state.TransitionsData == null)
+                    continue;
+
+                foreach (var transition in state.TransitionsData)
+                {
+                    var inputId = NormalizeDefinitionId(transition?.Input);
+                    if (!string.IsNullOrWhiteSpace(inputId) && !knownInputIds.Contains(inputId))
+                        missingInputIds.Add(inputId);
+                }
+            }
+
+            if (missingInputIds.Count == 0 && missingOutputIds.Count == 0)
+                return true;
+
+            var message = BuildMissingDefinitionsMessage(missingInputIds, missingOutputIds, actionName);
+            var decision = PopUpWindows.DialogWindow(
+                "Missing definitions",
+                message,
+                ["Continue", "Stop", "Cancel"]);
+
+            return decision == PopUpWindows.ConfirmChangeResult.Apply;
+        }
+
+        private bool IsNoOutputSentinel(string outputId)
+        {
+            return outputId == "-1";
+        }
+
+        private static string BuildMissingDefinitionsMessage(HashSet<string> missingInputIds, HashSet<string> missingOutputIds, string actionName)
+        {
+            var sb = new StringBuilder();
+            sb.AppendLine("Found references without definition:");
+
+            if (missingInputIds.Count > 0)
+                sb.AppendLine($"Missing input definitions: {string.Join(", ", OrderDefinitionIds(missingInputIds))}");
+
+            if (missingOutputIds.Count > 0)
+                sb.AppendLine($"Missing output definitions: {string.Join(", ", OrderDefinitionIds(missingOutputIds))}");
+
+            sb.AppendLine();
+            sb.Append($"Do you want to continue with {actionName}?");
+            return sb.ToString();
+        }
+
+        private static IEnumerable<string> OrderDefinitionIds(IEnumerable<string> ids)
+        {
+            return ids
+                .OrderBy(id => int.TryParse(id, out _) ? 0 : 1)
+                .ThenBy(id => int.TryParse(id, out var n) ? n : int.MaxValue)
+                .ThenBy(id => id, StringComparer.OrdinalIgnoreCase);
+        }
+
+        private static string NormalizeDefinitionId(string? rawId)
+        {
+            if (string.IsNullOrWhiteSpace(rawId))
+                return "";
+
+            var id = rawId.Trim();
+            var dashIndex = id.IndexOf('-');
+            if (dashIndex > 0)
+                id = id.Substring(0, dashIndex).Trim();
+
+            return id;
+        }
+
         public void ResetForNewFile()
         {
             UnwireMonitorChangesIfWired();
-            
+
             statesModelDatas.Clear();
-            inputsDefModelDatas.Clear(); 
+            inputsDefModelDatas.Clear();
             outputsDefModelDatas.Clear();
 
             StatesViewModel.Clear();
@@ -1106,7 +1208,7 @@ namespace MasterMetrology
             movedPairs.Clear();
 
             _selectedFullIndex = null;
-               
+
             visualRender.ResetVisuals(viewPort);
             NotifyGraphChanged();
 
