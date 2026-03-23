@@ -612,6 +612,28 @@ namespace MasterMetrology
             MarkSaved();
         }
 
+        public bool IsStateIndexAvailableForApply(StateModelData state, StateModelData? targetParent, string candidateIndex)
+        {
+            if (state == null || string.IsNullOrWhiteSpace(candidateIndex))
+                return false;
+
+            var normalized = candidateIndex.Trim();
+            IEnumerable<StateModelData> siblings = targetParent == null
+                ? statesModelDatas
+                : targetParent.SubStatesData;
+
+            foreach (var sibling in siblings)
+            {
+                if (ReferenceEquals(sibling, state))
+                    continue;
+
+                if (sibling.Index == normalized)
+                    return false;
+            }
+
+            return true;
+        }
+
         private bool IsIndexAvailable(string newIndex, StateModelData? parent)
         {
             if (parent == null)
@@ -1042,29 +1064,33 @@ namespace MasterMetrology
 
         public bool ProcessDecisionExitWin()
         {
-            if (!ConfirmProceedWithMissingDefinitionsCheck("exit"))
-                return true;
+            //if (!ConfirmProceedWithMissingDefinitionsCheck("exit"))
+            //    return true;
 
             return OpenCustomDialog(
                 "Unsaved Changes",
                 "You have unsaved changes. Would you Like to save them before exit?",
-                ["Yes", "Don't save", "Cancel"]);
+                ["Yes", "Don't save", "Cancel"],
+                missingDefinitionName: "exit");
         }
 
         public bool ProcessDecisionIfNotSavedDataToNewFile()
         {
-            if (!ConfirmProceedWithMissingDefinitionsCheck("continue to new file"))
-                return true;
+            //if (!ConfirmProceedWithMissingDefinitionsCheck("continue to new file"))
+            //    return true;
 
             return OpenCustomDialog(
                 "Unsaved data",
                 "Your file is not saved. Would you like to save data before continuing to new file?",
-                ["Yes", "Don't save", "Cancel"]);
+                ["Yes", "Don't save", "Cancel"],
+                missingDefinitionName: "continue to new file");
         }
 
-        private bool OpenCustomDialog(string title, string message, ArrayList buttons)
+        private bool OpenCustomDialog(string title, string message, ArrayList buttons, string missingDefinitionName)
         {
-            if (IsDirty)
+            var hasAnyProcessData = statesModelDatas.Count > 0 || inputsDefModelDatas.Count > 0 || outputsDefModelDatas.Count > 0;
+
+            if (IsDirty && hasAnyProcessData)
             {
                 var decision = PopUpWindows.DialogWindow(title, message, buttons);
 
@@ -1074,9 +1100,12 @@ namespace MasterMetrology
                 }
                 else if (decision == PopUpWindows.ConfirmChangeResult.Apply)
                 {
+                    if (!ConfirmProceedWithMissingDefinitionsCheck(missingDefinitionName))
+                        return true;
                     if (CanSave)
                     {
-                        if (!Save(validateDefinitions: false))
+                        
+                        if (!Save(validateDefinitions: true))
                             return true;
                     }
                     else

@@ -70,11 +70,11 @@ namespace MasterMetrology.Core.UI
             AddStateAsSubStateCommand = new RelayCommand(() => { _processController.CreateNewSubState(SelectedVertex!.State); _processController.MarkDirty(); }, () => SelectedState != null);
             AddStateAsSubStateCMCommand = new RelayCommand(p => { if (p is GraphVertex gv && gv.State != null) _processController.CreateNewSubState(gv.State); _processController.MarkDirty(); }, p => p is GraphVertex gv && gv.State != null);
 
-            DeleteWholeSelectedStateCommand = new RelayCommand(() => { _processController.DeleteWholeState(SelectedVertex!.State); _processController.MarkDirty(); }, () => SelectedState != null);
-            DeleteWholeStateCommand = new RelayCommand(p => { if (p is GraphVertex gv && gv.State != null) _processController.DeleteWholeState(gv.State); _processController.MarkDirty(); }, p => p is GraphVertex gv && gv.State != null);
+            DeleteWholeSelectedStateCommand = new RelayCommand(() => ConfirmAndDeleteWholeState(SelectedVertex?.State), () => SelectedState != null);
+            DeleteWholeStateCommand = new RelayCommand(p => { if (p is GraphVertex gv && gv.State != null) ConfirmAndDeleteWholeState(gv.State); }, p => p is GraphVertex gv && gv.State != null);
 
-            DeleteSingleSelectedStateCommand = new RelayCommand(() => { _processController.DeleteSingleState(SelectedVertex!.State); _processController.MarkDirty(); }, () => SelectedVertex?.State != null);
-            DeleteSingleStateCommand = new RelayCommand(p => { if (p is GraphVertex gv && gv.State != null) _processController.DeleteSingleState(gv.State); _processController.MarkDirty(); }, p => p is GraphVertex gv && gv.State != null);
+            DeleteSingleSelectedStateCommand = new RelayCommand(() => TryDeleteByKind(LastSelectionKind.State), () => SelectedVertex?.State != null);
+            DeleteSingleStateCommand = new RelayCommand(p => { if (p is GraphVertex gv && gv.State != null) ConfirmAndDeleteSingleState(gv.State); }, p => p is GraphVertex gv && gv.State != null);
 
             SaveCommand = new RelayCommand(Save, () => _processController.CanSave);
             SaveAsCommand = new RelayCommand(SaveAs, () => _processController.CanSaveAs);
@@ -82,10 +82,10 @@ namespace MasterMetrology.Core.UI
             RedoCommand = new RelayCommand(Redo, () => _processController.CanRedo);
 
             AddInputCommand = new RelayCommand(() => { AddInput(); _processController.MarkDirty(); });
-            RemoveInputCommand = new RelayCommand(() => { RemoveInput(); _processController.MarkDirty(); }, () => SelectedInput != null);
+            RemoveInputCommand = new RelayCommand(() => TryDeleteByKind(LastSelectionKind.InputDefinition), () => SelectedInput != null);
 
             AddOutputCommand = new RelayCommand(() => { AddOutput(); _processController.MarkDirty(); });
-            RemoveOutputCommand = new RelayCommand(() => { RemoveOutput(); _processController.MarkDirty(); }, () => SelectedOutput != null);
+            RemoveOutputCommand = new RelayCommand(() => TryDeleteByKind(LastSelectionKind.OutputDefinition), () => SelectedOutput != null);
 
             _processController.DataChanged += () =>
             {
@@ -191,7 +191,7 @@ namespace MasterMetrology.Core.UI
             get => _draftOutput;
             set
             {
-                if (_draftOutput == value) 
+                if (_draftOutput == value)
                     return;
 
                 var outputId = ExtractOutputId(value);
@@ -249,15 +249,15 @@ namespace MasterMetrology.Core.UI
                 RaiseAllCanExecute();
             }
         }
-        
+
         public ObservableCollection<StateViewModel> DraftChildren { get; } = new();
 
         private StateViewModel? _selectedChild;
         public StateViewModel? SelectedChild
         {
             get => _selectedChild;
-            set 
-            { 
+            set
+            {
                 _selectedChild = value;
 
                 if (value != null)
@@ -265,8 +265,8 @@ namespace MasterMetrology.Core.UI
                 else if (_lastSelectionKind == LastSelectionKind.Child)
                     _lastSelectionKind = LastSelectionKind.None;
 
-                OnPropertyChanged(); 
-                RaiseAllCanExecute(); 
+                OnPropertyChanged();
+                RaiseAllCanExecute();
             }
         }
 
@@ -328,10 +328,10 @@ namespace MasterMetrology.Core.UI
             {
                 var inputId = ExtractInputId(value);
 
-                if (inputId == _newTransitionInput) 
+                if (inputId == _newTransitionInput)
                     return;
 
-                if (!Regex.IsMatch(inputId, @"^\d*$")) 
+                if (!Regex.IsMatch(inputId, @"^\d*$"))
                     return;
 
                 if (_selectedInputDefinition != null && _selectedInputDefinition.ID != inputId)
@@ -467,10 +467,10 @@ namespace MasterMetrology.Core.UI
                 StatePanelDataChange = false;
             }
             else if (StatePanelDataChange)
-                {
+            {
                 if (Config.DEBUG_MODE)
                     Debug.WriteLine($"StatePanelDataChange");
-                    
+
                 var decision = PopUpWindows.DialogWindow(
                     "Unsaved changes",
                     "Save changed data of state?",
@@ -499,31 +499,31 @@ namespace MasterMetrology.Core.UI
 
             }
 
-                SelectedVertex = v;
+            SelectedVertex = v;
 
-                if (v?.State == null)
-                {
-                    SelectedState = null;
-                    OnPropertyChanged(nameof(IsSelectedVertex));
-                    OnPropertyChanged(nameof(IsSelectedVertexAndSection));
-                    OnPropertyChanged(nameof(StatePanelDataChange));
-                    return;
-                }
-
-                if (_processController.modelToViewModel.TryGetValue(v.State, out var svm))
-                {
-                    SelectedState = svm;
-                }
-                else
-                {
-                    SelectedState = FlatStates.FirstOrDefault(s => s.FullIndex == v.State.FullIndex);
-                }
-
-                SetLastSelection(LastSelectionKind.State);
-
+            if (v?.State == null)
+            {
+                SelectedState = null;
                 OnPropertyChanged(nameof(IsSelectedVertex));
                 OnPropertyChanged(nameof(IsSelectedVertexAndSection));
                 OnPropertyChanged(nameof(StatePanelDataChange));
+                return;
+            }
+
+            if (_processController.modelToViewModel.TryGetValue(v.State, out var svm))
+            {
+                SelectedState = svm;
+            }
+            else
+            {
+                SelectedState = FlatStates.FirstOrDefault(s => s.FullIndex == v.State.FullIndex);
+            }
+
+            SetLastSelection(LastSelectionKind.State);
+
+            OnPropertyChanged(nameof(IsSelectedVertex));
+            OnPropertyChanged(nameof(IsSelectedVertexAndSection));
+            OnPropertyChanged(nameof(StatePanelDataChange));
         }
 
         public void RefreshFromController()
@@ -642,7 +642,7 @@ namespace MasterMetrology.Core.UI
             {
                 if (Config.DEBUG_MODE)
                     Debug.WriteLine($"ADDED - {m.Name} {m.FullIndex}");
-                
+
                 if (_processController.modelToViewModel.TryGetValue(m, out var vm))
                     vm.IsDraftAdded = true;
             }
@@ -651,7 +651,7 @@ namespace MasterMetrology.Core.UI
             {
                 if (Config.DEBUG_MODE)
                     Debug.WriteLine($"REMOVED - {m.Name} {m.FullIndex}");
-                
+
                 if (_processController.modelToViewModel.TryGetValue(m, out var vm))
                     vm.IsDraftRemoved = true;
             }
@@ -880,6 +880,28 @@ namespace MasterMetrology.Core.UI
         {
             if (SelectedState == null || SelectedVertex == null) return;
 
+            var newIndex = DraftIndex?.Trim();
+            if (string.IsNullOrWhiteSpace(newIndex))
+            {
+                MessageBox.Show(
+                    "ID must be entered.",
+                    "Warning",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Warning);
+                return;
+            }
+
+            var parentModel = DraftParent?.StateModel;
+            if (!_processController.IsStateIndexAvailableForApply(SelectedState.StateModel, parentModel, newIndex))
+            {
+                MessageBox.Show(
+                    $"ID {newIndex} already exists on this level.",
+                    "Warning",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Warning);
+                return;
+            }
+
             var outputText = DraftOutput?.Trim();
             var outputId = ExtractOutputId(outputText);
 
@@ -922,13 +944,12 @@ namespace MasterMetrology.Core.UI
             foreach (var rm in toRemove) _processController.Add_RemovePendingChild(rm);
             foreach (var ad in toAdd) _processController.Add_AddPendingChild(ad);
 
-            var parentModel = DraftParent?.StateModel;
-            _processController.ApplyPendingChildChanges(SelectedVertex, parentModel, DraftIndex);
+            _processController.ApplyPendingChildChanges(SelectedVertex, parentModel, newIndex);
 
             RefreshFromController();
 
-            _processController.MarkDirty(); 
-            StatePanelDataChange = false; 
+            _processController.MarkDirty();
+            StatePanelDataChange = false;
             OnPropertyChanged(nameof(StatePanelDataChange));
         }
 
@@ -940,7 +961,7 @@ namespace MasterMetrology.Core.UI
         private void ImportFile()
         {
             if (_processController.ProcessDecisionIfNotSavedDataToNewFile())
-                return;   
+                return;
 
             OpenFileDialog ofd = new OpenFileDialog
             {
@@ -952,7 +973,7 @@ namespace MasterMetrology.Core.UI
 
             if (response == true)
             {
-                
+
                 _processController.ResetForNewFile();
                 RefreshFromController();
 
@@ -1181,45 +1202,71 @@ namespace MasterMetrology.Core.UI
 
         public void DeleteLastSelected()
         {
+            TryDeleteByKind(_lastSelectionKind);
+        }
+
+        private bool TryDeleteByKind(LastSelectionKind kind)
+        {
             string message;
             Action executeDelete;
 
-            switch (_lastSelectionKind)
+            switch (kind)
             {
                 case LastSelectionKind.State:
-                    if (!DeleteSingleSelectedStateCommand.CanExecute(null)) return;
+                    if (SelectedVertex?.State == null) return false;
                     message = $"Do you want to delete selected state \"{SelectedState?.Name}\" ({SelectedState?.FullIndex})?";
-                    executeDelete = () => DeleteSingleSelectedStateCommand.Execute(null);
+                    executeDelete = () => DeleteSingleStateCore(SelectedVertex.State);
                     break;
 
                 case LastSelectionKind.Transition:
-                    if (!RemoveTransitionCommand.CanExecute(null)) return;
-                    message = $"Do you want to delete selected transition with input \"{SelectedTransition?.TransitionData?.Input}\"?";
-                    executeDelete = () => RemoveTransitionCommand.Execute(null);
+                    if (SelectedTransition == null) return false;
+                    message = $"Do you want to delete selected transition with input \"{SelectedTransition.TransitionData?.Input}\"?";
+                    executeDelete = DeleteTransitionCore;
                     break;
 
                 case LastSelectionKind.InputDefinition:
-                    if (!RemoveInputCommand.CanExecute(null)) return;
-                    message = $"Do you want to delete input definition \"{SelectedInput?.DisplayText}\"?";
-                    executeDelete = () => RemoveInputCommand.Execute(null);
+                    if (SelectedInput == null) return false;
+                    message = $"Do you want to delete input definition \"{SelectedInput.DisplayText}\"?";
+                    executeDelete = DeleteInputDefinitionCore;
                     break;
 
                 case LastSelectionKind.OutputDefinition:
-                    if (!RemoveOutputCommand.CanExecute(null)) return;
-                    message = $"Do you want to delete output definition \"{SelectedOutput?.DisplayText}\"?";
-                    executeDelete = () => RemoveOutputCommand.Execute(null);
+                    if (SelectedOutput == null) return false;
+                    message = $"Do you want to delete output definition \"{SelectedOutput.DisplayText}\"?";
+                    executeDelete = DeleteOutputDefinitionCore;
                     break;
 
                 case LastSelectionKind.Child:
-                    if (!RemoveChildCommand.CanExecute(null)) return;
-                    message = $"Do you want to remove child \"{SelectedChild?.Name}\" ({SelectedChild?.FullIndex}) from selected state?";
-                    executeDelete = () => RemoveChildCommand.Execute(null);
+                    if (SelectedChild == null) return false;
+                    message = $"Do you want to remove child \"{SelectedChild.Name}\" ({SelectedChild.FullIndex}) from selected state?";
+                    executeDelete = DeleteChildCore;
                     break;
 
                 default:
-                    return;
+                    return false;
             }
 
+            return ExecuteDeleteWithConfirmation(message, executeDelete);
+        }
+
+        private void ConfirmAndDeleteSingleState(StateModelData state)
+        {
+            if (state == null) return;
+
+            var message = $"Do you want to delete selected state \"{state.Name}\" ({state.FullIndex})?";
+            ExecuteDeleteWithConfirmation(message, () => DeleteSingleStateCore(state));
+        }
+
+        private void ConfirmAndDeleteWholeState(StateModelData? state)
+        {
+            if (state == null) return;
+
+            var message = $"Do you want to delete whole section \"{state.Name}\" ({state.FullIndex})?";
+            ExecuteDeleteWithConfirmation(message, () => DeleteWholeStateCore(state));
+        }
+
+        private bool ExecuteDeleteWithConfirmation(string message, Action executeDelete)
+        {
             var result = MessageBox.Show(
                 message,
                 "Confirm delete",
@@ -1227,10 +1274,49 @@ namespace MasterMetrology.Core.UI
                 MessageBoxImage.Question);
 
             if (result != MessageBoxResult.Yes)
-                return;
+                return false;
 
             executeDelete();
             _lastSelectionKind = LastSelectionKind.None;
+            return true;
+        }
+
+        private void DeleteSingleStateCore(StateModelData state)
+        {
+            if (_processController.DeleteSingleState(state))
+                _processController.MarkDirty();
+        }
+
+        private void DeleteWholeStateCore(StateModelData state)
+        {
+            if (_processController.DeleteWholeState(state))
+                _processController.MarkDirty();
+        }
+
+        private void DeleteTransitionCore()
+        {
+            RemoveTransition();
+            _processController.MarkDirty();
+        }
+
+        private void DeleteInputDefinitionCore()
+        {
+            RemoveInput();
+            _processController.MarkDirty();
+        }
+
+        private void DeleteOutputDefinitionCore()
+        {
+            RemoveOutput();
+            _processController.MarkDirty();
+        }
+
+        private void DeleteChildCore()
+        {
+            RemoveChild();
+            _processController.MarkDirty();
+            StatePanelDataChange = true;
+            OnPropertyChanged(nameof(StatePanelDataChange));
         }
 
 
