@@ -1,6 +1,6 @@
-# MasterMetrology
+# Metrology Config Manager
 
-`MasterMetrology` is a WPF desktop application for creating, editing, and validating XML-based state machine configurations.
+`Metrology Config Manager` is a WPF desktop application for creating, editing, and validating XML-based state machine configurations.
 
 The project focuses on configuration files for `MeasurementModule`, especially:
 - input definitions
