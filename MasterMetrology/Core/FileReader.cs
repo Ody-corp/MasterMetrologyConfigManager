@@ -5,15 +5,25 @@ namespace MasterMetrology
 {
     internal class FileReader
     {
-        List<InputsDefModelData> InputsDefinition = new List<InputsDefModelData>();
-        List<OutputModelData> OutputDefinition = new List<OutputModelData>();
+        List<InputModelData> InputsDefinition = new List<InputModelData>();
+        List<OutputModelData> OutputsDefinition = new List<OutputModelData>();
         List<StateModelData> FullListStateModelData = new List<StateModelData>();
         Stack<StateModelData> stack = new Stack<StateModelData>();
 
         Stack<string> stackIndex = new Stack<string>();
 
-        public (List<InputsDefModelData> InputsDefinition, List<OutputModelData> OutputDefinition, List<StateModelData> FullListStateModelData) LoadDataFromFile(string filePath)
+        public (
+            List<InputModelData> InputsDefinition, 
+            List<OutputModelData> OutputDefinition, 
+            List<StateModelData> FullListStateModelData) 
+            LoadDataFromFile(string filePath)
         {
+            InputsDefinition.Clear();
+            OutputsDefinition.Clear();
+            FullListStateModelData.Clear();
+            stack.Clear();
+            stackIndex.Clear();
+
             using (XmlReader reader = XmlReader.Create(filePath))
             {
                 while (reader.Read())
@@ -22,7 +32,7 @@ namespace MasterMetrology
                     {
                         if (reader.Name == "Input")
                         {
-                            var input = new InputsDefModelData()
+                            var input = new InputModelData()
                             {
                                 Name = reader.GetAttribute("Name"),
                                 ID = reader.GetAttribute("ID")
@@ -39,9 +49,10 @@ namespace MasterMetrology
                                 UpdateParameters = Boolean.Parse(reader.GetAttribute("UpdateParameters")),
                                 UpdateCalibration = Boolean.Parse(reader.GetAttribute("UpdateCalibration")),
                                 UpdateMeasuredData = Boolean.Parse(reader.GetAttribute("UpdateMeasuredData")),
+                                UpdateProcessedData = Boolean.Parse(reader.GetAttribute("UpdateMeasuredData"))
 
                             };
-                            OutputDefinition.Add(output);
+                            OutputsDefinition.Add(output);
                         }
                         else if (reader.Name == "Transition")
                         {
@@ -101,7 +112,7 @@ namespace MasterMetrology
                 
             }
 
-            return (InputsDefinition, OutputDefinition, FullListStateModelData);
+            return (InputsDefinition, OutputsDefinition, FullListStateModelData);
         }
     }
 }

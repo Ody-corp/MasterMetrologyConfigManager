@@ -1,17 +1,22 @@
 ﻿using System.ComponentModel;
+using System.Text.RegularExpressions;
 
 namespace MasterMetrology.Models.Data
 {
-    internal class InputsDefModelData : INotifyPropertyChanged
+    internal class InputModelData : INotifyPropertyChanged
     {
         private string id;
         private string name;
+        public string DisplayText => $"{ID} - {Name}";
 
         public string ID
         {
             get => id;
             set
             {
+                if (!Regex.IsMatch(value, @"^\d*$"))
+                    return;
+
                 if (id != value)
                 {
                     id = value;

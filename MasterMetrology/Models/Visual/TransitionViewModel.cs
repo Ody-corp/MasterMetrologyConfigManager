@@ -9,14 +9,12 @@ namespace MasterMetrology.Models.Visual
     internal class TransitionViewModel : INotifyPropertyChanged
     { 
         public TransitionModelData TransitionData { get; }
-        //public string FromFullIndex { get; }
         public string DisplayText { get; }
         public string Id { get; }
 
         public TransitionViewModel(TransitionModelData transition, StateViewModel fromStateVm, StateViewModel nextStateVm)
         {
             TransitionData = transition;
-            //FromFullIndex = fromFullIndex ?? "";
             FromState = fromStateVm;
             NextState = nextStateVm;
             Id = $"{transition.FromState.FullIndex}_{transition.NextState.FullIndex}_{transition.Input}";
@@ -73,16 +71,6 @@ namespace MasterMetrology.Models.Visual
                 TransitionData.FromState = value.StateModel;
                 OnPropertyChanged(nameof(FromState));
                 
-            }
-        }
-
-        public ObservableCollection<Point> PathPoints
-        {
-            get => TransitionData.PathPoints;
-            set
-            {
-                TransitionData.PathPoints = value;
-                OnPropertyChanged(nameof(PathPoints));
             }
         }
 

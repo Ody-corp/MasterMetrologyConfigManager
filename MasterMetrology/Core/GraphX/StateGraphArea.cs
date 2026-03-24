@@ -5,6 +5,5 @@ namespace MasterMetrology.Core.GraphX
 {
     public class StateGraphArea : GraphArea<GraphVertex, GraphEdge, StateGraph>
     {
-
     }
 }

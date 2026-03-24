@@ -1,6 +1,6 @@
 ﻿using System.Windows.Input;
 
-namespace MasterMetrology
+namespace MasterMetrology.Utils
 {
     internal class RelayCommand : ICommand
     {

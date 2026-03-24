@@ -3,6 +3,7 @@ using MasterMetrology.Models.Visual;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
+using System.Windows.Shapes;
 
 namespace MasterMetrology.Core.GraphX.Controls
 {
@@ -12,22 +13,23 @@ namespace MasterMetrology.Core.GraphX.Controls
         private readonly Canvas _rootCanvas;
         private readonly Border _border;
         private readonly TextBlock _label;
+        private readonly Rectangle _headerRect;
 
         public SimpleVertexControl(GraphVertex vertex) : base(vertex)
         {
             _visualChildren = new VisualCollection(this);
 
+            var cm = Application.Current.FindResource("rightClickContextMenu") as ContextMenu;
+            this.Tag = vertex;
             _rootCanvas = new Canvas
             {
-                //Width = 140,
-                //Height = 50,
-                Background = Brushes.Transparent
+                Background = Brushes.Transparent,
+                ContextMenu = cm
             };
+            ContextMenuService.SetContextMenu(this, cm);
 
             _border = new Border
             {
-                //Width = 140,
-                //Height = 50,
                 CornerRadius = new CornerRadius(6),
                 Background = new SolidColorBrush(Color.FromArgb(200, 34, 68, 102)),
                 BorderBrush = Brushes.LightSteelBlue,
@@ -41,6 +43,8 @@ namespace MasterMetrology.Core.GraphX.Controls
                 Foreground = Brushes.White,
                 FontWeight = FontWeights.SemiBold,
                 TextWrapping = TextWrapping.Wrap,
+                TextAlignment = TextAlignment.Center,
+
                 //Width = 120
             };
 
@@ -49,7 +53,9 @@ namespace MasterMetrology.Core.GraphX.Controls
             Canvas.SetLeft(_label, 8);
             Canvas.SetTop(_label, 8);
 
-            _visualChildren.Add(_rootCanvas);            
+            _visualChildren.Add(_rootCanvas);
+
+            Loaded += SimpleVertexControl_Loaded;
         }
 
         public void UpdateLabel(string text)
@@ -72,11 +78,6 @@ namespace MasterMetrology.Core.GraphX.Controls
         // ---- IMPORTANT: call Measure/Arrange on the stored UIElement (_rootCanvas), not on Visual
         protected override Size MeasureOverride(Size constraint)
         {
-            /*            _rootCanvas.Measure(constraint);
-                        // return desired size of rootCanvas
-                        var ds = _rootCanvas.DesiredSize;
-                        return new Size(ds.Width, ds.Height);*/
-
             const double DEFAULT_MAX_LABEL_WIDTH = 300.0;
             const double H_PADDING = 12.0;
             const double V_PADDING = 8.0;
@@ -113,6 +114,36 @@ namespace MasterMetrology.Core.GraphX.Controls
         {
             _rootCanvas.Arrange(new Rect(0, 0, _rootCanvas.Width, _rootCanvas.Height));
             return new Size(_rootCanvas.Width, _rootCanvas.Height);
+        }
+
+        private ContextMenu GetVertexMenu()
+            => (ContextMenu)Application.Current.MainWindow.FindResource("rightClickContextMenu");
+
+        private void SimpleVertexControl_Loaded(object sender, RoutedEventArgs e)
+        {
+            var cm = GetVertexMenu();
+
+            this.ContextMenu = cm;
+            ContextMenuService.SetContextMenu(this, cm);
+
+            _rootCanvas.ContextMenu = cm;
+
+            this.AddHandler(UIElement.PreviewMouseRightButtonDownEvent,
+                           new System.Windows.Input.MouseButtonEventHandler(OnPreviewRightDown), true);
+
+        }
+        private void OnPreviewRightDown(object sender, System.Windows.Input.MouseButtonEventArgs e)
+        {
+            if (e.ChangedButton != System.Windows.Input.MouseButton.Right) return;
+
+            var cm = GetVertexMenu();
+            cm.DataContext = Application.Current.MainWindow.DataContext;
+
+            cm.PlacementTarget = this;
+            cm.Placement = System.Windows.Controls.Primitives.PlacementMode.MousePoint; // otvor pri kurzore
+            cm.IsOpen = true;
+
+            e.Handled = true;
         }
     }
 }
