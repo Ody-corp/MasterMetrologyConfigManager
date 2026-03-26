@@ -559,7 +559,16 @@ namespace MasterMetrology.Core.UI
 
             // to keep selection
             if (SelectedState != null && _processController.modelToViewModel.TryGetValue(SelectedState.StateModel, out var newSel))
+            {
                 SelectedState = newSel;
+            }
+            else
+            {
+                SelectedVertex = null;
+                SelectedState = null;
+                StatePanelDataChange = false;
+                OnPropertyChanged(nameof(StatePanelDataChange));
+            }
 
             RefreshCandidates();
             RefreshTransitionsFilter();
@@ -618,6 +627,34 @@ namespace MasterMetrology.Core.UI
 
             _supressStatePanelDirty = false;
         }
+
+        private bool TryResolvePendingStatePanelChanges()
+        {
+            if (!StatePanelDataChange)
+                return true;
+
+            var decision = PopUpWindows.DialogWindow(
+                "Unsaved changes",
+                "Save changed data of state?",
+                ["Save", "Discard", "Cancel"]);
+
+            if (decision == PopUpWindows.ConfirmChangeResult.Cancel)
+                return false;
+
+            if (decision == PopUpWindows.ConfirmChangeResult.Apply)
+            {
+                StatePanelDataChange = false;
+                Apply();
+            }
+            else
+            {
+                StatePanelDataChange = false;
+            }
+
+            OnPropertyChanged(nameof(StatePanelDataChange));
+            return true;
+        }
+
 
         private void ClearDraftFlags()
         {
@@ -960,6 +997,9 @@ namespace MasterMetrology.Core.UI
 
         private void OpenFile()
         {
+            if (!TryResolvePendingStatePanelChanges())
+                return;
+
             if (_processController.ProcessDecisionIfNotSavedDataToNewFile())
                 return;
 
