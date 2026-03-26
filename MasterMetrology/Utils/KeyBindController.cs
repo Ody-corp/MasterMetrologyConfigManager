@@ -73,13 +73,13 @@ namespace MasterMetrology.Utils
                 e.Handled = true;
                 return;
             }
-            // CTRL+O => Import file
+            // CTRL+O => Open file
             if (mods == ModifierKeys.Control
                 && e.Key == Key.O)
             {
-                if (_vm.ImportFileCommand.CanExecute(null))
+                if (_vm.OpenFileCommand.CanExecute(null))
                 {
-                    _vm.ImportFileCommand.Execute(null);
+                    _vm.OpenFileCommand.Execute(null);
                 }
                 e.Handled = true;
                 return;

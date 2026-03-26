@@ -60,7 +60,7 @@ namespace MasterMetrology.Core.UI
             RemoveTransitionCommand = new RelayCommand(() => { RemoveTransition(); _processController.MarkDirty(); }, () => SelectedTransition != null);
 
             ExitAppCommand = new RelayCommand(ExitApp);
-            ImportFileCommand = new RelayCommand(ImportFile);
+            OpenFileCommand = new RelayCommand(OpenFile);
             CreateNewFileCommand = new RelayCommand(CreateNewFile, () => InputsDef.Count > 0 || OutputsDef.Count > 0 || FlatStates.Count > 0);
             CenterViewCommand = new RelayCommand(CenterView);
             SetZoomCommand = new RelayCommand(SetZoom);
@@ -111,7 +111,7 @@ namespace MasterMetrology.Core.UI
         public RelayCommand AddTransitionCommand { get; }
         public RelayCommand RemoveTransitionCommand { get; }
         public RelayCommand ExitAppCommand { get; }
-        public RelayCommand ImportFileCommand { get; }
+        public RelayCommand OpenFileCommand { get; }
         public RelayCommand CenterViewCommand { get; }
         public RelayCommand SetZoomCommand { get; }
         public RelayCommand AddStateToRootCommand { get; }
@@ -958,7 +958,7 @@ namespace MasterMetrology.Core.UI
             Application.Current.Shutdown();
         }
 
-        private void ImportFile()
+        private void OpenFile()
         {
             if (_processController.ProcessDecisionIfNotSavedDataToNewFile())
                 return;
