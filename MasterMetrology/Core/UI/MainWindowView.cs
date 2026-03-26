@@ -651,6 +651,9 @@ namespace MasterMetrology.Core.UI
                 StatePanelDataChange = false;
             }
 
+            SelectedState = null;
+            OnPropertyChanged(nameof(IsSelectedVertex));
+            OnPropertyChanged(nameof(IsSelectedVertexAndSection));
             OnPropertyChanged(nameof(StatePanelDataChange));
             return true;
         }
