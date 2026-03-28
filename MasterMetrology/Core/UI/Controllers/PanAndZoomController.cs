@@ -73,7 +73,7 @@ namespace MasterMetrology.Core.UI.Controllers
             if (!_isPanning)
             {
                 var d = pos - _downPos.Value;
-                if (Math.Abs(d.X) <= Config.DragThreshold && Math.Abs(d.Y) <= Config.DragThreshold)
+                if (Math.Abs(d.X) <= Config.DRAG_TRESHOLD && Math.Abs(d.Y) <= Config.DRAG_TRESHOLD)
                     return;
 
                 // od teraz je to pan
@@ -98,8 +98,8 @@ namespace MasterMetrology.Core.UI.Controllers
             double oldScaleX = _zoomTransform.ScaleX;
             double oldScaleY = _zoomTransform.ScaleY;
 
-            double newScaleX = Math.Max(Config.MinZoom, Math.Min(Config.MaxZoom, oldScaleX * zoomFactor));
-            double newScaleY = Math.Max(Config.MinZoom, Math.Min(Config.MaxZoom, oldScaleY * zoomFactor));
+            double newScaleX = Math.Max(Config.MIN_ZOOM, Math.Min(Config.MAX_ZOOM, oldScaleX * zoomFactor));
+            double newScaleY = Math.Max(Config.MIN_ZOOM, Math.Min(Config.MAX_ZOOM, oldScaleY * zoomFactor));
 
             _panTransform.X = (_panTransform.X - anchor.X) * (newScaleX / _zoomTransform.ScaleX) + anchor.X;
             _panTransform.Y = (_panTransform.Y - anchor.Y) * (newScaleY / _zoomTransform.ScaleY) + anchor.Y;
@@ -188,7 +188,7 @@ namespace MasterMetrology.Core.UI.Controllers
 
         public void SetZoom(double targetZoom, Point? anchor = null)
         {
-            targetZoom = Math.Max(Config.MinZoom, Math.Min(Config.MaxZoom, targetZoom));
+            targetZoom = Math.Max(Config.MIN_ZOOM, Math.Min(Config.MAX_ZOOM, targetZoom));
 
             double oldZoomX = _zoomTransform.ScaleX;
             double oldZoomY = _zoomTransform.ScaleY;

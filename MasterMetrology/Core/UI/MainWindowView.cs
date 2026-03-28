@@ -1099,7 +1099,7 @@ namespace MasterMetrology.Core.UI
             InputsDef.Add(new InputModelData
             {
                 ID = _processController.GetNextInputID(),
-                Name = "NEW_INPUT"
+                Name = Config.DEFAULT_NEW_INPUT_NAME
             });
 
             RefreshAvailableInputDefinitions();
@@ -1139,7 +1139,7 @@ namespace MasterMetrology.Core.UI
             OutputsDef.Add(new OutputModelData
             {
                 ID = _processController.GetNextOutputID(),
-                Name = "NEW_OUTPUT",
+                Name = Config.DEFAULT_NEW_OUTPUT_NAME,
                 UpdateDefinition = false,
                 UpdateParameters = false,
                 UpdateCalibration = false,
