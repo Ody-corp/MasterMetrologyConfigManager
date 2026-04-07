@@ -26,7 +26,7 @@ namespace MasterMetrology
         private Canvas diagramCanvas;
         private FrameworkElement diagramBorder;
         private PanAndZoomController panAndZoom;
-        private ProcessHistoryService historyService = new ProcessHistoryService(maxUndoRedoSteps: 100);
+        private ProcessHistoryService historyService = new ProcessHistoryService(maxUndoRedoSteps: Config.MAX_UNDO_REDO_STEPS);
 
         public event Action? DataChanged;
         public event Action? UndoRedoStateChanged;
@@ -750,8 +750,8 @@ namespace MasterMetrology
 
             var newState = new StateModelData
             {
-                Name = "New state",
-                Output = "0",
+                Name = Config.DEFAULT_NEW_STATE_NAME,
+                Output = Config.DEFAULT_NEW_STATE_OUTPUT,
                 Index = idxStr,
                 Parent = parent,
                 SubStatesData = new ObservableCollection<StateModelData>(),
@@ -1064,9 +1064,6 @@ namespace MasterMetrology
 
         public bool ProcessDecisionExitWin()
         {
-            //if (!ConfirmProceedWithMissingDefinitionsCheck("exit"))
-            //    return true;
-
             return OpenCustomDialog(
                 "Unsaved Changes",
                 "You have unsaved changes. Would you Like to save them before exit?",
@@ -1076,9 +1073,6 @@ namespace MasterMetrology
 
         public bool ProcessDecisionIfNotSavedDataToNewFile()
         {
-            //if (!ConfirmProceedWithMissingDefinitionsCheck("continue to new file"))
-            //    return true;
-
             return OpenCustomDialog(
                 "Unsaved data",
                 "Your file is not saved. Would you like to save data before continuing to new file?",

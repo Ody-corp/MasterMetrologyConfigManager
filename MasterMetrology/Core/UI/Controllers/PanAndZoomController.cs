@@ -73,7 +73,7 @@ namespace MasterMetrology.Core.UI.Controllers
             if (!_isPanning)
             {
                 var d = pos - _downPos.Value;
-                if (Math.Abs(d.X) <= Config.DragThreshold && Math.Abs(d.Y) <= Config.DragThreshold)
+                if (Math.Abs(d.X) <= Config.DRAG_TRESHOLD && Math.Abs(d.Y) <= Config.DRAG_TRESHOLD)
                     return;
 
                 // od teraz je to pan
@@ -92,22 +92,23 @@ namespace MasterMetrology.Core.UI.Controllers
 
         private void OnMouseWheel(object sender, MouseWheelEventArgs e)
         {
-            Point center = new Point(_viewport.ActualWidth / 2, _viewport.ActualHeight / 2);
+            Point anchor = e.GetPosition( _viewport);
             double zoomFactor = e.Delta > 0 ? 1.1 : 0.9;
 
-            double newScaleX = _zoomTransform.ScaleX * zoomFactor;
-            double newScaleY = _zoomTransform.ScaleY * zoomFactor;
+            double oldScaleX = _zoomTransform.ScaleX;
+            double oldScaleY = _zoomTransform.ScaleY;
 
-            newScaleX = Math.Max(Config.MinZoom, Math.Min(Config.MaxZoom, newScaleX));
-            newScaleY = Math.Max(Config.MinZoom, Math.Min(Config.MaxZoom, newScaleY));
+            double newScaleX = Math.Max(Config.MIN_ZOOM, Math.Min(Config.MAX_ZOOM, oldScaleX * zoomFactor));
+            double newScaleY = Math.Max(Config.MIN_ZOOM, Math.Min(Config.MAX_ZOOM, oldScaleY * zoomFactor));
 
-            _panTransform.X = (_panTransform.X - center.X) * (newScaleX / _zoomTransform.ScaleX) + center.X;
-            _panTransform.Y = (_panTransform.Y - center.Y) * (newScaleY / _zoomTransform.ScaleY) + center.Y;
+            _panTransform.X = (_panTransform.X - anchor.X) * (newScaleX / _zoomTransform.ScaleX) + anchor.X;
+            _panTransform.Y = (_panTransform.Y - anchor.Y) * (newScaleY / _zoomTransform.ScaleY) + anchor.Y;
 
             _zoomTransform.ScaleX = newScaleX;
             _zoomTransform.ScaleY = newScaleY;
 
             ClampPan();
+            e.Handled = true;
         }
 
         private void ClampPan()
@@ -185,9 +186,9 @@ namespace MasterMetrology.Core.UI.Controllers
         }
         public double GetZoom() => _zoomTransform.ScaleX;
 
-        public void SetZoom(double targetZoom)
+        public void SetZoom(double targetZoom, Point? anchor = null)
         {
-            targetZoom = Math.Max(Config.MinZoom, Math.Min(Config.MaxZoom, targetZoom));
+            targetZoom = Math.Max(Config.MIN_ZOOM, Math.Min(Config.MAX_ZOOM, targetZoom));
 
             double oldZoomX = _zoomTransform.ScaleX;
             double oldZoomY = _zoomTransform.ScaleY;
@@ -196,13 +197,13 @@ namespace MasterMetrology.Core.UI.Controllers
                 Math.Abs(oldZoomY - targetZoom) < 0.0001)
                 return;
 
-            Point center = new Point(_viewport.ActualWidth / 2.0, _viewport.ActualHeight / 2.0);
+            Point pivot = anchor ?? new Point(_viewport.ActualWidth / 2.0, _viewport.ActualHeight / 2.0);
 
             double ratioX = targetZoom / oldZoomX;
             double ratioY = targetZoom / oldZoomY;
 
-            _panTransform.X = (_panTransform.X - center.X) * ratioX + center.X;
-            _panTransform.Y = (_panTransform.Y - center.Y) * ratioY + center.Y;
+            _panTransform.X = (_panTransform.X - pivot.X) * ratioX + pivot.X;
+            _panTransform.Y = (_panTransform.Y - pivot.Y) * ratioY + pivot.Y;
 
             _zoomTransform.ScaleX = targetZoom;
             _zoomTransform.ScaleY = targetZoom;

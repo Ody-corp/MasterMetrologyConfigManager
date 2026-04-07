@@ -35,7 +35,7 @@
             <Menu DockPanel.Dock="Top">
                 <MenuItem Header="File" >
                     <MenuItem Header="New file" Command="{Binding CreateNewFileCommand}" InputGestureText="Ctrl+N"/>
-                    <MenuItem Header="Import file" Command="{Binding ImportFileCommand}" InputGestureText="Ctrl+O"/>
+                    <MenuItem Header="Open file" Command="{Binding OpenFileCommand}" InputGestureText="Ctrl+O"/>
                     <Separator/>
                     <MenuItem Header="Save" Command="{Binding SaveCommand}" InputGestureText="Ctrl+S"/>
                     <MenuItem Header="Save as" Command="{Binding SaveAsCommand}" InputGestureText="Ctrl+Shift+S"/>
@@ -141,14 +141,15 @@
                     </Border>
                 </Grid>
                 <GridSplitter Grid.Column="1"
-              Width="10"
-              HorizontalAlignment="Stretch"
-              VerticalAlignment="Stretch"
-              ResizeBehavior="PreviousAndNext"
-              ResizeDirection="Columns"
-              Background="Transparent"
-              Cursor="SizeWE"
-                              Margin="0,5,0,5">
+                              Width="10"
+                              HorizontalAlignment="Stretch"
+                              VerticalAlignment="Stretch"
+                              ResizeBehavior="PreviousAndNext"
+                              ResizeDirection="Columns"
+                              Background="Transparent"
+                              Cursor="SizeWE"
+                              Margin="0,5,0,5"
+                              Focusable="False">
 
                     <GridSplitter.Template>
                         <ControlTemplate TargetType="GridSplitter">

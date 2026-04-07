@@ -60,7 +60,7 @@ namespace MasterMetrology.Core.UI
             RemoveTransitionCommand = new RelayCommand(() => { RemoveTransition(); _processController.MarkDirty(); }, () => SelectedTransition != null);
 
             ExitAppCommand = new RelayCommand(ExitApp);
-            ImportFileCommand = new RelayCommand(ImportFile);
+            OpenFileCommand = new RelayCommand(OpenFile);
             CreateNewFileCommand = new RelayCommand(CreateNewFile, () => InputsDef.Count > 0 || OutputsDef.Count > 0 || FlatStates.Count > 0);
             CenterViewCommand = new RelayCommand(CenterView);
             SetZoomCommand = new RelayCommand(SetZoom);
@@ -111,7 +111,7 @@ namespace MasterMetrology.Core.UI
         public RelayCommand AddTransitionCommand { get; }
         public RelayCommand RemoveTransitionCommand { get; }
         public RelayCommand ExitAppCommand { get; }
-        public RelayCommand ImportFileCommand { get; }
+        public RelayCommand OpenFileCommand { get; }
         public RelayCommand CenterViewCommand { get; }
         public RelayCommand SetZoomCommand { get; }
         public RelayCommand AddStateToRootCommand { get; }
@@ -559,7 +559,16 @@ namespace MasterMetrology.Core.UI
 
             // to keep selection
             if (SelectedState != null && _processController.modelToViewModel.TryGetValue(SelectedState.StateModel, out var newSel))
+            {
                 SelectedState = newSel;
+            }
+            else
+            {
+                SelectedVertex = null;
+                SelectedState = null;
+                StatePanelDataChange = false;
+                OnPropertyChanged(nameof(StatePanelDataChange));
+            }
 
             RefreshCandidates();
             RefreshTransitionsFilter();
@@ -618,6 +627,37 @@ namespace MasterMetrology.Core.UI
 
             _supressStatePanelDirty = false;
         }
+
+        private bool TryResolvePendingStatePanelChanges()
+        {
+            if (!StatePanelDataChange)
+                return true;
+
+            var decision = PopUpWindows.DialogWindow(
+                "Unsaved changes",
+                "Save changed data of state?",
+                ["Save", "Discard", "Cancel"]);
+
+            if (decision == PopUpWindows.ConfirmChangeResult.Cancel)
+                return false;
+
+            if (decision == PopUpWindows.ConfirmChangeResult.Apply)
+            {
+                StatePanelDataChange = false;
+                Apply();
+            }
+            else
+            {
+                StatePanelDataChange = false;
+            }
+
+            SelectedState = null;
+            OnPropertyChanged(nameof(IsSelectedVertex));
+            OnPropertyChanged(nameof(IsSelectedVertexAndSection));
+            OnPropertyChanged(nameof(StatePanelDataChange));
+            return true;
+        }
+
 
         private void ClearDraftFlags()
         {
@@ -958,8 +998,11 @@ namespace MasterMetrology.Core.UI
             Application.Current.Shutdown();
         }
 
-        private void ImportFile()
+        private void OpenFile()
         {
+            if (!TryResolvePendingStatePanelChanges())
+                return;
+
             if (_processController.ProcessDecisionIfNotSavedDataToNewFile())
                 return;
 
@@ -1056,7 +1099,7 @@ namespace MasterMetrology.Core.UI
             InputsDef.Add(new InputModelData
             {
                 ID = _processController.GetNextInputID(),
-                Name = "NEW_INPUT"
+                Name = Config.DEFAULT_NEW_INPUT_NAME
             });
 
             RefreshAvailableInputDefinitions();
@@ -1096,7 +1139,7 @@ namespace MasterMetrology.Core.UI
             OutputsDef.Add(new OutputModelData
             {
                 ID = _processController.GetNextOutputID(),
-                Name = "NEW_OUTPUT",
+                Name = Config.DEFAULT_NEW_OUTPUT_NAME,
                 UpdateDefinition = false,
                 UpdateParameters = false,
                 UpdateCalibration = false,
