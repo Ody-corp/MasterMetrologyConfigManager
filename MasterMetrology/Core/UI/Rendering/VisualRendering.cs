@@ -60,16 +60,6 @@ namespace MasterMetrology.Core.UI.Rendering
 
         private const double BG_CLICK_THRESHOLD = 4.0; // px
 
-        private const double SEC_HEADER_H = 44;
-        private const double SEC_PAD_X = 36;
-        private const double SEC_PAD_Y = 28;
-        private const double SEC_GAP_X = 70;
-        private const double SEC_GAP_Y = 44;
-        private const double SEC_INNER_MAX_H = 900;
-
-        private const double SEC_ROUTE_MARGIN_X = 80;
-        private const double SEC_ROUTE_MARGIN_Y = 60;
-
         public void RenderGraph(List<StateModelData> states, Canvas graphLayer, Action<GraphVertex?> onVertexSelected = null, Canvas diagramCanvas = null)
         {
             CleanupLastGraphArea(graphLayer);
@@ -648,12 +638,12 @@ namespace MasterMetrology.Core.UI.Rendering
                 childSizes.Add((ch, cs));
             }
 
-            double HEADER_H = SEC_HEADER_H;
-            double PAD_X = SEC_PAD_X;
-            double PAD_Y = SEC_PAD_Y;
-            double GAP_X = SEC_GAP_X;
-            double GAP_Y = SEC_GAP_Y;
-            double INNER_MAX_H = SEC_INNER_MAX_H;
+            double HEADER_H = Config.SEC_HEADER_H;
+            double PAD_X = Config.SEC_PAD_X;
+            double PAD_Y = Config.SEC_PAD_Y;
+            double GAP_X = Config.SEC_GAP_X;
+            double GAP_Y = Config.SEC_GAP_Y;
+            double INNER_MAX_H = Config.SEC_INNER_MAX_H;
 
             double x = 0, y = 0, colMaxW = 0;
             double usedMaxRight = 0;
@@ -699,14 +689,7 @@ namespace MasterMetrology.Core.UI.Rendering
         }
         private void LayoutRootColumns(List<StateModelData> roots, StateGraphArea area)
         {
-            const double START_X = 60;
-            const double START_Y = 60;
-            const double GAP_X = 140;
-            const double GAP_Y = 70;
-
-            const double MAX_COL_H = 1800; // wrap do ďalšieho stĺpca 
-
-            double x = START_X, y = START_Y;
+            double x = Config.START_X, y = Config.START_Y;
             double colMaxW = 0;
 
             foreach (var r in roots.OrderBy(m => m.FullIndex, FullIndexComparer.Instance))
@@ -715,16 +698,16 @@ namespace MasterMetrology.Core.UI.Rendering
 
                 var size = _sizeByFullIndex.TryGetValue(r.FullIndex, out var s) ? s : MeasuredSize(vc);
 
-                if (y + size.Height > START_Y + MAX_COL_H && y > START_Y)
+                if (y + size.Height > Config.START_Y + Config.MAX_COL_H && y > Config.START_Y)
                 {
-                    x += colMaxW + GAP_X;
-                    y = START_Y;
+                    x += colMaxW + Config.GAP_X;
+                    y = Config.START_Y;
                     colMaxW = 0;
                 }
 
                 vc.SetPosition(x, y);
 
-                y += size.Height + GAP_Y;
+                y += size.Height + Config.GAP_Y;
                 colMaxW = Math.Max(colMaxW, size.Width);
             }
         }
@@ -739,12 +722,12 @@ namespace MasterMetrology.Core.UI.Rendering
             double secX = secPos.X;
             double secY = secPos.Y;
 
-            double HEADER_H = SEC_HEADER_H;
-            double PAD_X = SEC_PAD_X;
-            double PAD_Y = SEC_PAD_Y;
-            double GAP_X = SEC_GAP_X;
-            double GAP_Y = SEC_GAP_Y;
-            double INNER_MAX_H = SEC_INNER_MAX_H;
+            double HEADER_H = Config.SEC_HEADER_H;
+            double PAD_X = Config.SEC_PAD_X;
+            double PAD_Y = Config.SEC_PAD_Y;
+            double GAP_X = Config.SEC_GAP_X;
+            double GAP_Y = Config.SEC_GAP_Y;
+            double INNER_MAX_H = Config.SEC_INNER_MAX_H;
 
 
             double startX = secX + PAD_X;
@@ -1126,9 +1109,9 @@ namespace MasterMetrology.Core.UI.Rendering
         private InnerBounds GetInnerBounds(VertexControl parentVc, VertexControl childVc)
         {
             // rovnaké konštanty ako používaš v PlaceChildrenRecursive / ComputeDesiredSizeRecursive
-            double PAD_X = SEC_PAD_X;
-            double PAD_Y = SEC_PAD_Y;
-            double HEADER_H = SEC_HEADER_H;
+            double PAD_X = Config.SEC_PAD_X;
+            double PAD_Y = Config.SEC_PAD_Y;
+            double HEADER_H = Config.SEC_HEADER_H;
 
 
             // parent pozícia v GraphArea súradniciach
